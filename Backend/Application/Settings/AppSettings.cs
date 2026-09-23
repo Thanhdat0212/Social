@@ -1,6 +1,6 @@
-namespace Application.Options;
+namespace Application.Settings;
 
-public class AppOptions
+public class AppSettings
 {
     public const string SectionName = "App";
 

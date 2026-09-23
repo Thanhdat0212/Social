@@ -1,6 +1,6 @@
-namespace Application.Options;
+namespace Application.Settings;
 
-public class JwtOptions
+public class JwtSettings
 {
     public const string SectionName = "Jwt";
 

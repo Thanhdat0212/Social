@@ -1,6 +1,6 @@
-namespace Application.Options;
+namespace Application.Settings;
 
-public class SmtpOptions
+public class SmtpSettings
 {
     public const string SectionName = "Smtp";
 

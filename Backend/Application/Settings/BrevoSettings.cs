@@ -1,6 +1,6 @@
-namespace Application.Options;
+namespace Application.Settings;
 
-public class BrevoOptions
+public class BrevoSettings
 {
     public const string SectionName = "Brevo";
 

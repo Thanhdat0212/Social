@@ -52,7 +52,7 @@ Social/
 │   │   │   └── Profile/Requests|Responses/
 │   │   ├── Interfaces/                   # IAuthService, IProfileService, IEmailSender, IJwtTokenService, IPasswordHasherService, IAvatarStorageService
 │   │   │   └── Repositories/             # IUnitOfWork, IGenericRepository<T>, IUserRepository, IRefreshTokenRepository, IVerificationTokenRepository
-│   │   ├── Options/                      # AppOptions, JwtOptions, EmailOptions, SmtpOptions, BrevoOptions, CloudinaryOptions
+│   │   ├── Settings/                     # AppSettings, JwtSettings, EmailSettings, SmtpSettings, BrevoSettings, CloudinarySettings
 │   │   ├── Validators/                   # FluentValidation cho từng request
 │   │   └── DependencyInjection.cs
 │   │

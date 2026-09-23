@@ -1,6 +1,6 @@
-namespace Application.Options;
+namespace Application.Settings;
 
-public class CloudinaryOptions
+public class CloudinarySettings
 {
     public const string SectionName = "Cloudinary";
 

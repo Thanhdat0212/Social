@@ -378,7 +378,7 @@ Chưa có file nghiệp vụ nào, chỉ chuẩn hoá khung 4 project:
 | File / Thư mục | Tác dụng |
 |---|---|
 | `Application/Common/ICurrentUserService.cs` | Interface đọc `UserId` hiện tại — Application không được phép biết `HttpContext` nên phải đi qua interface này (dependency rule mục 2) |
-| `Application/Options/JwtOptions.cs` | Model bind từ config `Jwt:SigningKey/Issuer/Audience/AccessTokenMinutes` |
+| `Application/Settings/JwtSettings.cs` | Model bind từ config `Jwt:SigningKey/Issuer/Audience/AccessTokenMinutes` |
 | `Application/Interfaces/IJwtTokenService.cs` | Hợp đồng sinh/verify access token |
 | `Application/Interfaces/IPasswordHasherService.cs` | Hợp đồng hash/verify mật khẩu |
 | `Infrastructure/Security/PasswordHasherService.cs` | Wrap `PasswordHasher<User>` (PBKDF2) theo quyết định #3, không kéo theo full Identity |
@@ -394,9 +394,9 @@ Chưa có file nghiệp vụ nào, chỉ chuẩn hoá khung 4 project:
 | `Domain/Exceptions/NotFoundException.cs` | Ném khi không tìm thấy user/token; `GlobalExceptionHandler` (GĐ8) map → 404 |
 | `Domain/Exceptions/ConflictException.cs` | Ném khi email đã tồn tại lúc đăng ký; map → 409 |
 | `Domain/Exceptions/ValidationAppException.cs` | Ném khi một rule nghiệp vụ (không phải FluentValidation) thất bại trong service; map → 400 |
-| `Application/Options/AppOptions.cs` | `FrontendBaseUrl` để dựng link xác minh (quyết định #14/C6) |
-| `Application/Options/EmailOptions.cs` | `Provider` = `Console`\|`Smtp`\|`Brevo` + `FromAddress`/`FromName` |
-| `Application/Options/SmtpOptions.cs`, `BrevoOptions.cs` | Cấu hình riêng cho từng nhà cung cấp email |
+| `Application/Settings/AppSettings.cs` | `FrontendBaseUrl` để dựng link xác minh (quyết định #14/C6) |
+| `Application/Settings/EmailSettings.cs` | `Provider` = `Console`\|`Smtp`\|`Brevo` + `FromAddress`/`FromName` |
+| `Application/Settings/SmtpSettings.cs`, `BrevoSettings.cs` | Cấu hình riêng cho từng nhà cung cấp email |
 | `Application/Interfaces/IAuthService.cs` (khởi tạo) | Khai báo `RegisterAsync`, `ConfirmEmailAsync`, `ResendConfirmationAsync` — bổ sung thêm method ở GĐ5, GĐ6 |
 | `Application/Interfaces/IEmailSender.cs` | Trừu tượng hoá việc gửi mail để Infrastructure có 3 cách implement khác nhau (quyết định #9) |
 | `Application/DTOs/Auth/RegisterRequest.cs`, `ResendConfirmationRequest.cs` | Request body của 2 endpoint đầu |
@@ -432,7 +432,7 @@ Chưa có file nghiệp vụ nào, chỉ chuẩn hoá khung 4 project:
 
 | File / Thư mục | Tác dụng |
 |---|---|
-| `Application/Options/CloudinaryOptions.cs` | `CloudName`/`ApiKey`/`ApiSecret` |
+| `Application/Settings/CloudinarySettings.cs` | `CloudName`/`ApiKey`/`ApiSecret` |
 | `Application/Interfaces/IProfileService.cs`, `IAvatarStorageService.cs` | Hợp đồng nghiệp vụ hồ sơ và hợp đồng lưu trữ ảnh (tách riêng để không ràng Application vào SDK Cloudinary) |
 | `Application/DTOs/Profile/ProfileDto.cs`, `UpdateProfileRequest.cs` | Response/request cho `GET`/`PUT /api/profile/me` |
 | `Application/Validators/UpdateProfileRequestValidator.cs` | Rule độ dài `DisplayName`/`Bio` |

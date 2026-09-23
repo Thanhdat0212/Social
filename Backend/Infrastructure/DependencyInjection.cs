@@ -2,7 +2,7 @@ using System.Text;
 using Application.Common;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
-using Application.Options;
+using Application.Settings;
 using Infrastructure.Email;
 using Infrastructure.Identity;
 using Infrastructure.Media;
@@ -41,14 +41,14 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
-        // 4. JWT Options & Authentication
-        var jwtSection = configuration.GetSection(JwtOptions.SectionName);
-        services.Configure<JwtOptions>(jwtSection);
-        var jwtOptions = jwtSection.Get<JwtOptions>() ?? new JwtOptions();
+        // 4. JWT Settings & Authentication
+        var jwtSection = configuration.GetSection(JwtSettings.SectionName);
+        services.Configure<JwtSettings>(jwtSection);
+        var jwtSettings = jwtSection.Get<JwtSettings>() ?? new JwtSettings();
 
-        var key = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(jwtOptions.SigningKey) 
-            ? "DefaultSuperSecretKeyForDevelopmentPhase1Only123456" 
-            : jwtOptions.SigningKey);
+        var key = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(jwtSettings.SigningKey)
+            ? "DefaultSuperSecretKeyForDevelopmentPhase1Only123456"
+            : jwtSettings.SigningKey);
 
         services.AddAuthentication(options =>
         {
@@ -63,29 +63,29 @@ public static class DependencyInjection
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = !string.IsNullOrEmpty(jwtOptions.Issuer),
-                ValidIssuer = jwtOptions.Issuer,
-                ValidateAudience = !string.IsNullOrEmpty(jwtOptions.Audience),
-                ValidAudience = jwtOptions.Audience,
+                ValidateIssuer = !string.IsNullOrEmpty(jwtSettings.Issuer),
+                ValidIssuer = jwtSettings.Issuer,
+                ValidateAudience = !string.IsNullOrEmpty(jwtSettings.Audience),
+                ValidAudience = jwtSettings.Audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
         });
 
-        // 5. Options (App, Email, Smtp, Brevo, Cloudinary)
-        services.Configure<AppOptions>(configuration.GetSection(AppOptions.SectionName));
-        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
-        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
-        services.Configure<BrevoOptions>(configuration.GetSection(BrevoOptions.SectionName));
-        services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
+        // 5. Settings (App, Email, Smtp, Brevo, Cloudinary)
+        services.Configure<AppSettings>(configuration.GetSection(AppSettings.SectionName));
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<BrevoSettings>(configuration.GetSection(BrevoSettings.SectionName));
+        services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
 
         // 6. Email Sender (Console / Smtp / Brevo)
-        var emailOptions = configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
-        if (string.Equals(emailOptions.Provider, "Smtp", StringComparison.OrdinalIgnoreCase))
+        var emailSettings = configuration.GetSection(EmailSettings.SectionName).Get<EmailSettings>() ?? new EmailSettings();
+        if (string.Equals(emailSettings.Provider, "Smtp", StringComparison.OrdinalIgnoreCase))
         {
             services.AddScoped<IEmailSender, SmtpEmailSender>();
         }
-        else if (string.Equals(emailOptions.Provider, "Brevo", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(emailSettings.Provider, "Brevo", StringComparison.OrdinalIgnoreCase))
         {
             services.AddHttpClient<IEmailSender, BrevoEmailSender>();
         }

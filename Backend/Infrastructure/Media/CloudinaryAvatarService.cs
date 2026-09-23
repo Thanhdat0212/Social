@@ -1,5 +1,5 @@
 using Application.Interfaces;
-using Application.Options;
+using Application.Settings;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Domain.Exceptions;
@@ -14,16 +14,16 @@ public class CloudinaryAvatarService : IAvatarStorageService
     private readonly ILogger<CloudinaryAvatarService> _logger;
 
     public CloudinaryAvatarService(
-        IOptions<CloudinaryOptions> cloudinaryOptions,
+        IOptions<CloudinarySettings> cloudinarySettings,
         ILogger<CloudinaryAvatarService> logger)
     {
         _logger = logger;
-        var options = cloudinaryOptions.Value;
+        var settings = cloudinarySettings.Value;
 
         var account = new Account(
-            options.CloudName,
-            options.ApiKey,
-            options.ApiSecret);
+            settings.CloudName,
+            settings.ApiKey,
+            settings.ApiSecret);
 
         _cloudinary = new Cloudinary(account);
         _cloudinary.Api.Secure = true;

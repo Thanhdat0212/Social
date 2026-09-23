@@ -1,5 +1,5 @@
 using Application.Interfaces;
-using Application.Options;
+using Application.Settings;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
@@ -10,17 +10,17 @@ namespace Infrastructure.Email;
 
 public class SmtpEmailSender : IEmailSender
 {
-    private readonly EmailOptions _emailOptions;
-    private readonly SmtpOptions _smtpOptions;
+    private readonly EmailSettings _emailSettings;
+    private readonly SmtpSettings _smtpSettings;
     private readonly ILogger<SmtpEmailSender> _logger;
 
     public SmtpEmailSender(
-        IOptions<EmailOptions> emailOptions,
-        IOptions<SmtpOptions> smtpOptions,
+        IOptions<EmailSettings> emailSettings,
+        IOptions<SmtpSettings> smtpSettings,
         ILogger<SmtpEmailSender> logger)
     {
-        _emailOptions = emailOptions.Value;
-        _smtpOptions = smtpOptions.Value;
+        _emailSettings = emailSettings.Value;
+        _smtpSettings = smtpSettings.Value;
         _logger = logger;
     }
 
@@ -29,7 +29,7 @@ public class SmtpEmailSender : IEmailSender
         try
         {
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_emailOptions.FromName, _emailOptions.FromAddress));
+            message.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromAddress));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = subject;
 
@@ -40,12 +40,12 @@ public class SmtpEmailSender : IEmailSender
             message.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
-            var secureSocketOptions = _smtpOptions.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
-            await client.ConnectAsync(_smtpOptions.Host, _smtpOptions.Port, secureSocketOptions, cancellationToken);
+            var secureSocketOptions = _smtpSettings.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
+            await client.ConnectAsync(_smtpSettings.Host, _smtpSettings.Port, secureSocketOptions, cancellationToken);
 
-            if (!string.IsNullOrEmpty(_smtpOptions.Username) && !string.IsNullOrEmpty(_smtpOptions.Password))
+            if (!string.IsNullOrEmpty(_smtpSettings.Username) && !string.IsNullOrEmpty(_smtpSettings.Password))
             {
-                await client.AuthenticateAsync(_smtpOptions.Username, _smtpOptions.Password, cancellationToken);
+                await client.AuthenticateAsync(_smtpSettings.Username, _smtpSettings.Password, cancellationToken);
             }
 
             await client.SendAsync(message, cancellationToken);

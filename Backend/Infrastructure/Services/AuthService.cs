@@ -3,7 +3,7 @@ using Application.DTOs.Auth.Requests;
 using Application.DTOs.Auth.Responses;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
-using Application.Options;
+using Application.Settings;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
@@ -20,7 +20,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHasherService _passwordHasherService;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailSender _emailSender;
-    private readonly AppOptions _appOptions;
+    private readonly AppSettings _appSettings;
 
     public AuthService(
         IUnitOfWork unitOfWork,
@@ -28,14 +28,14 @@ public class AuthService : IAuthService
         IPasswordHasherService passwordHasherService,
         IJwtTokenService jwtTokenService,
         IEmailSender emailSender,
-        IOptions<AppOptions> appOptions)
+        IOptions<AppSettings> appSettings)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _passwordHasherService = passwordHasherService;
         _jwtTokenService = jwtTokenService;
         _emailSender = emailSender;
-        _appOptions = appOptions.Value;
+        _appSettings = appSettings.Value;
     }
 
     public async Task RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken = default)
@@ -66,7 +66,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Tạo link xác minh và gửi email
-        var verifyUrl = $"{_appOptions.FrontendBaseUrl.TrimEnd('/')}/verify-email?userId={user.Id}&token={rawToken}";
+        var verifyUrl = $"{_appSettings.FrontendBaseUrl.TrimEnd('/')}/verify-email?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Chào mừng {user.DisplayName} đến với Social!</h2>
             <p>Vui lòng bấm vào liên kết bên dưới để xác minh địa chỉ email của bạn:</p>
@@ -150,7 +150,7 @@ public class AuthService : IAuthService
         await _unitOfWork.VerificationTokens.AddAsync(newToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var verifyUrl = $"{_appOptions.FrontendBaseUrl.TrimEnd('/')}/verify-email?userId={user.Id}&token={rawToken}";
+        var verifyUrl = $"{_appSettings.FrontendBaseUrl.TrimEnd('/')}/verify-email?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Xác minh lại tài khoản Social</h2>
             <p>Chào {user.DisplayName}, chúng tôi nhận được yêu cầu gửi lại email xác minh.</p>
@@ -304,7 +304,7 @@ public class AuthService : IAuthService
         await _unitOfWork.VerificationTokens.AddAsync(newToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var resetUrl = $"{_appOptions.FrontendBaseUrl.TrimEnd('/')}/reset-password?userId={user.Id}&token={rawToken}";
+        var resetUrl = $"{_appSettings.FrontendBaseUrl.TrimEnd('/')}/reset-password?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Yêu cầu đặt lại mật khẩu</h2>
             <p>Chào {user.DisplayName}, chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Social của bạn.</p>

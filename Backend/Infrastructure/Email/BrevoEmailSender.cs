@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Application.Interfaces;
-using Application.Options;
+using Application.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -11,19 +11,19 @@ namespace Infrastructure.Email;
 public class BrevoEmailSender : IEmailSender
 {
     private readonly HttpClient _httpClient;
-    private readonly EmailOptions _emailOptions;
-    private readonly BrevoOptions _brevoOptions;
+    private readonly EmailSettings _emailSettings;
+    private readonly BrevoSettings _brevoSettings;
     private readonly ILogger<BrevoEmailSender> _logger;
 
     public BrevoEmailSender(
         HttpClient httpClient,
-        IOptions<EmailOptions> emailOptions,
-        IOptions<BrevoOptions> brevoOptions,
+        IOptions<EmailSettings> emailSettings,
+        IOptions<BrevoSettings> brevoSettings,
         ILogger<BrevoEmailSender> logger)
     {
         _httpClient = httpClient;
-        _emailOptions = emailOptions.Value;
-        _brevoOptions = brevoOptions.Value;
+        _emailSettings = emailSettings.Value;
+        _brevoSettings = brevoSettings.Value;
         _logger = logger;
     }
 
@@ -33,7 +33,7 @@ public class BrevoEmailSender : IEmailSender
         {
             var payload = new
             {
-                sender = new { name = _emailOptions.FromName, email = _emailOptions.FromAddress },
+                sender = new { name = _emailSettings.FromName, email = _emailSettings.FromAddress },
                 to = new[] { new { email = toEmail } },
                 subject = subject,
                 htmlContent = htmlContent
@@ -45,7 +45,7 @@ public class BrevoEmailSender : IEmailSender
                 "application/json");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
-            request.Headers.Add("api-key", _brevoOptions.ApiKey);
+            request.Headers.Add("api-key", _brevoSettings.ApiKey);
             request.Content = jsonContent;
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
