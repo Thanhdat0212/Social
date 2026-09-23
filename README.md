@@ -15,8 +15,8 @@ Cập nhật: 2026-09-23
 | 3 | Hasher, JWT, Swagger | ✅ |
 | 4 | Đăng ký + xác minh + gửi lại | ✅ |
 | 5 | Login / refresh / logout qua cookie | ✅ |
-| 6 | Quên / đặt lại mật khẩu | ❌ Chưa làm |
-| 7 | Hồ sơ + avatar | ❌ Chưa làm |
+| 6 | Quên / đặt lại mật khẩu | ✅ |
+| 7 | Hồ sơ + avatar | ✅ |
 | 8 | Exception + pipeline hoàn chỉnh | ❌ Chưa làm |
 
 ### Frontend (GĐ 9–16) & Triển khai (GĐ 17)
@@ -44,31 +44,35 @@ Social/
 │   │
 │   ├── Application/                     # Business logic - chỉ phụ thuộc Domain
 │   │   ├── Common/
-│   │   │   ├── Helpers/TokenHelper.cs
 │   │   │   ├── ICurrentUserService.cs
-│   │   │   ├── Interfaces/ISocialDbContext.cs   # stub, chưa dùng tới
-│   │   │   └── Mappings/MappingProfile.cs       # AutoMapper: User -> UserDto
-│   │   ├── DTOs/Auth/                    # Register/Login/Refresh request & response
-│   │   ├── Interfaces/                   # IAuthService, IEmailSender, IJwtTokenService, IPasswordHasherService
-│   │   ├── Options/                      # AppOptions, JwtOptions, EmailOptions, SmtpOptions, BrevoOptions
-│   │   ├── Services/AuthService.cs       # stub, logic thật nằm ở Infrastructure/Services
+│   │   │   └── Mappings/MappingProfile.cs       # AutoMapper: User -> UserDto/ProfileDto
+│   │   ├── DTOs/
+│   │   │   ├── Auth/Requests/             # Register/Login/Refresh/Forgot/Reset...
+│   │   │   ├── Auth/Responses/            # Login/Refresh/UserDto...
+│   │   │   └── Profile/Requests|Responses/
+│   │   ├── Interfaces/                   # IAuthService, IProfileService, IEmailSender, IJwtTokenService, IPasswordHasherService, IAvatarStorageService
+│   │   │   └── Repositories/             # IUnitOfWork, IGenericRepository<T>, IUserRepository, IRefreshTokenRepository, IVerificationTokenRepository
+│   │   ├── Options/                      # AppOptions, JwtOptions, EmailOptions, SmtpOptions, BrevoOptions, CloudinaryOptions
 │   │   ├── Validators/                   # FluentValidation cho từng request
 │   │   └── DependencyInjection.cs
 │   │
 │   ├── Infrastructure/                  # Implement các interface của Application
 │   │   ├── Email/                        # ConsoleEmailSender, SmtpEmailSender, BrevoEmailSender
 │   │   ├── Identity/CurrentUserService.cs
+│   │   ├── Media/CloudinaryAvatarService.cs
 │   │   ├── Persistence/
 │   │   │   ├── SocialDbContext.cs
 │   │   │   ├── SocialDbContextFactory.cs # design-time factory cho `dotnet ef migrations`
-│   │   │   └── Configurations/           # Fluent API cho User/RefreshToken/VerificationToken
+│   │   │   ├── Configurations/           # Fluent API cho User/RefreshToken/VerificationToken
+│   │   │   └── Repositories/             # GenericRepository<T>, UserRepository, RefreshTokenRepository, VerificationTokenRepository, UnitOfWork
 │   │   ├── Security/                     # PasswordHasherService (PBKDF2), JwtTokenService, TokenHasher (SHA-256)
-│   │   ├── Services/AuthService.cs       # Implementation thật của IAuthService
+│   │   ├── Services/                     # AuthService, ProfileService — implementation thật, gọi qua IUnitOfWork
 │   │   └── DependencyInjection.cs
 │   │
 │   ├── API/                             # Presentation layer
 │   │   ├── Auth/RefreshTokenCookie.cs    # Helper Append/Get/Delete cookie `social_rt`
 │   │   ├── Controllers/AuthController.cs
+│   │   ├── Controllers/ProfileController.cs
 │   │   ├── Program.cs
 │   │   └── appsettings.json
 │   │
@@ -83,9 +87,9 @@ Social/
 
 **1. Domain** — Entity, Enum, Exception thuần. Không phụ thuộc project nào khác, không có logic hạ tầng hay framework.
 
-**2. Application** — DTO, FluentValidation, và **interface** cho mọi nghiệp vụ/hạ tầng (`IAuthService`, `IEmailSender`, `IJwtTokenService`...). Chỉ phụ thuộc `Domain`. Application **định nghĩa hợp đồng**, không biết `Infrastructure` implement thế nào.
+**2. Application** — DTO, FluentValidation, và **interface** cho mọi nghiệp vụ/hạ tầng (`IAuthService`, `IProfileService`, `IEmailSender`, `IJwtTokenService`, `IUnitOfWork`...). Chỉ phụ thuộc `Domain`. Application **định nghĩa hợp đồng**, không biết `Infrastructure` implement thế nào.
 
-**3. Infrastructure** — Implement toàn bộ interface của Application: EF Core (`SocialDbContext` dùng **trực tiếp**, không qua Repository/UnitOfWork), JWT, băm mật khẩu, gửi email. Phụ thuộc `Application` + `Domain`.
+**3. Infrastructure** — Implement toàn bộ interface của Application: EF Core qua Repository/`IUnitOfWork` (`SocialDbContext` không còn bị Service gọi trực tiếp), JWT, băm mật khẩu, gửi email, lưu trữ media (Cloudinary). Phụ thuộc `Application` + `Domain`.
 
 **4. API** — Controllers, `Program.cs`, và helper cookie (`RefreshTokenCookie`) cô lập riêng ở đây vì đây là chi tiết HTTP, không thuộc về nghiệp vụ. Phụ thuộc cả 3 layer còn lại.
 
@@ -103,7 +107,7 @@ API ──► Infrastructure ──► Application ──► Domain
 | Có dùng | Không dùng | Lý do |
 |---|---|---|
 | Service class thuần (`AuthService : IAuthService`) | MediatR/CQRS | ~10 use case ở Phase 1, chưa cần thêm tầng trung gian |
-| `SocialDbContext` dùng thẳng trong Service | Generic `IRepository<T>` / `UnitOfWork` | 1 DbContext, EF Core đã là Unit of Work sẵn — thêm Repository là bọc thêm 1 lớp không cần thiết ở quy mô này |
+| Generic `IRepository<T>` + `IUnitOfWork` (`Application/Interfaces/Repositories`) | `SocialDbContext` dùng thẳng trong Service | Từ GĐ6–7 trở đi cần transaction xuyên nhiều repository (vd: `ResetPasswordAsync` cập nhật `User` + `VerificationToken` + `RefreshToken` cùng lúc) — `IUnitOfWork.BeginTransactionAsync/CommitTransactionAsync` gói gọn việc đó, đồng thời Service không còn phụ thuộc trực tiếp EF Core |
 | `PasswordHasher<TUser>` (PBKDF2) | ASP.NET Core Identity đầy đủ | Không kéo theo schema/roles/2FA thừa |
 | Exception nghiệp vụ (`NotFoundException`, `ConflictException`, `ValidationAppException`) | `OperationResult<T>` wrapper | Exception + `GlobalExceptionHandler` (GĐ8) map thẳng sang mã lỗi HTTP, không cần bọc kết quả thủ công mỗi method |
 
@@ -111,12 +115,12 @@ Toàn bộ quyết định gốc: xem mục 3 trong [Social-Phase1-KeHoach.md](.
 
 ## 🚀 Cách thêm một tính năng mới
 
-Ví dụ minh hoạ bằng tính năng **Hồ sơ (GĐ7 — chưa làm)**, đúng theo mục 12.GĐ7 của kế hoạch:
+Ví dụ minh hoạ bằng tính năng **Hồ sơ (GĐ7 — đã làm)**, đúng theo mục 12.GĐ7 của kế hoạch:
 
-1. **DTO** — `Application/DTOs/Profile/ProfileDto.cs`, `UpdateProfileRequest.cs`
+1. **DTO** — `Application/DTOs/Profile/Responses/ProfileDto.cs`, `Requests/UpdateProfileRequestDto.cs`
 2. **Validator** (nếu cần) — `Application/Validators/UpdateProfileRequestValidator.cs`
 3. **Interface nghiệp vụ** — `Application/Interfaces/IProfileService.cs`, `IAvatarStorageService.cs`
-4. **Implement** — `Infrastructure/Services/ProfileService.cs` (dùng thẳng `SocialDbContext`), `Infrastructure/Media/CloudinaryAvatarService.cs`
+4. **Implement** — `Infrastructure/Services/ProfileService.cs` (gọi qua `IUnitOfWork.Users`), `Infrastructure/Media/CloudinaryAvatarService.cs`
 5. **Đăng ký DI** — thêm vào `Infrastructure/DependencyInjection.cs`:
    ```csharp
    services.AddScoped<IProfileService, ProfileService>();
@@ -124,7 +128,7 @@ Ví dụ minh hoạ bằng tính năng **Hồ sơ (GĐ7 — chưa làm)**, đún
    ```
 6. **Controller** — `API/Controllers/ProfileController.cs` với `[Authorize]`, gọi `IProfileService` qua constructor injection
 
-Không có bước "tạo Repository" hay "đăng ký UnitOfWork" — Service gọi thẳng `DbContext.SaveChangesAsync()`.
+Nếu entity mới cần truy vấn riêng, thêm interface con kế thừa `IGenericRepository<T>` (vd: `IUserRepository`) trong `Application/Interfaces/Repositories`, implement trong `Infrastructure/Persistence/Repositories`, rồi expose qua `IUnitOfWork`.
 
 ## 🔄 Luồng xử lý request
 
@@ -132,16 +136,16 @@ Không có bước "tạo Repository" hay "đăng ký UnitOfWork" — Service g�
 Client
   │
   ▼
-API/Controllers          — validate FluentValidation, map lỗi → ProblemDetails (GĐ8)
+API/Controllers            — validate FluentValidation, map lỗi → ProblemDetails (GĐ8)
   │
   ▼
-Application/Interfaces    — hợp đồng (I*Service)
+Application/Interfaces      — hợp đồng (I*Service, IUnitOfWork, I*Repository)
   │
   ▼
-Infrastructure/Services   — implementation, gọi thẳng SocialDbContext
+Infrastructure/Services     — implementation, gọi qua IUnitOfWork.Users/RefreshTokens/VerificationTokens
   │
   ▼
-Infrastructure/Persistence/SocialDbContext ──► PostgreSQL (Supabase)
+Infrastructure/Persistence/Repositories ──► SocialDbContext ──► PostgreSQL (Supabase)
   │
   ▼
 Domain/Entities
@@ -151,15 +155,19 @@ Domain/Entities
 
 Chỉ dùng **PostgreSQL qua Supabase** (Npgsql) — không có fallback InMemory. Connection string lấy từ `ConnectionStrings:DefaultConnection` (dev: `dotnet user-secrets`, prod: biến môi trường `ConnectionStrings__DefaultConnection`).
 
-## ✅ Tính năng đã có (GĐ1–5)
+## ✅ Tính năng đã có (GĐ1–7)
 
 - Đăng ký, xác minh email qua link 24h, gửi lại xác minh với cooldown 60 giây
 - Đăng nhập → access token (JWT 15 phút, trả trong body) + refresh token 7 ngày (cookie `httpOnly; Path=/api/auth`)
 - Refresh token **rotation**: mỗi lần `/refresh` sẽ revoke token cũ và phát token mới (`ReplacedByTokenHash`)
 - Đăng xuất: revoke token trong DB + xoá cookie
 - Mật khẩu băm bằng `PasswordHasher<User>` (PBKDF2), token lưu DB chỉ ở dạng hash SHA-256
+- Quên mật khẩu: gửi link reset hiệu lực 1 giờ, luôn trả 200 để không lộ email có tồn tại hay không
+- Đặt lại mật khẩu: đổi mật khẩu trong 1 transaction (`IUnitOfWork`), đồng thời tiêu thụ toàn bộ token reset và revoke toàn bộ refresh token còn hiệu lực (đăng xuất mọi thiết bị)
+- Hồ sơ cá nhân: xem/cập nhật tên hiển thị + tiểu sử (`GET/PUT /api/profile/me`)
+- Avatar: upload lên Cloudinary (tối đa 5MB, JPG/PNG/WebP, auto-crop 500×500 theo khuôn mặt) qua `POST /api/profile/me/avatar`
 
-**Chưa có:** quên/đặt lại mật khẩu (GĐ6), hồ sơ/avatar (GĐ7), `GlobalExceptionHandler` thống nhất — hiện mỗi action trong `AuthController` tự `catch` exception nghiệp vụ (GĐ8).
+**Chưa có:** `GlobalExceptionHandler` thống nhất — hiện mỗi action trong `AuthController`/`ProfileController` tự `catch` exception nghiệp vụ (GĐ8).
 
 ## ▶️ Cách chạy
 
@@ -167,12 +175,15 @@ Chỉ dùng **PostgreSQL qua Supabase** (Npgsql) — không có fallback InMemor
 cd Backend/API
 dotnet user-secrets set "Jwt:SigningKey" "<chuỗi bí mật ≥ 32 ký tự>"
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection string social-dev>"
+dotnet user-secrets set "Cloudinary:CloudName" "<cloud name>"
+dotnet user-secrets set "Cloudinary:ApiKey" "<api key>"
+dotnet user-secrets set "Cloudinary:ApiSecret" "<api secret>"
 dotnet run
 ```
 
 Swagger UI: `https://localhost:7068/swagger` (có nút Authorize để test endpoint `[Authorize]`).
 
-Mặc định `Email:Provider = Console` trong `appsettings.json` — email xác minh/reset in ra console, không cần cấu hình SMTP khi dev.
+Mặc định `Email:Provider = Console` trong `appsettings.json` — email xác minh/reset in ra console, không cần cấu hình SMTP khi dev. Thiếu cấu hình `Cloudinary:*` sẽ chỉ làm lỗi endpoint upload avatar (`POST /api/profile/me/avatar`), các API khác không bị ảnh hưởng.
 
 ## 📦 Package đã cài đặt (theo project)
 
@@ -180,7 +191,7 @@ Mặc định `Email:Provider = Console` trong `appsettings.json` — email xác
 |---|---|
 | Domain | — (không có dependency ngoài) |
 | Application | AutoMapper, FluentValidation, FluentValidation.DependencyInjectionExtensions |
-| Infrastructure | Microsoft.EntityFrameworkCore + Npgsql.EntityFrameworkCore.PostgreSQL, Microsoft.AspNetCore.Authentication.JwtBearer, System.IdentityModel.Tokens.Jwt, Microsoft.Extensions.Identity.Core (chỉ dùng `PasswordHasher<TUser>`), MailKit, Microsoft.Extensions.Http, Microsoft.Extensions.Configuration.UserSecrets |
+| Infrastructure | Microsoft.EntityFrameworkCore + Npgsql.EntityFrameworkCore.PostgreSQL, Microsoft.AspNetCore.Authentication.JwtBearer, System.IdentityModel.Tokens.Jwt, Microsoft.Extensions.Identity.Core (chỉ dùng `PasswordHasher<TUser>`), MailKit, CloudinaryDotNet, Microsoft.Extensions.Http, Microsoft.Extensions.Configuration.UserSecrets |
 | API | Microsoft.AspNetCore.Authentication.JwtBearer, Microsoft.EntityFrameworkCore.Design, Swashbuckle.AspNetCore |
 
 ## 🎯 Nguyên tắc

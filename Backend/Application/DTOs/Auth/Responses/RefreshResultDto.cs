@@ -1,6 +1,6 @@
-namespace Application.DTOs.Auth;
+namespace Application.DTOs.Auth.Responses;
 
-public class RefreshResult
+public class RefreshResultDto
 {
     public string AccessToken { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }

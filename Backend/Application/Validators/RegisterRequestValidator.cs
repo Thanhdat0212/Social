@@ -1,10 +1,10 @@
 using System.Text.RegularExpressions;
-using Application.DTOs.Auth;
+using Application.DTOs.Auth.Requests;
 using FluentValidation;
 
 namespace Application.Validators;
 
-public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+public class RegisterRequestValidator : AbstractValidator<RegisterRequestDto>
 {
     public RegisterRequestValidator()
     {

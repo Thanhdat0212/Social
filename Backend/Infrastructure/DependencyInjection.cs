@@ -1,10 +1,13 @@
 using System.Text;
 using Application.Common;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Options;
 using Infrastructure.Email;
 using Infrastructure.Identity;
+using Infrastructure.Media;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -19,11 +22,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // 1. Persistence
+        // 1. Persistence & Unit of Work / Repositories
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         services.AddDbContext<SocialDbContext>(options =>
             options.UseNpgsql(connectionString, b => 
                 b.MigrationsAssembly(typeof(SocialDbContext).Assembly.FullName)));
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IVerificationTokenRepository, VerificationTokenRepository>();
 
         // 2. HTTP Context & Current User
         services.AddHttpContextAccessor();
@@ -64,11 +72,12 @@ public static class DependencyInjection
             };
         });
 
-        // 5. Options (App, Email, Smtp, Brevo)
+        // 5. Options (App, Email, Smtp, Brevo, Cloudinary)
         services.Configure<AppOptions>(configuration.GetSection(AppOptions.SectionName));
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.Configure<BrevoOptions>(configuration.GetSection(BrevoOptions.SectionName));
+        services.Configure<CloudinaryOptions>(configuration.GetSection(CloudinaryOptions.SectionName));
 
         // 6. Email Sender (Console / Smtp / Brevo)
         var emailOptions = configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
@@ -85,8 +94,12 @@ public static class DependencyInjection
             services.AddScoped<IEmailSender, ConsoleEmailSender>();
         }
 
-        // 7. Domain / Infrastructure Services Implementation
+        // 7. Media & Storage
+        services.AddScoped<IAvatarStorageService, CloudinaryAvatarService>();
+
+        // 8. Domain / Infrastructure Services Implementation
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IProfileService, ProfileService>();
 
         return services;
     }

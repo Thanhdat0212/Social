@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace Application.Validators;
 
-public class ResendConfirmationRequestValidator : AbstractValidator<ResendConfirmationRequestDto>
+public class ForgotPasswordRequestValidator : AbstractValidator<ForgotPasswordRequestDto>
 {
-    public ResendConfirmationRequestValidator()
+    public ForgotPasswordRequestValidator()
     {
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email không được để trống.")

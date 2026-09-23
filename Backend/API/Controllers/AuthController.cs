@@ -1,5 +1,6 @@
 using API.Auth;
-using Application.DTOs.Auth;
+using Application.DTOs.Auth.Requests;
+using Application.DTOs.Auth.Responses;
 using Application.Interfaces;
 using Domain.Exceptions;
 using FluentValidation;
@@ -12,20 +13,26 @@ namespace API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly IValidator<RegisterRequest> _registerValidator;
-    private readonly IValidator<ResendConfirmationRequest> _resendValidator;
-    private readonly IValidator<LoginRequest> _loginValidator;
+    private readonly IValidator<RegisterRequestDto> _registerValidator;
+    private readonly IValidator<ResendConfirmationRequestDto> _resendValidator;
+    private readonly IValidator<LoginRequestDto> _loginValidator;
+    private readonly IValidator<ForgotPasswordRequestDto> _forgotPasswordValidator;
+    private readonly IValidator<ResetPasswordRequestDto> _resetPasswordValidator;
 
     public AuthController(
         IAuthService authService,
-        IValidator<RegisterRequest> registerValidator,
-        IValidator<ResendConfirmationRequest> resendValidator,
-        IValidator<LoginRequest> loginValidator)
+        IValidator<RegisterRequestDto> registerValidator,
+        IValidator<ResendConfirmationRequestDto> resendValidator,
+        IValidator<LoginRequestDto> loginValidator,
+        IValidator<ForgotPasswordRequestDto> forgotPasswordValidator,
+        IValidator<ResetPasswordRequestDto> resetPasswordValidator)
     {
         _authService = authService;
         _registerValidator = registerValidator;
         _resendValidator = resendValidator;
         _loginValidator = loginValidator;
+        _forgotPasswordValidator = forgotPasswordValidator;
+        _resetPasswordValidator = resetPasswordValidator;
     }
 
     /// <summary>
@@ -35,7 +42,7 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Register([FromBody] RegisterRequestDto request, CancellationToken cancellationToken)
     {
         var validationResult = await _registerValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
@@ -89,7 +96,7 @@ public class AuthController : ControllerBase
     [HttpPost("resend-confirmation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequestDto request, CancellationToken cancellationToken)
     {
         var validationResult = await _resendValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
@@ -106,10 +113,10 @@ public class AuthController : ControllerBase
     /// Đăng nhập bằng Email và Password. Trả về AccessToken trong Body và gán RefreshToken vào Cookie httpOnly
     /// </summary>
     [HttpPost("login")]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login([FromBody] LoginRequestDto request, CancellationToken cancellationToken)
     {
         var validationResult = await _loginValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
@@ -126,7 +133,7 @@ public class AuthController : ControllerBase
             // Gán cookie httpOnly cho refresh token
             RefreshTokenCookie.Append(Response, result.RawRefreshToken, result.RefreshTokenExpiresAt);
 
-            return Ok(new LoginResponse
+            return Ok(new LoginResponseDto
             {
                 AccessToken = result.AccessToken,
                 ExpiresAt = result.ExpiresAt,
@@ -147,7 +154,7 @@ public class AuthController : ControllerBase
     /// Làm mới Access Token thông qua Refresh Token lưu trong Cookie httpOnly
     /// </summary>
     [HttpPost("refresh")]
-    [ProducesResponseType(typeof(RefreshResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RefreshResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
@@ -165,7 +172,7 @@ public class AuthController : ControllerBase
             // Cập nhật cookie với token xoay vòng mới
             RefreshTokenCookie.Append(Response, result.RawRefreshToken, result.RefreshTokenExpiresAt);
 
-            return Ok(new RefreshResponse
+            return Ok(new RefreshResponseDto
             {
                 AccessToken = result.AccessToken,
                 ExpiresAt = result.ExpiresAt
@@ -196,5 +203,55 @@ public class AuthController : ControllerBase
         RefreshTokenCookie.Delete(Response);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Yêu cầu đặt lại mật khẩu: Gửi email chứa liên kết reset mật khẩu 1 giờ (luôn trả 200)
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        var validationResult = await _forgotPasswordValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.ToDictionary();
+            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+        }
+
+        await _authService.ForgotPasswordAsync(request, cancellationToken);
+        return Ok(new { message = "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của bạn." });
+    }
+
+    /// <summary>
+    /// Đặt lại mật khẩu mới bằng token trong link email, đồng thời thu hồi toàn bộ phiên đăng nhập
+    /// </summary>
+    [HttpPost("reset-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        var validationResult = await _resetPasswordValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.ToDictionary();
+            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+        }
+
+        try
+        {
+            await _authService.ResetPasswordAsync(request, cancellationToken);
+            return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới." });
+        }
+        catch (ValidationAppException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 }

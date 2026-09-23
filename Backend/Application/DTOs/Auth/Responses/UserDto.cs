@@ -1,4 +1,4 @@
-namespace Application.DTOs.Auth;
+namespace Application.DTOs.Auth.Responses;
 
 public class UserDto
 {

@@ -1,6 +1,6 @@
-namespace Application.DTOs.Auth;
+namespace Application.DTOs.Auth.Responses;
 
-public class LoginResult
+public class LoginResultDto
 {
     public string AccessToken { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }

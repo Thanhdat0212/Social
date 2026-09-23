@@ -1,8 +1,7 @@
-namespace Application.DTOs.Auth;
+namespace Application.DTOs.Auth.Responses;
 
-public class LoginResponse
+public class RefreshResponseDto
 {
     public string AccessToken { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
-    public UserDto User { get; set; } = null!;
 }
