@@ -23,8 +23,11 @@ public class SocialDbContextFactory : IDesignTimeDbContextFactory<SocialDbContex
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection") 
-            ?? "Host=localhost;Database=social_dev;Username=postgres;Password=postgres";
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = "Host=localhost;Database=social_dev;Username=postgres;Password=postgres";
+        }
 
         var optionsBuilder = new DbContextOptionsBuilder<SocialDbContext>();
         optionsBuilder.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(SocialDbContext).Assembly.FullName));
