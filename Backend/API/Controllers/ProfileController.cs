@@ -1,7 +1,6 @@
 using Application.DTOs.Profile.Requests;
 using Application.DTOs.Profile.Responses;
 using Application.Interfaces;
-using Domain.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,19 +35,8 @@ public class ProfileController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
     {
-        try
-        {
-            var profile = await _profileService.GetCurrentUserProfileAsync(cancellationToken);
-            return Ok(profile);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var profile = await _profileService.GetCurrentUserProfileAsync(cancellationToken);
+        return Ok(profile);
     }
 
     /// <summary>
@@ -64,23 +52,11 @@ public class ProfileController : ControllerBase
         var validationResult = await _updateValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.ToDictionary();
-            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
         }
 
-        try
-        {
-            var profile = await _profileService.UpdateProfileAsync(request, cancellationToken);
-            return Ok(profile);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var profile = await _profileService.UpdateProfileAsync(request, cancellationToken);
+        return Ok(profile);
     }
 
     /// <summary>
@@ -96,38 +72,38 @@ public class ProfileController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            return BadRequest(new { message = "Vui lòng chọn tệp ảnh để tải lên." });
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Tệp không hợp lệ",
+                Detail = "Vui lòng chọn tệp ảnh để tải lên."
+            });
         }
 
         if (file.Length > MaxFileSizeInBytes)
         {
-            return BadRequest(new { message = "Kích thước ảnh đại diện không được vượt quá 5MB." });
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Tệp quá dung lượng cho phép",
+                Detail = "Kích thước ảnh đại diện không được vượt quá 5MB."
+            });
         }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!AllowedExtensions.Contains(extension))
         {
-            return BadRequest(new { message = "Định dạng file không hỗ trợ. Vui lòng chọn ảnh JPG, PNG hoặc WebP." });
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Định dạng tệp không được hỗ trợ",
+                Detail = "Vui lòng chọn ảnh định dạng JPG, PNG hoặc WebP."
+            });
         }
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            var avatarUrl = await _profileService.UploadAvatarAsync(stream, file.FileName, cancellationToken);
+        await using var stream = file.OpenReadStream();
+        var avatarUrl = await _profileService.UploadAvatarAsync(stream, file.FileName, cancellationToken);
 
-            return Ok(new AvatarUploadResponseDto { AvatarUrl = avatarUrl });
-        }
-        catch (ValidationAppException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        return Ok(new AvatarUploadResponseDto { AvatarUrl = avatarUrl });
     }
 }

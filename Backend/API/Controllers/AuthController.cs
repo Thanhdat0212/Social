@@ -2,7 +2,6 @@ using API.Auth;
 using Application.DTOs.Auth.Requests;
 using Application.DTOs.Auth.Responses;
 using Application.Interfaces;
-using Domain.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,19 +46,11 @@ public class AuthController : ControllerBase
         var validationResult = await _registerValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.ToDictionary();
-            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
         }
 
-        try
-        {
-            await _authService.RegisterAsync(request, cancellationToken);
-            return StatusCode(StatusCodes.Status201Created, new { message = "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản." });
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        await _authService.RegisterAsync(request, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new { message = "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản." });
     }
 
     /// <summary>
@@ -68,26 +59,21 @@ public class AuthController : ControllerBase
     [HttpGet("confirm-email")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ConfirmEmail([FromQuery] Guid userId, [FromQuery] string token, CancellationToken cancellationToken)
     {
         if (userId == Guid.Empty || string.IsNullOrWhiteSpace(token))
         {
-            return BadRequest(new { message = "Thông tin xác minh không hợp lệ." });
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Lỗi dữ liệu yêu cầu",
+                Detail = "Thông tin xác minh không hợp lệ."
+            });
         }
 
-        try
-        {
-            await _authService.ConfirmEmailAsync(userId, token, cancellationToken);
-            return Ok(new { message = "Xác minh email thành công. Bây giờ bạn có thể đăng nhập." });
-        }
-        catch (ValidationAppException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        await _authService.ConfirmEmailAsync(userId, token, cancellationToken);
+        return Ok(new { message = "Xác minh email thành công. Bây giờ bạn có thể đăng nhập." });
     }
 
     /// <summary>
@@ -101,8 +87,7 @@ public class AuthController : ControllerBase
         var validationResult = await _resendValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.ToDictionary();
-            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
         }
 
         await _authService.ResendConfirmationAsync(request, cancellationToken);
@@ -121,33 +106,21 @@ public class AuthController : ControllerBase
         var validationResult = await _loginValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.ToDictionary();
-            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
         }
 
-        try
-        {
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var result = await _authService.LoginAsync(request, ipAddress, cancellationToken);
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var result = await _authService.LoginAsync(request, ipAddress, cancellationToken);
 
-            // Gán cookie httpOnly cho refresh token
-            RefreshTokenCookie.Append(Response, result.RawRefreshToken, result.RefreshTokenExpiresAt);
+        // Gán cookie httpOnly cho refresh token
+        RefreshTokenCookie.Append(Response, result.RawRefreshToken, result.RefreshTokenExpiresAt);
 
-            return Ok(new LoginResponseDto
-            {
-                AccessToken = result.AccessToken,
-                ExpiresAt = result.ExpiresAt,
-                User = result.User
-            });
-        }
-        catch (ValidationAppException ex) when (ex.Message.Contains("EMAIL_NOT_CONFIRMED") || ex.Errors.ContainsKey("EMAIL_NOT_CONFIRMED"))
+        return Ok(new LoginResponseDto
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new { code = "EMAIL_NOT_CONFIRMED", message = ex.Message });
-        }
-        catch (ValidationAppException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+            AccessToken = result.AccessToken,
+            ExpiresAt = result.ExpiresAt,
+            User = result.User
+        });
     }
 
     /// <summary>
@@ -161,7 +134,12 @@ public class AuthController : ControllerBase
         var rawRefreshToken = RefreshTokenCookie.Get(Request);
         if (string.IsNullOrWhiteSpace(rawRefreshToken))
         {
-            return Unauthorized(new { message = "Không tìm thấy refresh token trong cookie." });
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Không có quyền truy cập",
+                Detail = "Không tìm thấy refresh token trong cookie."
+            });
         }
 
         try
@@ -178,11 +156,11 @@ public class AuthController : ControllerBase
                 ExpiresAt = result.ExpiresAt
             });
         }
-        catch (ValidationAppException ex)
+        catch
         {
-            // Xoá cookie nếu refresh token không hợp lệ
+            // Xoá cookie nếu refresh token không hợp lệ và ném exception cho GlobalExceptionHandler xử lý
             RefreshTokenCookie.Delete(Response);
-            return Unauthorized(new { message = ex.Message });
+            throw;
         }
     }
 
@@ -216,8 +194,7 @@ public class AuthController : ControllerBase
         var validationResult = await _forgotPasswordValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.ToDictionary();
-            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
         }
 
         await _authService.ForgotPasswordAsync(request, cancellationToken);
@@ -236,22 +213,10 @@ public class AuthController : ControllerBase
         var validationResult = await _resetPasswordValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.ToDictionary();
-            return BadRequest(new { message = "Dữ liệu không hợp lệ.", errors });
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
         }
 
-        try
-        {
-            await _authService.ResetPasswordAsync(request, cancellationToken);
-            return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới." });
-        }
-        catch (ValidationAppException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        await _authService.ResetPasswordAsync(request, cancellationToken);
+        return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới." });
     }
 }
