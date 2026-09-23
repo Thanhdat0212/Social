@@ -1,0 +1,18 @@
+# Backend (.NET)
+Backend/**/bin/
+Backend/**/obj/
+Backend/.vs/
+**/*.user
+**/appsettings.Development.json
+
+# Frontend (Vite/React) - sẽ dùng khi FE có code
+FE/node_modules/
+FE/dist/
+FE/.env
+FE/.env.local
+
+# Thư mục tham khảo, không thuộc project Social
+Mẫu Backend/
+
+# OS / editor
+.vs/
