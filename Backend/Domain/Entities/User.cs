@@ -6,7 +6,8 @@ public class User : BaseEntity
 {
     public string Email { get; set; } = string.Empty;
     public string NormalizedEmail { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
+    public string? PasswordHash { get; set; }
+    public string? GoogleId { get; set; }
     public string DisplayName { get; set; } = string.Empty;
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }

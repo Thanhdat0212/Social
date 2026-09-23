@@ -15,6 +15,7 @@ public class AuthController : ControllerBase
     private readonly IValidator<RegisterRequestDto> _registerValidator;
     private readonly IValidator<ResendConfirmationRequestDto> _resendValidator;
     private readonly IValidator<LoginRequestDto> _loginValidator;
+    private readonly IValidator<GoogleLoginRequestDto> _googleLoginValidator;
     private readonly IValidator<ForgotPasswordRequestDto> _forgotPasswordValidator;
     private readonly IValidator<ResetPasswordRequestDto> _resetPasswordValidator;
 
@@ -23,6 +24,7 @@ public class AuthController : ControllerBase
         IValidator<RegisterRequestDto> registerValidator,
         IValidator<ResendConfirmationRequestDto> resendValidator,
         IValidator<LoginRequestDto> loginValidator,
+        IValidator<GoogleLoginRequestDto> googleLoginValidator,
         IValidator<ForgotPasswordRequestDto> forgotPasswordValidator,
         IValidator<ResetPasswordRequestDto> resetPasswordValidator)
     {
@@ -30,6 +32,7 @@ public class AuthController : ControllerBase
         _registerValidator = registerValidator;
         _resendValidator = resendValidator;
         _loginValidator = loginValidator;
+        _googleLoginValidator = googleLoginValidator;
         _forgotPasswordValidator = forgotPasswordValidator;
         _resetPasswordValidator = resetPasswordValidator;
     }
@@ -111,6 +114,34 @@ public class AuthController : ControllerBase
 
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var result = await _authService.LoginAsync(request, ipAddress, cancellationToken);
+
+        // Gán cookie httpOnly cho refresh token
+        RefreshTokenCookie.Append(Response, result.RawRefreshToken, result.RefreshTokenExpiresAt);
+
+        return Ok(new LoginResponseDto
+        {
+            AccessToken = result.AccessToken,
+            ExpiresAt = result.ExpiresAt,
+            User = result.User
+        });
+    }
+
+    /// <summary>
+    /// Đăng nhập hoặc đăng ký bằng Google ID Token
+    /// </summary>
+    [HttpPost("google")]
+    [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDto request, CancellationToken cancellationToken)
+    {
+        var validationResult = await _googleLoginValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary()));
+        }
+
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var result = await _authService.GoogleLoginAsync(request, ipAddress, cancellationToken);
 
         // Gán cookie httpOnly cho refresh token
         RefreshTokenCookie.Append(Response, result.RawRefreshToken, result.RefreshTokenExpiresAt);

@@ -72,12 +72,13 @@ public static class DependencyInjection
             };
         });
 
-        // 5. Settings (App, Email, Smtp, Brevo, Cloudinary)
+        // 5. Settings (App, Email, Smtp, Brevo, Cloudinary, Google)
         services.Configure<AppSettings>(configuration.GetSection(AppSettings.SectionName));
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
         services.Configure<BrevoSettings>(configuration.GetSection(BrevoSettings.SectionName));
         services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
+        services.Configure<GoogleSettings>(configuration.GetSection(GoogleSettings.SectionName));
 
         // 6. Email Sender (Console / Smtp / Brevo)
         var emailSettings = configuration.GetSection(EmailSettings.SectionName).Get<EmailSettings>() ?? new EmailSettings();

@@ -16,6 +16,11 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         return await _dbSet.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken);
     }
 
+    public async Task<User?> GetByGoogleIdAsync(string googleId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.FirstOrDefaultAsync(u => u.GoogleId == googleId, cancellationToken);
+    }
+
     public async Task<bool> IsEmailUniqueAsync(string normalizedEmail, CancellationToken cancellationToken = default)
     {
         return !await _dbSet.AnyAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken);

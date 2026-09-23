@@ -10,6 +10,7 @@ public interface IAuthService
     Task ResendConfirmationAsync(ResendConfirmationRequestDto request, CancellationToken cancellationToken = default);
 
     Task<LoginResultDto> LoginAsync(LoginRequestDto request, string? ipAddress, CancellationToken cancellationToken = default);
+    Task<LoginResultDto> GoogleLoginAsync(GoogleLoginRequestDto request, string? ipAddress, CancellationToken cancellationToken = default);
     Task<RefreshResultDto> RefreshAsync(string rawRefreshToken, string? ipAddress, CancellationToken cancellationToken = default);
     Task LogoutAsync(string rawRefreshToken, CancellationToken cancellationToken = default);
 

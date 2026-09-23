@@ -8,6 +8,7 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
+using Google.Apis.Auth;
 using Infrastructure.Security;
 using Microsoft.Extensions.Options;
 
@@ -21,6 +22,7 @@ public class AuthService : IAuthService
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailSender _emailSender;
     private readonly AppSettings _appSettings;
+    private readonly GoogleSettings _googleSettings;
 
     public AuthService(
         IUnitOfWork unitOfWork,
@@ -28,7 +30,8 @@ public class AuthService : IAuthService
         IPasswordHasherService passwordHasherService,
         IJwtTokenService jwtTokenService,
         IEmailSender emailSender,
-        IOptions<AppSettings> appSettings)
+        IOptions<AppSettings> appSettings,
+        IOptions<GoogleSettings> googleSettings)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -36,6 +39,7 @@ public class AuthService : IAuthService
         _jwtTokenService = jwtTokenService;
         _emailSender = emailSender;
         _appSettings = appSettings.Value;
+        _googleSettings = googleSettings.Value;
     }
 
     public async Task RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken = default)
@@ -166,7 +170,7 @@ public class AuthService : IAuthService
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
 
         var user = await _unitOfWork.Users.GetByNormalizedEmailAsync(normalizedEmail, cancellationToken);
-        if (user == null || !_passwordHasherService.VerifyPassword(user, request.Password, user.PasswordHash))
+        if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !_passwordHasherService.VerifyPassword(user, request.Password, user.PasswordHash))
         {
             throw new ValidationAppException("Credentials", "Email hoặc mật khẩu không chính xác.");
         }
@@ -176,6 +180,111 @@ public class AuthService : IAuthService
             throw new ValidationAppException("EMAIL_NOT_CONFIRMED", "Tài khoản chưa được xác minh email. Vui lòng kiểm tra hộp thư hoặc gửi lại yêu cầu xác minh.");
         }
 
+        var accessToken = _jwtTokenService.GenerateAccessToken(user);
+        var accessTokenExpiresAt = _jwtTokenService.GetAccessTokenExpiration();
+
+        var rawRefreshToken = _jwtTokenService.GenerateRefreshToken();
+        var refreshTokenExpiresAt = _jwtTokenService.GetRefreshTokenExpiration();
+
+        var refreshToken = new RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = TokenHasher.HashToken(rawRefreshToken),
+            ExpiresAtUtc = refreshTokenExpiresAt,
+            CreatedByIp = ipAddress
+        };
+
+        await _unitOfWork.RefreshTokens.AddAsync(refreshToken, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new LoginResultDto
+        {
+            AccessToken = accessToken,
+            ExpiresAt = accessTokenExpiresAt,
+            User = _mapper.Map<UserDto>(user),
+            RawRefreshToken = rawRefreshToken,
+            RefreshTokenExpiresAt = refreshTokenExpiresAt
+        };
+    }
+
+    public async Task<LoginResultDto> GoogleLoginAsync(GoogleLoginRequestDto request, string? ipAddress, CancellationToken cancellationToken = default)
+    {
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { _googleSettings.ClientId }
+            };
+            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+        }
+        catch (Exception)
+        {
+            throw new ValidationAppException("IdToken", "Mã xác thực Google (ID Token) không hợp lệ hoặc đã hết hạn.");
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.Email))
+        {
+            throw new ValidationAppException("Email", "Không thể lấy thông tin email từ tài khoản Google này.");
+        }
+
+        var normalizedEmail = payload.Email.Trim().ToUpperInvariant();
+
+        // 1. Tìm user theo GoogleId trước, nếu chưa có thì tìm theo NormalizedEmail
+        var user = await _unitOfWork.Users.GetByGoogleIdAsync(payload.Subject, cancellationToken);
+        if (user == null)
+        {
+            user = await _unitOfWork.Users.GetByNormalizedEmailAsync(normalizedEmail, cancellationToken);
+        }
+
+        if (user == null)
+        {
+            // 2. Chưa có tài khoản -> Tạo mới hoàn toàn
+            user = new User
+            {
+                Email = payload.Email.Trim(),
+                NormalizedEmail = normalizedEmail,
+                DisplayName = string.IsNullOrWhiteSpace(payload.Name) ? payload.Email.Split('@')[0] : payload.Name.Trim(),
+                AvatarUrl = payload.Picture,
+                GoogleId = payload.Subject,
+                EmailConfirmed = true,
+                PasswordHash = null
+            };
+
+            await _unitOfWork.Users.AddAsync(user, cancellationToken);
+        }
+        else
+        {
+            // 3. Đã có tài khoản -> Liên kết GoogleId và kích hoạt email nếu chưa
+            var isUpdated = false;
+
+            if (string.IsNullOrEmpty(user.GoogleId))
+            {
+                user.GoogleId = payload.Subject;
+                isUpdated = true;
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                isUpdated = true;
+            }
+
+            // Nếu user chưa có avatar thì lấy avatar từ Google
+            if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(payload.Picture))
+            {
+                user.AvatarUrl = payload.Picture;
+                isUpdated = true;
+            }
+
+            if (isUpdated)
+            {
+                user.UpdatedAtUtc = DateTime.UtcNow;
+                _unitOfWork.Users.Update(user);
+            }
+        }
+
+        // 4. Phát cặp Token (AccessToken + RefreshToken)
         var accessToken = _jwtTokenService.GenerateAccessToken(user);
         var accessTokenExpiresAt = _jwtTokenService.GetAccessTokenExpiration();
 
