@@ -102,7 +102,7 @@ Social/
 │   │
 │   └── Backend.slnx
 │
-├── FE/                                  # React + Vite + TypeScript (chuẩn bị khởi tạo)
+├── FE/                                  # React + Vite + TypeScript
 ├── Social-Phase1-KeHoach.md              # Kế hoạch chi tiết 17 giai đoạn
 └── Social-Phase1-KeHoach_de_dac_de_doc.md
 ```
