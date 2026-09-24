@@ -70,12 +70,13 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Tạo link xác minh và gửi email
-        var verifyUrl = $"{_appSettings.FrontendBaseUrl.TrimEnd('/')}/verify-email?userId={user.Id}&token={rawToken}";
+        var baseUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        var verifyUrl = $"{baseUrl}/verify-email?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Chào mừng {user.DisplayName} đến với Social!</h2>
             <p>Vui lòng bấm vào liên kết bên dưới để xác minh địa chỉ email của bạn:</p>
             <p><a href=""{verifyUrl}"" style=""display:inline-block;padding:10px 20px;color:#fff;background-color:#007bff;text-decoration:none;border-radius:5px;"">Xác minh Email</a></p>
-            <p>Hoặc copy đường link này vào trình duyệt: <br/>{verifyUrl}</p>
+            <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{verifyUrl}"" style=""word-break:break-all;color:#007bff;"">{verifyUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 24 giờ.</p>";
 
         await _emailSender.SendEmailAsync(user.Email, "Xác minh tài khoản Social của bạn", emailBody, cancellationToken);
@@ -154,12 +155,13 @@ public class AuthService : IAuthService
         await _unitOfWork.VerificationTokens.AddAsync(newToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var verifyUrl = $"{_appSettings.FrontendBaseUrl.TrimEnd('/')}/verify-email?userId={user.Id}&token={rawToken}";
+        var baseUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        var verifyUrl = $"{baseUrl}/verify-email?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Xác minh lại tài khoản Social</h2>
             <p>Chào {user.DisplayName}, chúng tôi nhận được yêu cầu gửi lại email xác minh.</p>
             <p><a href=""{verifyUrl}"" style=""display:inline-block;padding:10px 20px;color:#fff;background-color:#007bff;text-decoration:none;border-radius:5px;"">Xác minh Email</a></p>
-            <p>Hoặc copy đường link này vào trình duyệt: <br/>{verifyUrl}</p>
+            <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{verifyUrl}"" style=""word-break:break-all;color:#007bff;"">{verifyUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 24 giờ.</p>";
 
         await _emailSender.SendEmailAsync(user.Email, "Gửi lại xác minh tài khoản Social của bạn", emailBody, cancellationToken);
@@ -413,12 +415,13 @@ public class AuthService : IAuthService
         await _unitOfWork.VerificationTokens.AddAsync(newToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var resetUrl = $"{_appSettings.FrontendBaseUrl.TrimEnd('/')}/reset-password?userId={user.Id}&token={rawToken}";
+        var baseUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        var resetUrl = $"{baseUrl}/reset-password?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Yêu cầu đặt lại mật khẩu</h2>
             <p>Chào {user.DisplayName}, chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Social của bạn.</p>
             <p><a href=""{resetUrl}"" style=""display:inline-block;padding:10px 20px;color:#fff;background-color:#dc3545;text-decoration:none;border-radius:5px;"">Đặt lại mật khẩu</a></p>
-            <p>Hoặc copy đường link này vào trình duyệt: <br/>{resetUrl}</p>
+            <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{resetUrl}"" style=""word-break:break-all;color:#dc3545;"">{resetUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 1 giờ. Nếu bạn không gửi yêu cầu này, hãy bỏ qua email này.</p>";
 
         await _emailSender.SendEmailAsync(user.Email, "Đặt lại mật khẩu tài khoản Social của bạn", emailBody, cancellationToken);
