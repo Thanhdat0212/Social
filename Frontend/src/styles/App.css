@@ -1,0 +1,52 @@
+/* App-specific transitions and micro-animations */
+
+.auth-success-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+  animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.auth-error-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.proxy-test-card:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.15);
+}
+
+.user-status-card {
+  margin-top: 2rem;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.user-details p {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+}

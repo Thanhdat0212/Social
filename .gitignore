@@ -5,7 +5,11 @@ Backend/.vs/
 **/*.user
 **/appsettings.Development.json
 
-# Frontend (Vite/React) - sẽ dùng khi FE có code
+# Frontend (Vite/React)
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.env
+Frontend/.env.local
 FE/node_modules/
 FE/dist/
 FE/.env
@@ -13,6 +17,7 @@ FE/.env.local
 
 # Thư mục tham khảo, không thuộc project Social
 Mẫu Backend/
+Frontend Tham Kha/
 
 # OS / editor
 .vs/
