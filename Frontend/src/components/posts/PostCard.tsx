@@ -5,6 +5,7 @@ import { postApi } from '@/api/postApi';
 import { followApi } from '@/api/followApi';
 import { interactionApi } from '@/api/interactionApi';
 import { InteractionType } from '@/types/interaction';
+import { seenPostsService } from '@/utils/seenPosts';
 import { CommentSection } from './CommentSection';
 
 interface PostCardProps {
@@ -54,7 +55,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
 
   // Tự động ghi nhận hành vi xem bài (View tracking) bằng IntersectionObserver
   useEffect(() => {
-    if (!isAuthenticated || hasTrackedView.current || !cardRef.current) return;
+    if (hasTrackedView.current || !cardRef.current) return;
 
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -62,17 +63,23 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting) {
-          // Người dùng dừng xem bài viết trên 1.5 giây -> ghi nhận view
+          // Người dùng dừng xem bài viết trên 600ms -> ghi nhận view
           timer = setTimeout(() => {
             if (!hasTrackedView.current) {
               hasTrackedView.current = true;
-              interactionApi.track({
-                postId: post.id,
-                interactionType: InteractionType.View,
-                value: 1.0,
-              });
+              // 1. Lưu vào danh sách đã xem cục bộ (hoạt động cho cả khách vãng lai và user)
+              seenPostsService.markAsSeen(post.id);
+
+              // 2. Ghi nhận tương tác lên Backend nếu đã đăng nhập
+              if (isAuthenticated) {
+                interactionApi.track({
+                  postId: post.id,
+                  interactionType: InteractionType.View,
+                  value: 1.0,
+                }).catch(() => {});
+              }
             }
-          }, 1500);
+          }, 600);
         } else {
           if (timer) {
             clearTimeout(timer);
@@ -80,7 +87,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
           }
         }
       },
-      { threshold: 0.6 }
+      { threshold: 0.5 }
     );
 
     observer.observe(cardRef.current);

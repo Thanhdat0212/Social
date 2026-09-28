@@ -79,13 +79,33 @@ public class PostService : IPostService
         return postDto;
     }
 
-    public async Task<IReadOnlyList<PostDto>> GetRecentPostsAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PostDto>> GetRecentPostsAsync(int page = 1, int pageSize = 20, IEnumerable<Guid>? seenPostIds = null, CancellationToken cancellationToken = default)
     {
         if (page < 1) page = 1;
         if (pageSize < 1 || pageSize > 50) pageSize = 20;
 
-        var posts = await _unitOfWork.Posts.GetRecentPostsAsync(page, pageSize, cancellationToken);
-        var postDtos = _mapper.Map<List<PostDto>>(posts);
+        var viewedPostIds = new HashSet<Guid>();
+        if (seenPostIds != null)
+        {
+            foreach (var id in seenPostIds) viewedPostIds.Add(id);
+        }
+        if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
+        {
+            var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(_currentUserService.UserId.Value, 500, cancellationToken);
+            foreach (var id in dbViewed) viewedPostIds.Add(id);
+        }
+
+        // Lấy 200 bài viết mới nhất làm ứng viên
+        var candidatePosts = await _unitOfWork.Posts.GetRecentPostsAsync(1, 200, cancellationToken);
+        var unseen = candidatePosts.Where(p => !viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
+        var viewed = candidatePosts.Where(p => viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
+
+        var pagedPosts = unseen.Concat(viewed)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var postDtos = _mapper.Map<List<PostDto>>(pagedPosts);
 
         if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
         {

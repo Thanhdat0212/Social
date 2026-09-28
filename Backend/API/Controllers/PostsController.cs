@@ -77,9 +77,12 @@ public class PostsController : ControllerBase
     public async Task<IActionResult> GetForYouFeed(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? seenIds = null,
+        [FromHeader(Name = "X-Seen-Post-Ids")] string? headerSeenIds = null,
         CancellationToken cancellationToken = default)
     {
-        var feed = await _feedService.GetForYouFeedAsync(page, pageSize, cancellationToken);
+        var parsedSeenIds = ParseGuids(seenIds, headerSeenIds);
+        var feed = await _feedService.GetForYouFeedAsync(page, pageSize, parsedSeenIds, cancellationToken);
         return Ok(feed);
     }
 
@@ -93,9 +96,12 @@ public class PostsController : ControllerBase
     public async Task<IActionResult> GetFollowingFeed(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? seenIds = null,
+        [FromHeader(Name = "X-Seen-Post-Ids")] string? headerSeenIds = null,
         CancellationToken cancellationToken = default)
     {
-        var feed = await _feedService.GetFollowingFeedAsync(page, pageSize, cancellationToken);
+        var parsedSeenIds = ParseGuids(seenIds, headerSeenIds);
+        var feed = await _feedService.GetFollowingFeedAsync(page, pageSize, parsedSeenIds, cancellationToken);
         return Ok(feed);
     }
 
@@ -108,10 +114,26 @@ public class PostsController : ControllerBase
     public async Task<IActionResult> GetRecentPosts(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? seenIds = null,
+        [FromHeader(Name = "X-Seen-Post-Ids")] string? headerSeenIds = null,
         CancellationToken cancellationToken = default)
     {
-        var posts = await _postService.GetRecentPostsAsync(page, pageSize, cancellationToken);
+        var parsedSeenIds = ParseGuids(seenIds, headerSeenIds);
+        var posts = await _postService.GetRecentPostsAsync(page, pageSize, parsedSeenIds, cancellationToken);
         return Ok(posts);
+    }
+
+    private static List<Guid> ParseGuids(string? queryIds, string? headerIds)
+    {
+        var combined = string.Join(",", new[] { queryIds, headerIds }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        if (string.IsNullOrWhiteSpace(combined)) return new List<Guid>();
+
+        return combined.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Guid.TryParse(s, out var g) ? (Guid?)g : null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .Distinct()
+            .ToList();
     }
 
     /// <summary>

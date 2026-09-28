@@ -23,6 +23,18 @@ public class UserInteractionRepository : GenericRepository<UserInteraction>, IUs
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetViewedPostIdsAsync(Guid userId, int limit = 500, CancellationToken cancellationToken = default)
+    {
+        var rawIds = await _context.UserInteractions
+            .Where(ui => ui.UserId == userId && ui.InteractionType == InteractionType.View && ui.PostId.HasValue)
+            .OrderByDescending(ui => ui.CreatedAtUtc)
+            .Take(limit)
+            .Select(ui => ui.PostId!.Value)
+            .ToListAsync(cancellationToken);
+
+        return rawIds.Distinct().ToList();
+    }
+
     public async Task<bool> HasInteractedRecentlyAsync(
         Guid userId,
         Guid postId,

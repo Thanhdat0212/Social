@@ -17,30 +17,36 @@ export const postApi = {
   /**
    * Lấy bảng tin gợi ý thông minh (For You Feed - 70/20/10)
    */
-  getForYouFeed: async (page = 1, pageSize = 20) => {
-    const response = await apiClient.get<PostDto[]>('/posts/feed', {
-      params: { page, pageSize },
-    });
+  getForYouFeed: async (page = 1, pageSize = 20, seenIds?: string[]) => {
+    const params: Record<string, any> = { page, pageSize };
+    if (seenIds && seenIds.length > 0) {
+      params.seenIds = seenIds.join(',');
+    }
+    const response = await apiClient.get<PostDto[]>('/posts/feed', { params });
     return response.data;
   },
 
   /**
    * Lấy bảng tin từ các tác giả đang theo dõi (Following Feed)
    */
-  getFollowingFeed: async (page = 1, pageSize = 20) => {
-    const response = await apiClient.get<PostDto[]>('/posts/following', {
-      params: { page, pageSize },
-    });
+  getFollowingFeed: async (page = 1, pageSize = 20, seenIds?: string[]) => {
+    const params: Record<string, any> = { page, pageSize };
+    if (seenIds && seenIds.length > 0) {
+      params.seenIds = seenIds.join(',');
+    }
+    const response = await apiClient.get<PostDto[]>('/posts/following', { params });
     return response.data;
   },
 
   /**
    * Lấy danh sách bài viết mới nhất
    */
-  getRecentPosts: async (page = 1, pageSize = 20) => {
-    const response = await apiClient.get<PostDto[]>('/posts', {
-      params: { page, pageSize },
-    });
+  getRecentPosts: async (page = 1, pageSize = 20, seenIds?: string[]) => {
+    const params: Record<string, any> = { page, pageSize };
+    if (seenIds && seenIds.length > 0) {
+      params.seenIds = seenIds.join(',');
+    }
+    const response = await apiClient.get<PostDto[]>('/posts', { params });
     return response.data;
   },
 

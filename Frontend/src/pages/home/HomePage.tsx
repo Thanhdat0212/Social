@@ -6,6 +6,7 @@ import { postApi } from '@/api/postApi';
 import type { PostDto } from '@/types/post';
 import { CreatePostBox, PostList } from '@/components/posts';
 import { getApiErrorMessage } from '@/utils/error';
+import { seenPostsService } from '@/utils/seenPosts';
 import { ROUTES } from '@/constants/routes';
 import { ENV } from '@/config';
 
@@ -24,14 +25,15 @@ export const HomePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      const seenIds = seenPostsService.getRecentSeenIds(60);
       let data: PostDto[];
       if (activeTab === 'following') {
-        data = await postApi.getFollowingFeed(1, 20);
+        data = await postApi.getFollowingFeed(1, 20, seenIds);
       } else if (activeTab === 'recent') {
-        data = await postApi.getRecentPosts(1, 20);
+        data = await postApi.getRecentPosts(1, 20, seenIds);
       } else {
         // 'for-you' (Default smart AI recommendation)
-        data = await postApi.getForYouFeed(1, 20);
+        data = await postApi.getForYouFeed(1, 20, seenIds);
       }
       setPosts(data);
     } catch (err) {
@@ -40,6 +42,11 @@ export const HomePage: React.FC = () => {
       setLoading(false);
     }
   }, [activeTab]);
+
+  const handleManualRefresh = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    fetchPosts();
+  };
 
   useEffect(() => {
     fetchPosts();
@@ -126,7 +133,7 @@ export const HomePage: React.FC = () => {
             posts={posts}
             loading={loading}
             error={error}
-            onRefresh={fetchPosts}
+            onRefresh={handleManualRefresh}
             onPostDeleted={handlePostDeleted}
           />
         </main>

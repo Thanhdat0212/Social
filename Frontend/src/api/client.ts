@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { ENV } from '@/config';
 import { getApiErrorMessage } from '@/utils/error';
+import { seenPostsService } from '@/utils/seenPosts';
 
 export { getApiErrorMessage };
 
@@ -14,13 +15,22 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor: Gắn Access Token từ Zustand store
+// Request interceptor: Gắn Access Token từ Zustand store và danh sách bài đã xem
 apiClient.interceptors.request.use(
   (config) => {
     const accessToken = useAuthStore.getState().accessToken;
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+
+    // Tự động gắn danh sách bài viết đã xem gần đây vào header đối với các request lấy bảng tin
+    if (config.method === 'get' && config.url && config.url.includes('/posts')) {
+      const recentSeen = seenPostsService.getRecentSeenIds(60);
+      if (recentSeen.length > 0) {
+        config.headers['X-Seen-Post-Ids'] = recentSeen.join(',');
+      }
+    }
+
     return config;
   },
   (error) => {

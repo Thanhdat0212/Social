@@ -28,7 +28,7 @@ public class FeedService : IFeedService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<PostDto>> GetForYouFeedAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PostDto>> GetForYouFeedAsync(int page = 1, int pageSize = 20, IEnumerable<Guid>? seenPostIds = null, CancellationToken cancellationToken = default)
     {
         if (page < 1) page = 1;
         if (pageSize < 1 || pageSize > 50) pageSize = 20;
@@ -42,92 +42,114 @@ public class FeedService : IFeedService
 
         var now = DateTime.UtcNow;
         var currentUserId = _currentUserService.IsAuthenticated ? _currentUserService.UserId : null;
+
+        // 1. Tập hợp danh sách ID các bài viết đã xem (kết hợp từ DB và Client gửi lên)
+        var viewedPostIds = new HashSet<Guid>();
+        if (seenPostIds != null)
+        {
+            foreach (var id in seenPostIds)
+            {
+                viewedPostIds.Add(id);
+            }
+        }
+
+        if (currentUserId.HasValue)
+        {
+            var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(currentUserId.Value, 500, cancellationToken);
+            foreach (var id in dbViewed)
+            {
+                viewedPostIds.Add(id);
+            }
+        }
+
+        // 2. Phân chia ứng viên thành 2 nhóm: Chưa xem (Unseen) và Đã xem (Viewed)
+        var unseenCandidates = candidatePosts.Where(p => !viewedPostIds.Contains(p.Id)).ToList();
+        var viewedCandidates = candidatePosts.Where(p => viewedPostIds.Contains(p.Id)).ToList();
+
         List<Post> rankedPosts;
 
         if (currentUserId.HasValue)
         {
-            // 1. Lấy hồ sơ sở thích của người dùng
+            // Lấy hồ sơ sở thích của người dùng để xếp hạng theo AI
             var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(currentUserId.Value, cancellationToken);
             var prefMap = preferences.ToDictionary(p => p.InterestId, p => p.Score);
 
-            // 2. Lấy các bài viết người dùng đã xem gần đây để giảm ưu tiên (tránh lặp lại)
-            var recentInteractions = await _unitOfWork.UserInteractions.GetRecentUserInteractionsAsync(
-                currentUserId.Value, 200, cancellationToken);
-
-            var viewedPostIds = recentInteractions
-                .Where(i => i.InteractionType == InteractionType.View && i.PostId.HasValue)
-                .Select(i => i.PostId!.Value)
-                .ToHashSet();
-
-            // 3. Tính điểm gợi ý (Scoring Model: Personal Match 55% + Engagement 25% + Recency Decay 20%)
-            var scoredList = new List<(Post Post, double TotalScore, double PersonalScore)>();
-
-            foreach (var post in candidatePosts)
+            List<Post> RankCandidateGroup(List<Post> candidates)
             {
-                // A. Điểm khớp chủ đề với AI Confidence
-                double personalScore = 0.0;
-                if (post.PostInterests.Count > 0)
+                if (candidates.Count == 0) return new List<Post>();
+
+                var scoredList = new List<(Post Post, double TotalScore)>();
+                foreach (var post in candidates)
                 {
-                    foreach (var pi in post.PostInterests)
+                    // A. Điểm khớp chủ đề với AI Confidence
+                    double personalScore = 0.5;
+                    if (post.PostInterests.Count > 0)
                     {
-                        double userTopicScore = prefMap.TryGetValue(pi.InterestId, out var score) ? score : 0.5;
-                        personalScore += userTopicScore * pi.Confidence;
+                        personalScore = 0.0;
+                        foreach (var pi in post.PostInterests)
+                        {
+                            double userTopicScore = prefMap.TryGetValue(pi.InterestId, out var score) ? score : 0.5;
+                            personalScore += userTopicScore * pi.Confidence;
+                        }
                     }
+
+                    // B. Điểm tương tác cộng đồng (Engagement)
+                    double rawEngagement = (post.LikeCount * 2.0) + (post.CommentCount * 3.0) + (post.ViewCount * 0.2);
+                    double engagementScore = Math.Log(1.0 + rawEngagement);
+
+                    // C. Độ mới của bài viết (Time Decay)
+                    double hoursOld = Math.Max(0.0, (now - post.CreatedAtUtc).TotalHours);
+                    double recencyScore = 1.0 / (1.0 + 0.03 * hoursOld);
+
+                    double totalScore = (personalScore * 0.55) + (engagementScore * 0.25) + (recencyScore * 0.20);
+                    scoredList.Add((post, totalScore));
                 }
-                else
-                {
-                    personalScore = 0.5;
-                }
 
-                // B. Điểm tương tác cộng đồng (Engagement)
-                double rawEngagement = (post.LikeCount * 2.0) + (post.CommentCount * 3.0) + (post.ViewCount * 0.2);
-                double engagementScore = Math.Log(1.0 + rawEngagement);
+                // Phân bổ đa dạng hóa theo tỷ lệ: 70% Cá nhân hóa - 20% Mở rộng - 10% Khám phá mới
+                var orderedByScore = scoredList.OrderByDescending(x => x.TotalScore).ToList();
 
-                // C. Độ mới của bài viết (Time Decay: suy giảm dần theo số giờ)
-                double hoursOld = Math.Max(0.0, (now - post.CreatedAtUtc).TotalHours);
-                double recencyScore = 1.0 / (1.0 + 0.03 * hoursOld);
+                var personalPool = orderedByScore
+                    .Take((int)Math.Ceiling(candidates.Count * 0.7))
+                    .Select(x => x.Post)
+                    .ToList();
 
-                // D. Hệ số bài đã xem (giảm 70% điểm nếu đã xem trong phiên gần đây)
-                double viewedPenalty = viewedPostIds.Contains(post.Id) ? 0.3 : 1.0;
+                var explorationPool = orderedByScore
+                    .Skip((int)Math.Ceiling(candidates.Count * 0.7))
+                    .Take((int)Math.Ceiling(candidates.Count * 0.2))
+                    .Select(x => x.Post)
+                    .ToList();
 
-                double totalScore = ((personalScore * 0.55) + (engagementScore * 0.25) + (recencyScore * 0.20)) * viewedPenalty;
+                var discoveryPool = candidates
+                    .Except(personalPool)
+                    .Except(explorationPool)
+                    .OrderByDescending(p => p.CreatedAtUtc)
+                    .ToList();
 
-                scoredList.Add((post, totalScore, personalScore));
+                return InterleaveFeed(personalPool, explorationPool, discoveryPool);
             }
 
-            // 4. Phân bổ đa dạng hóa theo tỷ lệ (Feed Diversification: 70% Cá nhân hóa - 20% Mở rộng - 10% Khám phá mới)
-            var orderedByScore = scoredList.OrderByDescending(x => x.TotalScore).ToList();
+            var rankedUnseen = RankCandidateGroup(unseenCandidates);
+            var rankedViewed = RankCandidateGroup(viewedCandidates);
 
-            // Nhóm 1: 70% Bài viết đúng sở thích cao nhất
-            var personalPool = orderedByScore
-                .Take((int)Math.Ceiling(candidatePosts.Count * 0.7))
-                .Select(x => x.Post)
-                .ToList();
-
-            // Nhóm 2: 20% Bài viết mở rộng sở thích
-            var explorationPool = orderedByScore
-                .Skip((int)Math.Ceiling(candidatePosts.Count * 0.7))
-                .Take((int)Math.Ceiling(candidatePosts.Count * 0.2))
-                .Select(x => x.Post)
-                .ToList();
-
-            // Nhóm 3: 10% Bài viết mới / khám phá
-            var discoveryPool = candidatePosts
-                .Except(personalPool)
-                .Except(explorationPool)
-                .OrderByDescending(p => p.CreatedAtUtc)
-                .ToList();
-
-            // Trộn các nhóm một cách hài hoà
-            rankedPosts = InterleaveFeed(personalPool, explorationPool, discoveryPool);
+            // BÀI ĐĂNG CHƯA XEM ĐƯỢC ƯU TIÊN LÊN ĐẦU TIÊN
+            // Nếu đã xem hết bài mới, các bài đã xem trước đó mới hiển thị ở phần sau
+            rankedPosts = rankedUnseen.Concat(rankedViewed).ToList();
         }
         else
         {
-            // Đối với khách vãng lai: Xếp theo tương tác và độ mới
-            rankedPosts = candidatePosts
-                .OrderByDescending(p => (p.LikeCount * 2.0 + p.CommentCount * 3.0 + p.ViewCount * 0.2) / (1.0 + 0.05 * Math.Max(0, (now - p.CreatedAtUtc).TotalHours)))
-                .ThenByDescending(p => p.CreatedAtUtc)
-                .ToList();
+            // Đối với khách vãng lai: Xếp hạng bài chưa xem trước, sau đó là bài đã xem
+            List<Post> RankGuestGroup(List<Post> candidates)
+            {
+                return candidates
+                    .OrderByDescending(p => (p.LikeCount * 2.0 + p.CommentCount * 3.0 + p.ViewCount * 0.2) / (1.0 + 0.05 * Math.Max(0, (now - p.CreatedAtUtc).TotalHours)))
+                    .ThenByDescending(p => p.CreatedAtUtc)
+                    .ToList();
+            }
+
+            var rankedUnseen = RankGuestGroup(unseenCandidates);
+            var rankedViewed = RankGuestGroup(viewedCandidates);
+
+            rankedPosts = rankedUnseen.Concat(rankedViewed).ToList();
         }
 
         // Phân trang kết quả
@@ -155,7 +177,7 @@ public class FeedService : IFeedService
         return dtos;
     }
 
-    public async Task<IReadOnlyList<PostDto>> GetFollowingFeedAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PostDto>> GetFollowingFeedAsync(int page = 1, int pageSize = 20, IEnumerable<Guid>? seenPostIds = null, CancellationToken cancellationToken = default)
     {
         if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
         {
@@ -174,8 +196,24 @@ public class FeedService : IFeedService
             return Array.Empty<PostDto>();
         }
 
-        var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, page, pageSize, cancellationToken);
-        var dtos = _mapper.Map<List<PostDto>>(posts);
+        var viewedPostIds = new HashSet<Guid>();
+        if (seenPostIds != null)
+        {
+            foreach (var id in seenPostIds) viewedPostIds.Add(id);
+        }
+        var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(currentUserId, 500, cancellationToken);
+        foreach (var id in dbViewed) viewedPostIds.Add(id);
+
+        var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, 200, cancellationToken);
+        var unseen = posts.Where(p => !viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
+        var viewed = posts.Where(p => viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
+
+        var rankedPosts = unseen.Concat(viewed)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var dtos = _mapper.Map<List<PostDto>>(rankedPosts);
 
         if (dtos.Count > 0)
         {
