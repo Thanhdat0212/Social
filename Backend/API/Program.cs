@@ -2,7 +2,9 @@ using API.ErrorHandling;
 using Application;
 using Infrastructure;
 using Infrastructure.Common;
+using Infrastructure.Persistence;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 // Nạp các biến môi trường từ file .env (nếu có) trước khi cấu hình ứng dụng
@@ -82,6 +84,26 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Tự động kiểm tra và áp dụng Database Migrations khi khởi động
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<SocialDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Đang kiểm tra và áp dụng Database Migrations...");
+        await context.Database.MigrateAsync();
+        logger.LogInformation("Database Migrations đã được áp dụng thành công.");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Lỗi xảy ra khi áp dụng database migrations: {Message}", ex.Message);
+    }
+}
+
 
 // ==========================================
 // HTTP Request Pipeline (Thứ tự chuẩn mục 7.3)
