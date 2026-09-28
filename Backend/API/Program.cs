@@ -168,4 +168,19 @@ app.MapPost("/api/admin/seed-1000", async (SocialDbContext db, ILoggerFactory lo
     return Results.Ok(new { message = $"Đã nạp thành công {inserted} bài viết vào database!", count = inserted });
 });
 
+app.MapGet("/api/admin/stats", async (SocialDbContext db) =>
+{
+    var userCount = await db.Users.CountAsync();
+    var postCount = await db.Posts.CountAsync();
+    var interestCount = await db.Interests.CountAsync();
+    var postInterestCount = await db.PostInterests.CountAsync();
+    return Results.Ok(new
+    {
+        totalUsers = userCount,
+        totalPosts = postCount,
+        totalInterests = interestCount,
+        totalPostInterests = postInterestCount
+    });
+});
+
 app.Run();
