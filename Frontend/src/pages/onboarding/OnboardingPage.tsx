@@ -18,14 +18,23 @@ export const OnboardingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const MIN_REQUIRED = 3;
+  const MIN_REQUIRED = 1;
 
   useEffect(() => {
     const fetchInterests = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await interestApi.getAllInterests();
+        const [data, status] = await Promise.all([
+          interestApi.getAllInterests(),
+          interestApi.getOnboardingStatus().catch(() => null),
+        ]);
+
+        if (status && status.isOnboarded) {
+          navigate(ROUTES.HOME, { replace: true });
+          return;
+        }
+
         setInterests(data);
 
         // Nạp các sở thích đã chọn trước đó (nếu có)
@@ -41,7 +50,7 @@ export const OnboardingPage: React.FC = () => {
     };
 
     fetchInterests();
-  }, []);
+  }, [navigate]);
 
   const toggleInterest = (id: string) => {
     setSelectedIds((prev) => {
@@ -80,7 +89,7 @@ export const OnboardingPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedIds.size < MIN_REQUIRED) {
-      setError(`Vui lòng chọn tối thiểu ${MIN_REQUIRED} chủ đề để thuật toán hiểu rõ sở thích của bạn.`);
+      setError('Vui lòng chọn ít nhất 1 chủ đề để tiếp tục.');
       return;
     }
 
@@ -109,8 +118,7 @@ export const OnboardingPage: React.FC = () => {
           Bạn quan tâm đến <span className="gradient-text">chủ đề nào?</span>
         </h1>
         <p className="onboarding-subtitle">
-          Chọn tối thiểu <strong>{MIN_REQUIRED} chủ đề</strong> bạn yêu thích. Thuật toán gợi ý của Social sẽ kết hợp
-          sở thích của bạn cùng công nghệ AI để tạo nên Bảng tin hấp dẫn nhất.
+          Chọn một hoặc nhiều chủ đề bạn yêu thích để hệ thống cá nhân hóa Bảng tin phù hợp nhất với bạn.
         </p>
 
         {/* Thanh trạng thái chọn & Thanh tìm kiếm */}
@@ -138,7 +146,7 @@ export const OnboardingPage: React.FC = () => {
 
           <div className="selection-status-bar">
             <div className={`selection-counter ${selectedIds.size >= MIN_REQUIRED ? 'counter-valid' : ''}`}>
-              Đã chọn: <strong>{selectedIds.size}</strong> / tối thiểu {MIN_REQUIRED}
+              Đã chọn: <strong>{selectedIds.size}</strong> chủ đề
             </div>
 
             <div className="selection-actions">
@@ -218,13 +226,13 @@ export const OnboardingPage: React.FC = () => {
           <div className="onboarding-bottom-bar">
             <div className="bottom-bar-content">
               <div className="bottom-bar-info">
-                {selectedIds.size < MIN_REQUIRED ? (
+                {selectedIds.size === 0 ? (
                   <span className="text-warning">
-                    ⚠️ Chọn thêm ít nhất <strong>{MIN_REQUIRED - selectedIds.size}</strong> chủ đề nữa
+                    ⚠️ Vui lòng chọn ít nhất 1 chủ đề bạn quan tâm
                   </span>
                 ) : (
                   <span className="text-success">
-                    🎉 Tuyệt vời! Bạn đã chọn đủ {selectedIds.size} chủ đề
+                    🎉 Tuyệt vời! Bạn đã chọn {selectedIds.size} chủ đề
                   </span>
                 )}
               </div>

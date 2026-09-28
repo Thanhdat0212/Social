@@ -224,34 +224,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
         </div>
       )}
 
-      {/* AI Classified Topics Tags */}
-      <div className="post-topics-section">
-        {post.topics && post.topics.length > 0 ? (
-          <div className="post-topics-list">
-            <span className="topics-label">🤖 Chủ đề AI:</span>
-            {post.topics.map((topic) => (
-              <span
-                key={topic.id}
-                className="badge ai-topic-badge"
-                title={`Độ tin cậy của thuật toán: ${(topic.confidence * 100).toFixed(0)}%`}
-              >
-                {topic.icon && <span className="topic-icon">{topic.icon}</span>}
-                #{topic.name}
-                <span className="confidence-pill">
-                  {(topic.confidence * 100).toFixed(0)}%
-                </span>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="ai-processing-notice">
-            <span className="sparkle-icon">✨</span>
-            <span className="ai-processing-text">
-              Gemini AI đang phân tích nội dung ngầm...
-            </span>
-          </div>
-        )}
-      </div>
 
       {/* Interaction Action Bar */}
       <footer className="post-footer">

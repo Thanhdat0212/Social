@@ -73,9 +73,9 @@ public class InterestService : IInterestService
 
         // 2. Kiểm tra danh sách sở thích hợp lệ
         var distinctIds = request.InterestIds.Distinct().ToList();
-        if (distinctIds.Count < 3)
+        if (distinctIds.Count < 1)
         {
-            throw new ValidationAppException("InterestIds", "Vui lòng chọn tối thiểu 3 sở thích để hệ thống gợi ý nội dung phù hợp.");
+            throw new ValidationAppException("InterestIds", "Vui lòng chọn tối thiểu 1 sở thích để hệ thống gợi ý nội dung phù hợp.");
         }
 
         var foundInterests = await _unitOfWork.Interests.GetByIdsAsync(distinctIds, cancellationToken);
@@ -119,7 +119,7 @@ public class InterestService : IInterestService
 
         return new OnboardingStatusDto
         {
-            IsOnboarded = count >= 3,
+            IsOnboarded = count >= 1,
             SelectedCount = count
         };
     }

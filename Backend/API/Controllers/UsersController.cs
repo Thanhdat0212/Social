@@ -35,7 +35,7 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Chọn hoặc cập nhật danh sách sở thích ban đầu (Onboarding - tối thiểu 3 chủ đề)
+    /// Chọn hoặc cập nhật danh sách sở thích ban đầu (Onboarding - tối thiểu 1 chủ đề)
     /// </summary>
     [HttpPost("me/interests")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -68,7 +68,7 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Kiểm tra trạng thái Onboarding của người dùng (đã chọn tối thiểu 3 sở thích hay chưa)
+    /// Kiểm tra trạng thái Onboarding của người dùng (đã chọn tối thiểu 1 sở thích hay chưa)
     /// </summary>
     [HttpGet("me/onboarding-status")]
     [ProducesResponseType(typeof(OnboardingStatusDto), StatusCodes.Status200OK)]

@@ -20,14 +20,9 @@ export const Navbar: React.FC = () => {
             Trang chủ
           </Link>
           {isAuthenticated && (
-            <>
-              <Link to={ROUTES.ONBOARDING} className="nav-link">
-                Sở thích
-              </Link>
-              <Link to={ROUTES.PROFILE} className="nav-link">
-                Hồ sơ
-              </Link>
-            </>
+            <Link to={ROUTES.PROFILE} className="nav-link">
+              Hồ sơ
+            </Link>
           )}
         </nav>
 

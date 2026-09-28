@@ -97,7 +97,6 @@ export const HomePage: React.FC = () => {
             >
               <span className="tab-icon">✨</span>
               <span>Dành cho bạn</span>
-              <span className="tab-badge">70-20-10</span>
             </button>
 
             {isAuthenticated && (
@@ -134,55 +133,41 @@ export const HomePage: React.FC = () => {
 
         {/* Sidebar Column */}
         <aside className="feed-sidebar-col">
-          {/* User Quick Card (If Logged In) */}
-          {isAuthenticated && user && (
+          {isAuthenticated && user ? (
             <div className="card sidebar-info-card">
               <h3 className="sidebar-title">
                 <span>👋 Chào mừng, {user.displayName}</span>
               </h3>
               <p className="sidebar-content">
-                Hồ sơ sở thích ban đầu giúp thuật toán cá nhân hóa 70% nội dung bảng tin của bạn.
+                Chúc bạn có những trải nghiệm kết nối và chia sẻ tuyệt vời hôm nay!
               </p>
               <div className="sidebar-links">
-                <Link to={ROUTES.ONBOARDING} className="sidebar-link-btn" id="sidebar-onboarding-link">
-                  <span>🎯 Tùy biến sở thích</span>
-                  <span>→</span>
-                </Link>
                 <Link to={ROUTES.PROFILE} className="sidebar-link-btn" id="sidebar-profile-link">
                   <span>👤 Trang cá nhân</span>
                   <span>→</span>
                 </Link>
               </div>
             </div>
-          )}
-
-          {/* AI Content Intelligence Card */}
-          <div className="card sidebar-info-card">
-            <h3 className="sidebar-title">
-              <span>🤖 Trợ lý AI Gemini</span>
-            </h3>
-            <p className="sidebar-content">
-              Mỗi bài viết đăng tải đều được chuyển qua kênh ngầm để AI tự động:
-            </p>
-            <ul style={{ paddingLeft: '1.25rem', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.6' }}>
-              <li>Đọc hiểu ngữ nghĩa &amp; phân tích nội dung.</li>
-              <li>Tự động gắn nhãn chủ đề kèm độ tin cậy.</li>
-              <li>Học sở thích động qua Like, Comment &amp; View.</li>
-            </ul>
-          </div>
-
-          {/* Architecture Roadmap Info */}
-          <div className="card sidebar-info-card">
-            <h3 className="sidebar-title">
-              <span>🗺️ Tiến độ Hệ thống</span>
-            </h3>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div>✅ <strong>Giai đoạn 1:</strong> Sở thích &amp; Onboarding</div>
-              <div>✅ <strong>Giai đoạn 2:</strong> Gemini AI Auto-tag (Bảo mật cao)</div>
-              <div>✅ <strong>Giai đoạn 3:</strong> Tương tác Xã hội &amp; Ghi nhận hành vi</div>
-              <div>✅ <strong>Giai đoạn 4:</strong> Recommendation Feed Engine (70-20-10)</div>
+          ) : (
+            <div className="card sidebar-info-card">
+              <h3 className="sidebar-title">
+                <span>🌟 Chào mừng bạn</span>
+              </h3>
+              <p className="sidebar-content">
+                Tham gia cộng đồng Social để chia sẻ câu chuyện và kết nối cùng mọi người.
+              </p>
+              <div className="sidebar-links">
+                <Link to={ROUTES.AUTH.REGISTER} className="sidebar-link-btn" id="sidebar-reg-link">
+                  <span>✨ Đăng ký tài khoản</span>
+                  <span>→</span>
+                </Link>
+                <Link to={ROUTES.AUTH.LOGIN} className="sidebar-link-btn" id="sidebar-login-link">
+                  <span>🔑 Đăng nhập</span>
+                  <span>→</span>
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </aside>
       </div>
     </div>

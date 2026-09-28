@@ -3,10 +3,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTitle } from '@/hooks/useTitle';
 import { profileApi } from '@/api/profileApi';
 import { followApi } from '@/api/followApi';
-import { interestApi } from '@/api/interestApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { LoadingScreen } from '@/components/feedback/LoadingScreen';
-import type { ProfileDto, FollowStatsDto, UserFollowDto, UserPreferenceDto } from '@/types';
+import type { ProfileDto, FollowStatsDto, UserFollowDto } from '@/types';
 
 type FollowModalType = 'followers' | 'following' | null;
 
@@ -28,9 +27,6 @@ export const ProfilePage: React.FC = () => {
   const [followUsersList, setFollowUsersList] = useState<UserFollowDto[]>([]);
   const [followListLoading, setFollowListLoading] = useState(false);
 
-  // User Preferences
-  const [preferences, setPreferences] = useState<UserPreferenceDto[]>([]);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,16 +35,12 @@ export const ProfilePage: React.FC = () => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        const [profileData, prefsData] = await Promise.all([
-          profileApi.getMyProfile(),
-          interestApi.getMyPreferences().catch(() => []),
-        ]);
+        const profileData = await profileApi.getMyProfile();
 
         if (isMounted) {
           setProfile(profileData);
           setDisplayName(profileData.displayName);
           setBio(profileData.bio || '');
-          setPreferences(prefsData);
 
           // Fetch follow stats
           if (profileData.id) {
@@ -223,28 +215,6 @@ export const ProfilePage: React.FC = () => {
                 <span className="stat-label">Đang theo dõi</span>
               </button>
             </div>
-          </div>
-
-          {/* Hồ sơ sở thích AI */}
-          <div className="card profile-interests-card mt-4">
-            <h3 className="card-subtitle">🎯 Sở thích của bạn (Trọng số AI)</h3>
-            <p className="text-xs text-muted mb-3">
-              Điểm số sở thích được cập nhật tự động khi bạn thích, bình luận và đọc bài viết.
-            </p>
-
-            {preferences.length > 0 ? (
-              <div className="profile-interests-cloud">
-                {preferences.map((pref) => (
-                  <div key={pref.interestId} className="preference-pill">
-                    {pref.icon && <span>{pref.icon}</span>}
-                    <span>{pref.interestName}</span>
-                    <span className="score-tag">{(pref.score || 1.0).toFixed(1)}đ</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted">Chưa có sở thích nào được ghi nhận.</p>
-            )}
           </div>
         </div>
 

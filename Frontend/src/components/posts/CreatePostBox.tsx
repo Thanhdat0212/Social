@@ -181,9 +181,6 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
             >
               🖼️ Đính kèm ảnh {selectedFiles.length > 0 && `(${selectedFiles.length}/5)`}
             </button>
-            <div className="ai-notice-badge" title="Bài viết sẽ được AI phân loại sau khi đăng">
-              ✨ Gemini Auto-Topic
-            </div>
           </div>
 
           <div className="create-post-submit">

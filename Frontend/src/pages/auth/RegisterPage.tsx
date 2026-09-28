@@ -4,6 +4,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/hooks/useAuth';
 import { useTitle } from '@/hooks/useTitle';
 import { authApi } from '@/api/authApi';
+import { interestApi } from '@/api/interestApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
 
@@ -11,6 +12,19 @@ export const RegisterPage: React.FC = () => {
   useTitle('Đăng ký tài khoản');
   const { setAuth } = useAuth();
   const navigate = useNavigate();
+
+  const handlePostLoginRedirect = async () => {
+    try {
+      const status = await interestApi.getOnboardingStatus();
+      if (!status.isOnboarded) {
+        navigate(ROUTES.ONBOARDING);
+        return;
+      }
+    } catch {
+      // Fallback
+    }
+    navigate(ROUTES.HOME);
+  };
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -184,7 +198,7 @@ export const RegisterPage: React.FC = () => {
                 try {
                   const data = await authApi.googleLogin({ idToken: credentialResponse.credential });
                   setAuth(data.accessToken, data.user);
-                  navigate(ROUTES.PROFILE);
+                  await handlePostLoginRedirect();
                 } catch (err) {
                   setError(getApiErrorMessage(err));
                 } finally {
