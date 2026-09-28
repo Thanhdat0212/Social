@@ -96,11 +96,21 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Đang kiểm tra và áp dụng Database Migrations...");
         await context.Database.MigrateAsync();
         logger.LogInformation("Database Migrations đã được áp dụng thành công.");
+
+        // Nạp bộ dữ liệu mẫu phong phú khi khởi động nếu database chưa có đủ bài viết
+        await DatabaseSeeder.SeedAsync(context, logger);
+
+        // Tự động sinh và nạp 1000 bài viết nếu cơ sở dữ liệu có dưới 500 bài viết
+        var currentPostCount = await context.Posts.CountAsync();
+        if (currentPostCount < 500)
+        {
+            await BulkPostSeeder.SeedBulkPostsAsync(context, logger, 1000);
+        }
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Lỗi xảy ra khi áp dụng database migrations: {Message}", ex.Message);
+        logger.LogError(ex, "Lỗi xảy ra khi áp dụng database migrations hoặc seed data: {Message}", ex.Message);
     }
 }
 
@@ -142,5 +152,20 @@ app.UseAuthorization();
 
 // 8. Map Controllers
 app.MapControllers();
+
+// 9. Development Seed Endpoint
+app.MapPost("/api/admin/seed", async (SocialDbContext db, ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("DatabaseSeeder");
+    await DatabaseSeeder.SeedAsync(db, logger);
+    return Results.Ok(new { message = "Đã nạp thành công bộ dữ liệu mẫu phong phú!" });
+});
+
+app.MapPost("/api/admin/seed-1000", async (SocialDbContext db, ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("BulkPostSeeder");
+    var inserted = await BulkPostSeeder.SeedBulkPostsAsync(db, logger, 1000);
+    return Results.Ok(new { message = $"Đã nạp thành công {inserted} bài viết vào database!", count = inserted });
+});
 
 app.Run();
