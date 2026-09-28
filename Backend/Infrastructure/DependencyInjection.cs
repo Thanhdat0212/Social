@@ -10,6 +10,7 @@ using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
 using Infrastructure.Services;
+using Infrastructure.AI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +33,15 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IVerificationTokenRepository, VerificationTokenRepository>();
+        services.AddScoped<IInterestRepository, InterestRepository>();
+        services.AddScoped<IUserInterestRepository, UserInterestRepository>();
+        services.AddScoped<IUserPreferenceRepository, UserPreferenceRepository>();
+        services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IPostInterestRepository, PostInterestRepository>();
+        services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<IUserFollowRepository, UserFollowRepository>();
+        services.AddScoped<IUserInteractionRepository, UserInteractionRepository>();
 
         // 2. HTTP Context & Current User
         services.AddHttpContextAccessor();
@@ -79,6 +89,7 @@ public static class DependencyInjection
         services.Configure<BrevoSettings>(configuration.GetSection(BrevoSettings.SectionName));
         services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
         services.Configure<GoogleSettings>(configuration.GetSection(GoogleSettings.SectionName));
+        services.Configure<GeminiSettings>(configuration.GetSection(GeminiSettings.SectionName));
 
         // 6. Email Sender (Console / Smtp / Brevo)
         var emailSettings = configuration.GetSection(EmailSettings.SectionName).Get<EmailSettings>() ?? new EmailSettings();
@@ -97,10 +108,23 @@ public static class DependencyInjection
 
         // 7. Media & Storage
         services.AddScoped<IAvatarStorageService, CloudinaryAvatarService>();
+        services.AddScoped<IPostMediaStorageService, CloudinaryPostMediaService>();
 
         // 8. Domain / Infrastructure Services Implementation
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IInterestService, InterestService>();
+        services.AddScoped<IPostService, PostService>();
+        services.AddScoped<IFeedService, FeedService>();
+        services.AddScoped<ILikeService, LikeService>();
+        services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IFollowService, FollowService>();
+        services.AddScoped<IInteractionService, InteractionService>();
+        services.AddHttpClient<IAiContentAnalyzer, GeminiService>();
+
+        // 9. Asynchronous AI Background Worker & Channel
+        services.AddSingleton<IPostAiChannel, PostAiChannel>();
+        services.AddHostedService<PostAiBackgroundWorker>();
 
         return services;
     }

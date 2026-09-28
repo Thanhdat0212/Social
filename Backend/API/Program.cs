@@ -1,8 +1,12 @@
 using API.ErrorHandling;
 using Application;
 using Infrastructure;
+using Infrastructure.Common;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi.Models;
+
+// Nạp các biến môi trường từ file .env (nếu có) trước khi cấu hình ứng dụng
+DotEnv.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 

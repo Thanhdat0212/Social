@@ -4,6 +4,9 @@ Backend/**/obj/
 Backend/.vs/
 **/*.user
 **/appsettings.Development.json
+**/.env
+**/.env.*
+!**/.env.example
 
 # Frontend (Vite/React)
 Frontend/node_modules/

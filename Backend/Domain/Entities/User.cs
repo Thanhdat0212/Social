@@ -17,4 +17,12 @@ public class User : BaseEntity
     // Navigation properties
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>(); // quan hệ 1 -N 
     public ICollection<VerificationToken> VerificationTokens { get; set; } = new List<VerificationToken>();
+    public ICollection<UserInterest> UserInterests { get; set; } = new List<UserInterest>();
+    public ICollection<UserPreference> UserPreferences { get; set; } = new List<UserPreference>();
+    public ICollection<Post> Posts { get; set; } = new List<Post>();
+    public ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
+    public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public ICollection<UserFollow> Following { get; set; } = new List<UserFollow>();
+    public ICollection<UserFollow> Followers { get; set; } = new List<UserFollow>();
+    public ICollection<UserInteraction> Interactions { get; set; } = new List<UserInteraction>();
 }

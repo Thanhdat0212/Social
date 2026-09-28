@@ -1,3 +1,4 @@
+using Infrastructure.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -8,6 +9,8 @@ public class SocialDbContextFactory : IDesignTimeDbContextFactory<SocialDbContex
 {
     public SocialDbContext CreateDbContext(string[] args)
     {
+        DotEnv.Load();
+
         // Try reading configuration from API directory or current directory
         var basePath = Path.Combine(Directory.GetCurrentDirectory(), "../API");
         if (!Directory.Exists(basePath))

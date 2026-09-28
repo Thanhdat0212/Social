@@ -1,18 +1,10 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Layout } from '@/components/Layout';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { HomePage } from '@/pages/HomePage';
-import { LoginPage } from '@/pages/LoginPage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
+import { BrowserRouter } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/api/authApi';
 import { profileApi } from '@/api/profileApi';
+import { AppRoutes } from '@/routes/AppRoutes';
+import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 
 export const App: React.FC = () => {
   const { setAuth, clearAuth, setInitializing } = useAuthStore();
@@ -49,31 +41,11 @@ export const App: React.FC = () => {
   }, [setAuth, clearAuth, setInitializing]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="login" element={<LoginPage />} />
-          <Route path="register" element={<RegisterPage />} />
-          <Route path="verify-email" element={<VerifyEmailPage />} />
-          <Route path="forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="reset-password" element={<ResetPasswordPage />} />
-
-          {/* Protected Routes */}
-          <Route
-            path="profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* 404 Route */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

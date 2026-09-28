@@ -13,6 +13,15 @@ public class SocialDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<VerificationToken> VerificationTokens => Set<VerificationToken>();
+    public DbSet<Interest> Interests => Set<Interest>();
+    public DbSet<UserInterest> UserInterests => Set<UserInterest>();
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+    public DbSet<Post> Posts => Set<Post>();
+    public DbSet<PostInterest> PostInterests => Set<PostInterest>();
+    public DbSet<PostLike> PostLikes => Set<PostLike>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<UserFollow> UserFollows => Set<UserFollow>();
+    public DbSet<UserInteraction> UserInteractions => Set<UserInteraction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

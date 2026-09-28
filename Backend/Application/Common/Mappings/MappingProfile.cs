@@ -24,5 +24,29 @@ public class MappingProfile : Profile
 
         // Profile Mappings
         CreateMap<User, ProfileDto>();
+
+        // Interest & Preference Mappings
+        CreateMap<Interest, Application.DTOs.Interests.InterestDto>()
+            .ForMember(dest => dest.IsSelected, opt => opt.Ignore());
+
+        CreateMap<UserPreference, Application.DTOs.Interests.UserPreferenceDto>()
+            .ForMember(dest => dest.InterestName, opt => opt.MapFrom(src => src.Interest.Name))
+            .ForMember(dest => dest.InterestSlug, opt => opt.MapFrom(src => src.Interest.Slug))
+            .ForMember(dest => dest.Icon, opt => opt.MapFrom(src => src.Interest.Icon));
+
+        // Post Mappings
+        CreateMap<User, Application.DTOs.Posts.PostAuthorDto>();
+
+        CreateMap<PostInterest, Application.DTOs.Posts.PostTopicDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Interest.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Interest.Name))
+            .ForMember(dest => dest.Slug, opt => opt.MapFrom(src => src.Interest.Slug))
+            .ForMember(dest => dest.Icon, opt => opt.MapFrom(src => src.Interest.Icon))
+            .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Confidence));
+
+        CreateMap<Post, Application.DTOs.Posts.PostDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author))
+            .ForMember(dest => dest.Topics, opt => opt.MapFrom(src => src.PostInterests));
     }
 }

@@ -1,0 +1,11 @@
+using Application.DTOs.Posts;
+
+namespace Application.Interfaces;
+
+public interface IPostService
+{
+    Task<PostDto> CreatePostAsync(CreatePostRequestDto request, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PostDto>> GetRecentPostsAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<PostDto> GetPostByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task DeletePostAsync(Guid id, CancellationToken cancellationToken = default);
+}
