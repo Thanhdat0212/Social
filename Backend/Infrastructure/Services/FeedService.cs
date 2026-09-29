@@ -13,9 +13,9 @@ namespace Infrastructure.Services;
 
 public class FeedService : IFeedService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IRecommendationService _recommendationService;
+    private readonly IUnitOfWork _unitOfWork; // Dùng để lấy danh sách bài viết từ database
+    private readonly ICurrentUserService _currentUserService;// dùng để biết người dùng hiện tại là ai
+    private readonly IRecommendationService _recommendationService; // Dùng để lấy danh sách bài viết từ RecommendationService
     private readonly IMapper _mapper;
     private readonly ILogger<FeedService> _logger;
 

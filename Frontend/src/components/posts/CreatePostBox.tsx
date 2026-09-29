@@ -79,7 +79,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
         }
       }
 
-      setUploadProgress('Đang xử lý nội dung & gửi vào hàng đợi AI...');
+      setUploadProgress('Đang xuất bản bài viết...');
       const newPost = await postApi.createPost({
         content: content.trim(),
         mediaUrls: uploadedMediaUrls,
