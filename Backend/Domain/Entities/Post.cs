@@ -21,4 +21,5 @@ public class Post : BaseEntity
     public ICollection<PostLike> Likes { get; set; } = new List<PostLike>();
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     public ICollection<UserInteraction> Interactions { get; set; } = new List<UserInteraction>();
+    public PostEmbedding? Embedding { get; set; }
 }

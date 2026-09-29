@@ -123,5 +123,41 @@ public class PostAiBackgroundWorker : BackgroundService
                 post.Id,
                 string.Join(", ", classificationResults.Select(r => $"{r.TopicName} ({r.Confidence:P0})")));
         }
+
+        // Tự động sinh Vector Embedding ngữ nghĩa cho bài viết
+        try
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<Persistence.SocialDbContext>();
+            var embeddingService = scope.ServiceProvider.GetService<Application.Interfaces.Recommendation.IEmbeddingService>();
+
+            if (embeddingService != null)
+            {
+                var hasEmbedding = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(
+                    dbContext.PostEmbeddings, pe => pe.PostId == post.Id, cancellationToken);
+
+                if (!hasEmbedding)
+                {
+                    var vector = await embeddingService.GenerateEmbeddingAsync(post.Content, cancellationToken);
+                    if (vector.Length > 0)
+                    {
+                        await dbContext.PostEmbeddings.AddAsync(new PostEmbedding
+                        {
+                            PostId = post.Id,
+                            Values = vector,
+                            Model = "text-embedding-004",
+                            CreatedAtUtc = DateTime.UtcNow,
+                            UpdatedAtUtc = DateTime.UtcNow
+                        }, cancellationToken);
+
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                        _logger.LogInformation("Đã tạo thành công Vector Embedding ({Dim} chiều) cho bài viết {PostId}.", vector.Length, post.Id);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể tạo vector embedding cho bài viết {PostId}.", post.Id);
+        }
     }
 }

@@ -11,6 +11,14 @@ using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
 using Infrastructure.Services;
 using Infrastructure.AI;
+using Application.Interfaces.Recommendation;
+using Infrastructure.Recommendation;
+using Infrastructure.Recommendation.Aggregator;
+using Infrastructure.Recommendation.CandidateGenerators;
+using Infrastructure.Recommendation.Diversity;
+using Infrastructure.Recommendation.Ranking;
+using Infrastructure.Recommendation.Collaborative;
+using Infrastructure.Recommendation.Semantic;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -121,10 +129,25 @@ public static class DependencyInjection
         services.AddScoped<IFollowService, FollowService>();
         services.AddScoped<IInteractionService, InteractionService>();
         services.AddHttpClient<IAiContentAnalyzer, GeminiService>();
+        services.AddHttpClient<IEmbeddingService, GeminiEmbeddingService>();
 
         // 9. Asynchronous AI Background Worker & Channel
         services.AddSingleton<IPostAiChannel, PostAiChannel>();
         services.AddHostedService<PostAiBackgroundWorker>();
+
+        // 10. Hybrid Recommendation Pipeline (Generators -> Aggregator -> Ranking -> Diversity)
+        services.AddScoped<ICollaborativeFilteringService, CollaborativeFilteringService>();
+        services.AddScoped<ISemanticVectorSearchService, SemanticVectorSearchService>();
+        services.AddScoped<ICandidateGenerator, InterestCandidateGenerator>();
+        services.AddScoped<ICandidateGenerator, FollowingCandidateGenerator>();
+        services.AddScoped<ICandidateGenerator, TrendingCandidateGenerator>();
+        services.AddScoped<ICandidateGenerator, ExplorationCandidateGenerator>();
+        services.AddScoped<ICandidateGenerator, CollaborativeCandidateGenerator>();
+        services.AddScoped<ICandidateGenerator, SemanticCandidateGenerator>();
+        services.AddScoped<ICandidateAggregator, CandidateAggregator>();
+        services.AddScoped<IRecommendationRankingService, RecommendationRankingService>();
+        services.AddScoped<IDiversityService, DiversityService>();
+        services.AddScoped<IRecommendationService, RecommendationService>();
 
         return services;
     }

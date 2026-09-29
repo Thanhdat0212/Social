@@ -98,9 +98,12 @@ public class InteractionService : IInteractionService
                 double weightMultiplier = item.InteractionType switch
                 {
                     InteractionType.View => 0.1,
+                    InteractionType.Like => 1.0,
+                    InteractionType.Comment => 1.5,
                     InteractionType.Share => 1.5,
                     InteractionType.Save => 2.0,
-                    InteractionType.Skip => -0.1,
+                    InteractionType.Follow => 2.0,
+                    InteractionType.Skip => -0.3,
                     InteractionType.NotInterested => -1.0,
                     _ => 0.05
                 };
