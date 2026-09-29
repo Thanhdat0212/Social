@@ -144,7 +144,7 @@ public class PostAiBackgroundWorker : BackgroundService
                         {
                             PostId = post.Id,
                             Values = vector,
-                            Model = "text-embedding-004",
+                            Model = "gemini-embedding-001",
                             CreatedAtUtc = DateTime.UtcNow,
                             UpdatedAtUtc = DateTime.UtcNow
                         }, cancellationToken);

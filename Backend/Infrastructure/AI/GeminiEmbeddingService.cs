@@ -49,7 +49,7 @@ public class GeminiEmbeddingService : IEmbeddingService
 
             var requestBody = new
             {
-                model = "models/text-embedding-004",
+                model = "models/gemini-embedding-001",
                 content = new
                 {
                     parts = new[]
@@ -59,7 +59,7 @@ public class GeminiEmbeddingService : IEmbeddingService
                 }
             };
 
-            var url = $"{_settings.ApiEndpoint.TrimEnd('/')}/text-embedding-004:embedContent?key={_settings.ApiKey}";
+            var url = $"{_settings.ApiEndpoint.TrimEnd('/')}/gemini-embedding-001:embedContent?key={_settings.ApiKey}";
 
             using var response = await _httpClient.PostAsJsonAsync(url, requestBody, JsonOptions, cancellationToken);
             if (!response.IsSuccessStatusCode)
