@@ -34,31 +34,39 @@ public class FollowingCandidateGenerator : ICandidateGenerator
 
         if (targetCount <= 0) targetCount = 100;
 
-        var followingUserIds = await _unitOfWork.UserFollows.GetFollowingUserIdsAsync(context.UserId.Value, cancellationToken);
-        if (followingUserIds.Count == 0)
+        try
         {
+            var followingUserIds = await _unitOfWork.UserFollows.GetFollowingUserIdsAsync(context.UserId.Value, cancellationToken);
+            if (followingUserIds.Count == 0)
+            {
+                return Array.Empty<CandidatePostDto>();
+            }
+
+            var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, targetCount, cancellationToken);
+
+            var result = new List<CandidatePostDto>(posts.Count);
+            foreach (var post in posts)
+            {
+                var primaryPi = post.PostInterests
+                    .OrderByDescending(pi => pi.Confidence)
+                    .FirstOrDefault();
+
+                result.Add(new CandidatePostDto
+                {
+                    Post = post,
+                    Source = Source,
+                    PrimaryInterestId = primaryPi?.InterestId,
+                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    SourceWeight = 1.1 // Ưu tiên nhẹ bài từ người theo dõi
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên Following.");
             return Array.Empty<CandidatePostDto>();
         }
-
-        var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, targetCount, cancellationToken);
-
-        var result = new List<CandidatePostDto>(posts.Count);
-        foreach (var post in posts)
-        {
-            var primaryPi = post.PostInterests
-                .OrderByDescending(pi => pi.Confidence)
-                .FirstOrDefault();
-
-            result.Add(new CandidatePostDto
-            {
-                Post = post,
-                Source = Source,
-                PrimaryInterestId = primaryPi?.InterestId,
-                PrimaryInterestName = primaryPi?.Interest?.Name,
-                SourceWeight = 1.1 // Ưu tiên nhẹ bài từ người theo dõi
-            });
-        }
-
-        return result;
     }
 }

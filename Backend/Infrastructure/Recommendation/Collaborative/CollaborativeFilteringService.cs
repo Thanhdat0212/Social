@@ -43,8 +43,13 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
         }
 
         // 2. Lấy danh sách sở thích của các người dùng khác có chung ít nhất 1 chủ đề
-        var otherPreferences = await _context.UserPreferences
+        var rawOtherPreferences = await _context.UserPreferences
             .Where(up => up.UserId != userId && myInterestIds.Contains(up.InterestId) && up.Score > 0)
+            .Select(up => new { up.UserId, up.InterestId, up.Score })
+            .Take(2000)
+            .ToListAsync(cancellationToken);
+
+        var otherPreferences = rawOtherPreferences
             .GroupBy(up => up.UserId)
             .Select(g => new
             {
@@ -52,7 +57,7 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
                 Preferences = g.Select(p => new { p.InterestId, p.Score }).ToList()
             })
             .Take(200)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         if (otherPreferences.Count == 0)
         {

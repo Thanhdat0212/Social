@@ -29,50 +29,58 @@ public class InterestCandidateGenerator : ICandidateGenerator
     {
         if (targetCount <= 0) targetCount = 300;
 
-        List<Guid> targetInterestIds = new();
-
-        if (context.UserId.HasValue)
+        try
         {
-            var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
-            if (preferences.Count > 0)
+            List<Guid> targetInterestIds = new();
+
+            if (context.UserId.HasValue)
             {
-                targetInterestIds = preferences
-                    .Where(p => p.Score > 0)
-                    .OrderByDescending(p => p.Score)
-                    .Take(10)
-                    .Select(p => p.InterestId)
-                    .ToList();
+                var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
+                if (preferences.Count > 0)
+                {
+                    targetInterestIds = preferences
+                        .Where(p => p.Score > 0)
+                        .OrderByDescending(p => p.Score)
+                        .Take(10)
+                        .Select(p => p.InterestId)
+                        .ToList();
+                }
+
+                // Fallback sang UserInterests nếu preferences chưa có hoặc ít
+                if (targetInterestIds.Count == 0)
+                {
+                    var staticInterests = await _unitOfWork.UserInterests.GetByUserIdAsync(context.UserId.Value, cancellationToken);
+                    targetInterestIds = staticInterests.Select(ui => ui.InterestId).ToList();
+                }
             }
 
-            // Fallback sang UserInterests nếu preferences chưa có hoặc ít
-            if (targetInterestIds.Count == 0)
+            var posts = targetInterestIds.Count > 0
+                ? await _unitOfWork.Posts.GetPostsByInterestIdsAsync(targetInterestIds, targetCount, cancellationToken)
+                : await _unitOfWork.Posts.GetCandidatePostsForFeedAsync(targetCount, cancellationToken);
+
+            var result = new List<CandidatePostDto>(posts.Count);
+            foreach (var post in posts)
             {
-                var staticInterests = await _unitOfWork.UserInterests.GetByUserIdAsync(context.UserId.Value, cancellationToken);
-                targetInterestIds = staticInterests.Select(ui => ui.InterestId).ToList();
+                var primaryPi = post.PostInterests
+                    .OrderByDescending(pi => pi.Confidence)
+                    .FirstOrDefault();
+
+                result.Add(new CandidatePostDto
+                {
+                    Post = post,
+                    Source = Source,
+                    PrimaryInterestId = primaryPi?.InterestId,
+                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    SourceWeight = 1.0
+                });
             }
+
+            return result;
         }
-
-        var posts = targetInterestIds.Count > 0
-            ? await _unitOfWork.Posts.GetPostsByInterestIdsAsync(targetInterestIds, targetCount, cancellationToken)
-            : await _unitOfWork.Posts.GetCandidatePostsForFeedAsync(targetCount, cancellationToken);
-
-        var result = new List<CandidatePostDto>(posts.Count);
-        foreach (var post in posts)
+        catch (Exception ex)
         {
-            var primaryPi = post.PostInterests
-                .OrderByDescending(pi => pi.Confidence)
-                .FirstOrDefault();
-
-            result.Add(new CandidatePostDto
-            {
-                Post = post,
-                Source = Source,
-                PrimaryInterestId = primaryPi?.InterestId,
-                PrimaryInterestName = primaryPi?.Interest?.Name,
-                SourceWeight = 1.0
-            });
+            _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên Interest.");
+            return Array.Empty<CandidatePostDto>();
         }
-
-        return result;
     }
 }

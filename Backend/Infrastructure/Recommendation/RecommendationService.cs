@@ -32,7 +32,7 @@ public class RecommendationService : IRecommendationService
         RecommendationContext context,
         CancellationToken cancellationToken = default)
     {
-        // 1. Kích hoạt song song các Candidate Generators
+        // 1. Kích hoạt tuần tự các Candidate Generators (tránh xung đột Concurrency trên Scoped DbContext của EF Core)
         var activeGenerators = _generators.OrderBy(g => g.Priority).ToList();
         if (activeGenerators.Count == 0)
         {
@@ -40,9 +40,11 @@ public class RecommendationService : IRecommendationService
             return Array.Empty<Post>();
         }
 
-        var generatorTasks = activeGenerators.Select(g =>
+        var allCandidates = new List<CandidatePostDto>();
+
+        foreach (var generator in activeGenerators)
         {
-            int quota = g.Source switch
+            int quota = generator.Source switch
             {
                 CandidateSource.Interest => 300,
                 CandidateSource.Following => 100,
@@ -53,11 +55,19 @@ public class RecommendationService : IRecommendationService
                 _ => 100
             };
 
-            return g.GenerateCandidatesAsync(context, quota, cancellationToken);
-        });
-
-        var candidateBatches = await Task.WhenAll(generatorTasks);
-        var allCandidates = candidateBatches.SelectMany(b => b).ToList();
+            try
+            {
+                var candidates = await generator.GenerateCandidatesAsync(context, quota, cancellationToken);
+                if (candidates.Count > 0)
+                {
+                    allCandidates.AddRange(candidates);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên từ generator {Source}.", generator.Source);
+            }
+        }
 
         if (allCandidates.Count == 0)
         {

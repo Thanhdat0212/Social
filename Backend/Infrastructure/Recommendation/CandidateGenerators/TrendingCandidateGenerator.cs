@@ -29,28 +29,36 @@ public class TrendingCandidateGenerator : ICandidateGenerator
     {
         if (targetCount <= 0) targetCount = 100;
 
-        var posts = await _unitOfWork.Posts.GetTrendingPostsAsync(
-            TimeSpan.FromHours(48),
-            targetCount,
-            cancellationToken);
-
-        var result = new List<CandidatePostDto>(posts.Count);
-        foreach (var post in posts)
+        try
         {
-            var primaryPi = post.PostInterests
-                .OrderByDescending(pi => pi.Confidence)
-                .FirstOrDefault();
+            var posts = await _unitOfWork.Posts.GetTrendingPostsAsync(
+                TimeSpan.FromHours(48),
+                targetCount,
+                cancellationToken);
 
-            result.Add(new CandidatePostDto
+            var result = new List<CandidatePostDto>(posts.Count);
+            foreach (var post in posts)
             {
-                Post = post,
-                Source = Source,
-                PrimaryInterestId = primaryPi?.InterestId,
-                PrimaryInterestName = primaryPi?.Interest?.Name,
-                SourceWeight = 1.0
-            });
-        }
+                var primaryPi = post.PostInterests
+                    .OrderByDescending(pi => pi.Confidence)
+                    .FirstOrDefault();
 
-        return result;
+                result.Add(new CandidatePostDto
+                {
+                    Post = post,
+                    Source = Source,
+                    PrimaryInterestId = primaryPi?.InterestId,
+                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    SourceWeight = 1.0
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên Trending.");
+            return Array.Empty<CandidatePostDto>();
+        }
     }
 }

@@ -29,35 +29,43 @@ public class ExplorationCandidateGenerator : ICandidateGenerator
     {
         if (targetCount <= 0) targetCount = 100;
 
-        List<Guid> knownInterestIds = new();
-        if (context.UserId.HasValue)
+        try
         {
-            var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
-            knownInterestIds = preferences.Select(p => p.InterestId).ToList();
-        }
-
-        var posts = await _unitOfWork.Posts.GetExplorationPostsAsync(
-            knownInterestIds,
-            targetCount,
-            cancellationToken);
-
-        var result = new List<CandidatePostDto>(posts.Count);
-        foreach (var post in posts)
-        {
-            var primaryPi = post.PostInterests
-                .OrderByDescending(pi => pi.Confidence)
-                .FirstOrDefault();
-
-            result.Add(new CandidatePostDto
+            List<Guid> knownInterestIds = new();
+            if (context.UserId.HasValue)
             {
-                Post = post,
-                Source = Source,
-                PrimaryInterestId = primaryPi?.InterestId,
-                PrimaryInterestName = primaryPi?.Interest?.Name,
-                SourceWeight = 0.95
-            });
-        }
+                var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
+                knownInterestIds = preferences.Select(p => p.InterestId).ToList();
+            }
 
-        return result;
+            var posts = await _unitOfWork.Posts.GetExplorationPostsAsync(
+                knownInterestIds,
+                targetCount,
+                cancellationToken);
+
+            var result = new List<CandidatePostDto>(posts.Count);
+            foreach (var post in posts)
+            {
+                var primaryPi = post.PostInterests
+                    .OrderByDescending(pi => pi.Confidence)
+                    .FirstOrDefault();
+
+                result.Add(new CandidatePostDto
+                {
+                    Post = post,
+                    Source = Source,
+                    PrimaryInterestId = primaryPi?.InterestId,
+                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    SourceWeight = 0.95
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên Exploration.");
+            return Array.Empty<CandidatePostDto>();
+        }
     }
 }

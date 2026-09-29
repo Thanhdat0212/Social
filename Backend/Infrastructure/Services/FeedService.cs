@@ -51,16 +51,30 @@ public class FeedService : IFeedService
 
         // Kích hoạt toàn bộ Pipeline gợi ý: Generators -> Aggregator -> Ranking -> Diversity
         var rankedPosts = await _recommendationService.GetForYouFeedPostsAsync(recommendationContext, cancellationToken);
+        List<Post> pagedPosts;
+
         if (rankedPosts.Count == 0)
+        {
+            // Dự phòng an toàn: nếu pipeline gợi ý không trả về bài nào, lấy các bài viết ứng viên mới nhất
+            var fallback = await _unitOfWork.Posts.GetCandidatePostsForFeedAsync(pageSize * 2, cancellationToken);
+            pagedPosts = fallback
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+        }
+        else
+        {
+            // Phân trang kết quả
+            pagedPosts = rankedPosts
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+        }
+
+        if (pagedPosts.Count == 0)
         {
             return Array.Empty<PostDto>();
         }
-
-        // Phân trang kết quả
-        var pagedPosts = rankedPosts
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
 
         var dtos = _mapper.Map<List<PostDto>>(pagedPosts);
 
