@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useNotificationStore, usePostModalStore } from '@/store';
 import { useSignalR } from '@/hooks/useSignalR';
 import type { UserNotificationEvent } from '@/types';
@@ -14,7 +13,6 @@ import {
 } from '@/components/common';
 
 export const NotificationBell: React.FC = () => {
-  const navigate = useNavigate();
   const { notifications, unreadCount, addNotification, markAllAsRead } = useNotificationStore();
   const { openPostModal } = usePostModalStore();
   const [isOpen, setIsOpen] = useState(false);

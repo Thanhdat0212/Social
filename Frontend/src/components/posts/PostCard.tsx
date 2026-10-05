@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import type { PostDto } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotificationStore, usePostModalStore } from '@/store';

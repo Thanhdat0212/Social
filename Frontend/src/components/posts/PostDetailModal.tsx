@@ -3,7 +3,7 @@ import { usePostModalStore } from '@/store';
 import { postApi } from '@/api/postApi';
 import type { PostDto } from '@/types';
 import { PostCard } from './PostCard';
-import { CloseIcon, Button, RefreshIcon } from '@/components/common';
+import { CloseIcon, Button } from '@/components/common';
 import { getApiErrorMessage } from '@/utils/error';
 
 export const PostDetailModal: React.FC = () => {
