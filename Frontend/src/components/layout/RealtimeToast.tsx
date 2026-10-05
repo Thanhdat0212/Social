@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNotificationStore } from '@/store';
+import { useNotificationStore, usePostModalStore } from '@/store';
 import {
   Avatar,
   HeartIcon,
@@ -12,6 +12,7 @@ import {
 
 export const RealtimeToast: React.FC = () => {
   const { activeToast, clearActiveToast } = useNotificationStore();
+  const { openPostModal } = usePostModalStore();
 
   useEffect(() => {
     if (!activeToast) return;
@@ -23,6 +24,13 @@ export const RealtimeToast: React.FC = () => {
   }, [activeToast, clearActiveToast]);
 
   if (!activeToast) return null;
+
+  const handleToastClick = () => {
+    if (activeToast.targetPostId) {
+      openPostModal(activeToast.targetPostId);
+    }
+    clearActiveToast();
+  };
 
   const renderBadge = () => {
     if (activeToast.triggeredByUserAvatar) {
@@ -51,7 +59,7 @@ export const RealtimeToast: React.FC = () => {
 
   return (
     <div className="realtime-toast-container" role="status" aria-live="polite">
-      <div className="realtime-toast-card" onClick={clearActiveToast}>
+      <div className="realtime-toast-card" onClick={handleToastClick}>
         <div className="toast-avatar-col">{renderBadge()}</div>
         <div className="toast-content">
           <span className="toast-title">Thông báo</span>

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PostDto } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { useNotificationStore } from '@/store';
+import { useNotificationStore, usePostModalStore } from '@/store';
 import { postApi } from '@/api/postApi';
 import { followApi } from '@/api/followApi';
 import { interactionApi } from '@/api/interactionApi';
@@ -35,6 +35,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 }) => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotificationStore();
+  const { openPostModal } = usePostModalStore();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -243,11 +244,16 @@ export const PostCard: React.FC<PostCardProps> = ({
                   </button>
                 )}
               </div>
-              <Link to={`/posts/${post.id}`} className="post-entry-time-link" title="Xem chi tiết bài viết">
+              <button
+                type="button"
+                className="post-entry-time-link"
+                onClick={() => openPostModal(post.id)}
+                title="Xem chi tiết bài viết"
+              >
                 <time className="post-entry-time" dateTime={post.createdAtUtc}>
                   {formatRelativeTime(post.createdAtUtc)}
                 </time>
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -265,14 +271,17 @@ export const PostCard: React.FC<PostCardProps> = ({
 
             {showMenu && (
               <div className="dropdown-menu-popover">
-                <Link
-                  to={`/posts/${post.id}`}
+                <button
+                  type="button"
                   className="dropdown-menu-item"
-                  onClick={() => setShowMenu(false)}
+                  onClick={() => {
+                    setShowMenu(false);
+                    openPostModal(post.id);
+                  }}
                 >
                   <ShareIcon size={16} />
                   <span>Xem chi tiết</span>
-                </Link>
+                </button>
                 <button type="button" className="dropdown-menu-item" onClick={handleCopyLink}>
                   <ShareIcon size={16} />
                   <span>Sao chép liên kết</span>

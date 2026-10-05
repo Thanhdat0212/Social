@@ -4,6 +4,7 @@ import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { RealtimeToast } from './RealtimeToast';
 import { MobileNav } from './MobileNav';
+import { PostDetailModal } from '@/components/posts/PostDetailModal';
 
 export const Layout: React.FC = () => {
   return (
@@ -15,6 +16,8 @@ export const Layout: React.FC = () => {
       <Footer />
       <MobileNav />
       <RealtimeToast />
+      <PostDetailModal />
     </div>
   );
 };
+

@@ -57,7 +57,13 @@ export const PostDetailPage: React.FC = () => {
         <button
           type="button"
           className="btn-back-link"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate(ROUTES.HOME);
+            }
+          }}
           aria-label="Quay lại"
         >
           <span className="arrow-left">←</span>

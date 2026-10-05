@@ -18,10 +18,9 @@ import {
 } from '@/components/common';
 import { getApiErrorMessage } from '@/utils/error';
 import { seenPostsService } from '@/utils/seenPosts';
+import { useFeedStore, type FeedTab } from '@/store';
 import { ROUTES } from '@/constants/routes';
 import { ENV } from '@/config';
-
-type FeedTab = 'for-you' | 'following' | 'recent';
 
 const PAGE_SIZE = 20;
 
@@ -29,11 +28,24 @@ export const HomePage: React.FC = () => {
   useTitle('Trang chủ — Bảng tin gợi ý AI');
   const { isAuthenticated, user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<FeedTab>('for-you');
-  const [posts, setPosts] = useState<PostDto[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const {
+    activeTab,
+    tabStates,
+    setActiveTab,
+    setTabPosts,
+    appendTabPosts,
+    prependTabPost,
+    removeTabPost,
+    updatePostInFeed,
+    setTabScrollY,
+  } = useFeedStore();
+
+  const currentTabState = tabStates[activeTab];
+  const posts = currentTabState.posts;
+  const page = currentTabState.page;
+  const hasMore = currentTabState.hasMore;
+
+  const [loading, setLoading] = useState(posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,46 +54,46 @@ export const HomePage: React.FC = () => {
   const [bottomPendingPosts, setBottomPendingPosts] = useState<PostDto[]>([]);
 
   // Tải danh sách bài viết trang đầu tiên
-  const fetchPosts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setPage(1);
-    setHasMore(true);
-    setPendingPosts([]);
-    setBottomPendingPosts([]);
-
-    try {
-      const seenIds = seenPostsService.getRecentSeenIds(60);
-      let data: PostDto[];
-      if (activeTab === 'following') {
-        data = await postApi.getFollowingFeed(1, PAGE_SIZE, seenIds);
-      } else if (activeTab === 'recent') {
-        data = await postApi.getRecentPosts(1, PAGE_SIZE);
-      } else {
-        data = await postApi.getForYouFeed(1, PAGE_SIZE, seenIds);
+  const fetchPosts = useCallback(
+    async (forceRefresh = false) => {
+      // Nếu tab này đã có bài và không phải lệnh refresh chủ động, giữ nguyên bài đang đọc
+      if (!forceRefresh && tabStates[activeTab].posts.length > 0) {
+        setLoading(false);
+        return;
       }
 
-      setPosts(data);
-      if (data.length < PAGE_SIZE) {
-        setHasMore(false);
+      setLoading(true);
+      setError(null);
+      setPendingPosts([]);
+      setBottomPendingPosts([]);
+
+      try {
+        const seenIds = seenPostsService.getRecentSeenIds(60);
+        let data: PostDto[];
+        if (activeTab === 'following') {
+          data = await postApi.getFollowingFeed(1, PAGE_SIZE, seenIds);
+        } else if (activeTab === 'recent') {
+          data = await postApi.getRecentPosts(1, PAGE_SIZE);
+        } else {
+          data = await postApi.getForYouFeed(1, PAGE_SIZE, seenIds);
+        }
+
+        setTabPosts(activeTab, data, 1, data.length >= PAGE_SIZE);
+      } catch (err) {
+        setError(getApiErrorMessage(err));
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(getApiErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [activeTab]);
+    },
+    [activeTab, tabStates, setTabPosts]
+  );
 
   // Nạp thêm đợt bài tiếp theo khi lướt xuống dưới (Infinite Scroll)
   const handleLoadMore = useCallback(async () => {
     if (loading || loadingMore) return;
 
     if (!hasMore && bottomPendingPosts.length > 0) {
-      setPosts((prev) => {
-        const existingIds = new Set(prev.map((p) => p.id));
-        const toAdd = bottomPendingPosts.filter((p) => !existingIds.has(p.id));
-        return [...prev, ...toAdd];
-      });
+      appendTabPosts(activeTab, bottomPendingPosts, page, false);
       setBottomPendingPosts([]);
       return;
     }
@@ -109,23 +121,13 @@ export const HomePage: React.FC = () => {
       const incoming = [...bottomPendingPosts, ...nextBatch];
       setBottomPendingPosts([]);
 
-      setPosts((prev) => {
-        const existingIds = new Set(prev.map((p) => p.id));
-        const deduplicated = incoming.filter((p) => !existingIds.has(p.id));
-        return [...prev, ...deduplicated];
-      });
-
-      setPage(nextPage);
-
-      if (nextBatch.length < PAGE_SIZE) {
-        setHasMore(false);
-      }
+      appendTabPosts(activeTab, incoming, nextPage, nextBatch.length >= PAGE_SIZE);
     } catch (err) {
       console.warn('Lỗi khi nạp thêm bài viết:', err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, hasMore, bottomPendingPosts, page, posts, activeTab]);
+  }, [loading, loadingMore, hasMore, bottomPendingPosts, page, posts, activeTab, appendTabPosts]);
 
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: handleLoadMore,
@@ -136,12 +138,40 @@ export const HomePage: React.FC = () => {
 
   const handleManualRefresh = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    fetchPosts();
+    setTabScrollY(activeTab, 0);
+    fetchPosts(true);
   };
 
+  const handleTabSelect = (tab: FeedTab) => {
+    if (tab === activeTab) {
+      handleManualRefresh();
+      return;
+    }
+    setTabScrollY(activeTab, window.scrollY);
+    setActiveTab(tab);
+  };
+
+  // Khôi phục vị trí cuộn khi mount hoặc đổi tab
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts, user?.id]);
+    if (tabStates[activeTab].posts.length > 0) {
+      setLoading(false);
+      const savedY = tabStates[activeTab].scrollY;
+      if (savedY > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: savedY, behavior: 'instant' });
+        });
+      }
+    } else {
+      fetchPosts();
+    }
+  }, [activeTab]);
+
+  // Lưu vị trí cuộn trước khi unmount trang
+  useEffect(() => {
+    return () => {
+      setTabScrollY(activeTab, window.scrollY);
+    };
+  }, [activeTab, setTabScrollY]);
 
   // Realtime SignalR Listeners
   useSignalR<PostDto>('ReceiveNewPost', (newPost) => {
@@ -164,26 +194,23 @@ export const HomePage: React.FC = () => {
 
   useSignalR<PostLikeEvent>('PostLiked', (event) => {
     if (!event?.postId) return;
-    const targetId = event.postId.toLowerCase();
-    setPosts((prev) =>
-      prev.map((p) => (p.id.toLowerCase() === targetId ? { ...p, likeCount: event.likeCount } : p))
-    );
+    updatePostInFeed(event.postId, (p) => ({ ...p, likeCount: event.likeCount }));
   });
 
   useSignalR<CommentAddedEvent>('CommentAdded', (event) => {
     if (!event?.postId) return;
-    const targetId = event.postId.toLowerCase();
-    setPosts((prev) =>
-      prev.map((p) => (p.id.toLowerCase() === targetId ? { ...p, commentCount: event.totalCommentCount } : p))
-    );
+    updatePostInFeed(event.postId, (p) => ({
+      ...p,
+      commentCount: event.totalCommentCount,
+    }));
   });
 
   const handlePostCreated = (newPost: PostDto) => {
-    setPosts((prev) => [newPost, ...prev]);
+    prependTabPost(newPost);
   };
 
   const handlePostDeleted = (postId: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    removeTabPost(postId);
     setPendingPosts((prev) => prev.filter((p) => p.id !== postId));
     setBottomPendingPosts((prev) => prev.filter((p) => p.id !== postId));
   };
@@ -195,11 +222,7 @@ export const HomePage: React.FC = () => {
 
   const handleApplyPendingPosts = () => {
     if (pendingPosts.length === 0) return;
-    setPosts((prev) => {
-      const existingIds = new Set(prev.map((p) => p.id));
-      const freshToAdd = pendingPosts.filter((p) => !existingIds.has(p.id));
-      return [...freshToAdd, ...prev];
-    });
+    pendingPosts.forEach((p) => prependTabPost(p));
     setPendingPosts([]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -252,7 +275,7 @@ export const HomePage: React.FC = () => {
                 role="tab"
                 aria-selected={activeTab === 'for-you'}
                 className={`feed-tab-item ${activeTab === 'for-you' ? 'active' : ''}`}
-                onClick={() => setActiveTab('for-you')}
+                onClick={() => handleTabSelect('for-you')}
                 id="feed-tab-for-you"
               >
                 <SparklesIcon size={16} />
@@ -265,7 +288,7 @@ export const HomePage: React.FC = () => {
                   role="tab"
                   aria-selected={activeTab === 'following'}
                   className={`feed-tab-item ${activeTab === 'following' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('following')}
+                  onClick={() => handleTabSelect('following')}
                   id="feed-tab-following"
                 >
                   <UsersIcon size={16} />
@@ -278,7 +301,7 @@ export const HomePage: React.FC = () => {
                 role="tab"
                 aria-selected={activeTab === 'recent'}
                 className={`feed-tab-item ${activeTab === 'recent' ? 'active' : ''}`}
-                onClick={() => setActiveTab('recent')}
+                onClick={() => handleTabSelect('recent')}
                 id="feed-tab-recent"
               >
                 <ClockIcon size={16} />

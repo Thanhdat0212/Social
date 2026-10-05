@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotificationStore } from '@/store';
+import { useNotificationStore, usePostModalStore } from '@/store';
 import { useSignalR } from '@/hooks/useSignalR';
 import type { UserNotificationEvent } from '@/types';
 import { formatRelativeTime } from '@/utils/date';
@@ -16,6 +16,7 @@ import {
 export const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
   const { notifications, unreadCount, addNotification, markAllAsRead } = useNotificationStore();
+  const { openPostModal } = usePostModalStore();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,16 +53,8 @@ export const NotificationBell: React.FC = () => {
   const handleItemClick = (targetPostId?: string) => {
     setIsOpen(false);
     if (targetPostId) {
-      const element = document.getElementById(`post-${targetPostId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('post-highlight-pulse');
-        setTimeout(() => {
-          element.classList.remove('post-highlight-pulse');
-        }, 2500);
-      } else {
-        navigate(`/posts/${targetPostId}`);
-      }
+      // Mở modal bài viết trực tiếp trên trang hiện tại để không reload trang và giữ nguyên bài đang đọc
+      openPostModal(targetPostId);
     }
   };
 
