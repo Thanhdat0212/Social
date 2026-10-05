@@ -13,15 +13,18 @@ public class FollowService : IFollowService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IRealtimeNotificationService _realtimeNotificationService;
     private readonly ILogger<FollowService> _logger;
 
     public FollowService(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
+        IRealtimeNotificationService realtimeNotificationService,
         ILogger<FollowService> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _realtimeNotificationService = realtimeNotificationService;
         _logger = logger;
     }
 
@@ -74,6 +77,24 @@ public class FollowService : IFollowService
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Gửi thông báo realtime cho người được theo dõi
+        if (isFollowing)
+        {
+            var currentUser = await _unitOfWork.Users.GetByIdAsync(currentUserId, cancellationToken);
+            var actorName = !string.IsNullOrWhiteSpace(currentUser?.DisplayName) ? currentUser.DisplayName : "Một người dùng";
+            var notification = new Application.DTOs.Realtime.UserNotificationEventDto
+            {
+                Type = "follow",
+                Message = $"{actorName} đã bắt đầu theo dõi bạn.",
+                TriggeredByUserId = currentUserId,
+                TriggeredByUserName = actorName,
+                TriggeredByUserAvatar = currentUser?.AvatarUrl,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            await _realtimeNotificationService.SendNotificationToUserAsync(targetUserId, notification, cancellationToken);
+        }
 
         var followersCount = await _unitOfWork.UserFollows.GetFollowersCountAsync(targetUserId, cancellationToken);
 

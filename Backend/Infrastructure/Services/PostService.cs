@@ -15,6 +15,7 @@ public class PostService : IPostService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
     private readonly IPostAiChannel _postAiChannel;
+    private readonly IRealtimeNotificationService _realtimeNotificationService;
     private readonly IMapper _mapper;
     private readonly ILogger<PostService> _logger;
 
@@ -22,12 +23,14 @@ public class PostService : IPostService
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
         IPostAiChannel postAiChannel,
+        IRealtimeNotificationService realtimeNotificationService,
         IMapper mapper,
         ILogger<PostService> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _postAiChannel = postAiChannel;
+        _realtimeNotificationService = realtimeNotificationService;
         _mapper = mapper;
         _logger = logger;
     }
@@ -75,6 +78,9 @@ public class PostService : IPostService
         postDto.Author = _mapper.Map<PostAuthorDto>(user);
         postDto.Topics = new List<PostTopicDto>();
         postDto.IsLikedByCurrentUser = false;
+
+        // Phát tín hiệu realtime bài viết mới tới toàn bộ clients & followers
+        await _realtimeNotificationService.PublishNewPostAsync(postDto, cancellationToken);
 
         return postDto;
     }
@@ -159,6 +165,10 @@ public class PostService : IPostService
 
         _unitOfWork.Posts.Delete(post);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Phát sự kiện realtime xóa bài viết tới toàn bộ clients
+        await _realtimeNotificationService.PublishPostDeletedAsync(id, cancellationToken);
+
         _logger.LogInformation("Người dùng {UserId} đã xóa bài viết {PostId}.", currentUserId, id);
     }
 

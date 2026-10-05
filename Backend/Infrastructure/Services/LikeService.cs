@@ -13,15 +13,18 @@ public class LikeService : ILikeService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IRealtimeNotificationService _realtimeNotificationService;
     private readonly ILogger<LikeService> _logger;
 
     public LikeService(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
+        IRealtimeNotificationService realtimeNotificationService,
         ILogger<LikeService> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _realtimeNotificationService = realtimeNotificationService;
         _logger = logger;
     }
 
@@ -93,6 +96,9 @@ public class LikeService : ILikeService
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Phát sự kiện realtime cập nhật Like cho bài viết và gửi thông báo cho tác giả
+        await _realtimeNotificationService.PublishPostLikedAsync(postId, post.LikeCount, currentUserId, isLiked, post.AuthorId, cancellationToken);
 
         _logger.LogInformation(
             "Người dùng {UserId} đã {Action} bài viết {PostId}. Tổng lượt like: {Count}",

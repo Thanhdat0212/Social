@@ -3,6 +3,7 @@ using Application;
 using Infrastructure;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
+using Infrastructure.Realtime;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -28,22 +29,27 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// 4. CORS configuration (tuỳ chọn - mặc định để trống khi dùng proxy cùng origin)
+// 4. CORS configuration & SignalR
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-if (allowedOrigins.Length > 0)
+builder.Services.AddCors(options =>
 {
-    builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
     {
-        options.AddDefaultPolicy(policy =>
+        if (allowedOrigins.Length > 0)
         {
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        });
+            policy.WithOrigins(allowedOrigins);
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(_ => true); // Cho phép kết nối dev / preview
+        }
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
-}
+});
 
+builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -138,20 +144,18 @@ if (app.Environment.IsDevelopment())
 // 4. HTTPS Redirection
 app.UseHttpsRedirection();
 
-// 5. CORS (khi có cấu hình AllowedOrigins)
-if (allowedOrigins.Length > 0)
-{
-    app.UseCors();
-}
+// 5. CORS
+app.UseCors();
 
-// 6. Authentication (Đọc JWT từ header)
+// 6. Authentication (Đọc JWT từ header hoặc query param cho WebSocket)
 app.UseAuthentication();
 
 // 7. Authorization (Kiểm tra [Authorize])
 app.UseAuthorization();
 
-// 8. Map Controllers
+// 8. Map Controllers & SignalR Hubs
 app.MapControllers();
+app.MapHub<SocialHub>("/hubs/social");
 
 // 9. Development Seed Endpoint
 app.MapPost("/api/admin/seed", async (SocialDbContext db, ILoggerFactory loggerFactory) =>

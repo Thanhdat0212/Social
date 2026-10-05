@@ -13,15 +13,18 @@ public class CommentService : ICommentService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IRealtimeNotificationService _realtimeNotificationService;
     private readonly ILogger<CommentService> _logger;
 
     public CommentService(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
+        IRealtimeNotificationService realtimeNotificationService,
         ILogger<CommentService> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _realtimeNotificationService = realtimeNotificationService;
         _logger = logger;
     }
 
@@ -94,7 +97,7 @@ public class CommentService : ICommentService
 
         _logger.LogInformation("Người dùng {UserId} đã bình luận vào bài viết {PostId}.", currentUserId, postId);
 
-        return new CommentDto
+        var commentDto = new CommentDto
         {
             Id = comment.Id,
             PostId = comment.PostId,
@@ -109,6 +112,11 @@ public class CommentService : ICommentService
             },
             Replies = new List<CommentDto>()
         };
+
+        // Phát sự kiện realtime tới room post_{postId} và gửi thông báo tới tác giả bài viết
+        await _realtimeNotificationService.PublishCommentAddedAsync(postId, post.CommentCount, commentDto, post.AuthorId, cancellationToken);
+
+        return commentDto;
     }
 
     public async Task<IReadOnlyList<CommentDto>> GetPostCommentsAsync(Guid postId, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default)

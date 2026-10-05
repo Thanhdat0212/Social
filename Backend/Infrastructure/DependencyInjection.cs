@@ -88,6 +88,21 @@ public static class DependencyInjection
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
+
+            // Cấu hình bắt token từ query param ?access_token= khi kết nối WebSocket (SignalR)
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    {
+                        context.Token = accessToken;
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         // 5. Settings (App, Email, Smtp, Brevo, Cloudinary, Google)
@@ -128,6 +143,7 @@ public static class DependencyInjection
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IFollowService, FollowService>();
         services.AddScoped<IInteractionService, InteractionService>();
+        services.AddScoped<IRealtimeNotificationService, RealtimeNotificationService>();
         services.AddHttpClient<IAiContentAnalyzer, GeminiService>();
         services.AddHttpClient<IEmbeddingService, GeminiEmbeddingService>();
 
