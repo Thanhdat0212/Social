@@ -5,6 +5,15 @@ import { profileApi } from '@/api/profileApi';
 import { followApi } from '@/api/followApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { LoadingScreen } from '@/components/feedback/LoadingScreen';
+import {
+  Avatar,
+  Button,
+  Alert,
+  CloseIcon,
+  ImageIcon,
+  UsersIcon,
+  UserIcon,
+} from '@/components/common';
 import type { ProfileDto, FollowStatsDto, UserFollowDto } from '@/types';
 
 type FollowModalType = 'followers' | 'following' | null;
@@ -42,7 +51,6 @@ export const ProfilePage: React.FC = () => {
           setDisplayName(profileData.displayName);
           setBio(profileData.bio || '');
 
-          // Fetch follow stats
           if (profileData.id) {
             const stats = await followApi.getFollowStats(profileData.id).catch(() => null);
             if (isMounted && stats) {
@@ -144,34 +152,24 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="container profile-page">
-      <div className="page-header">
-        <h1>Hồ sơ cá nhân</h1>
-        <p className="text-muted">Quản lý thông tin tài khoản, sở thích và mạng lưới quan hệ của bạn</p>
-      </div>
+    <div className="container profile-page-container">
+      {/* Profile Header Card with Cover */}
+      <section className="profile-hero-card">
+        <div className="profile-cover-banner" />
 
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
-
-      <div className="profile-layout">
-        {/* Cột ảnh đại diện & Thống kê Follow */}
-        <div className="profile-left-col">
-          <div className="card profile-avatar-card text-center">
-            <div className="avatar-wrapper">
-              {profile?.avatarUrl ? (
-                <img src={profile.avatarUrl} alt={profile.displayName} className="profile-avatar-img" />
-              ) : (
-                <div className="profile-avatar-placeholder">
-                  {profile?.displayName ? profile.displayName.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
-              {uploadingAvatar && (
-                <div className="avatar-loading-overlay">
-                  <div className="spinner"></div>
-                </div>
-              )}
-            </div>
-
+        <div className="profile-hero-content">
+          <div className="profile-avatar-stack">
+            <Avatar
+              src={profile?.avatarUrl}
+              name={profile?.displayName}
+              size="xl"
+              className="profile-hero-avatar"
+            />
+            {uploadingAvatar && (
+              <div className="avatar-loading-overlay">
+                <span className="spinner-inline" />
+              </div>
+            )}
             <input
               type="file"
               ref={fileInputRef}
@@ -179,137 +177,167 @@ export const ProfilePage: React.FC = () => {
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
             />
-
             <button
               type="button"
+              className="btn-change-avatar"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="btn btn-secondary btn-sm mt-4"
-              id="upload-avatar-btn"
+              title="Thay đổi ảnh đại diện"
+              aria-label="Thay đổi ảnh đại diện"
             >
-              {uploadingAvatar ? 'Đang tải ảnh...' : 'Thay đổi ảnh đại diện'}
+              <ImageIcon size={15} />
             </button>
-            <p className="text-xs text-muted mt-2">Định dạng JPG, PNG, WebP (Tối đa 5MB)</p>
+          </div>
 
-            {/* Follow Statistics Bar */}
-            <div className="profile-follow-stats">
+          <div className="profile-identity-col">
+            <div className="profile-names-row">
+              <h1 className="profile-fullname">{profile?.displayName || 'Thành viên'}</h1>
+              {profile?.emailConfirmed && (
+                <span className="badge-verified" title="Tài khoản đã xác minh email">
+                  ✓ Đã xác minh
+                </span>
+              )}
+            </div>
+            <p className="profile-email-meta">{profile?.email}</p>
+            {profile?.bio && <p className="profile-bio-text">{profile.bio}</p>}
+
+            {/* Follow Stats Chips */}
+            <div className="profile-stats-row">
               <button
                 type="button"
-                className="follow-stat-btn"
+                className="profile-stat-chip"
                 onClick={() => handleOpenFollowModal('followers')}
                 id="profile-followers-btn"
               >
-                <span className="stat-number">{followStats?.followersCount || 0}</span>
-                <span className="stat-label">Người theo dõi</span>
+                <UsersIcon size={16} />
+                <span className="stat-count">{followStats?.followersCount || 0}</span>
+                <span className="stat-name">Người theo dõi</span>
               </button>
-
-              <div className="stat-divider"></div>
 
               <button
                 type="button"
-                className="follow-stat-btn"
+                className="profile-stat-chip"
                 onClick={() => handleOpenFollowModal('following')}
                 id="profile-following-btn"
               >
-                <span className="stat-number">{followStats?.followingCount || 0}</span>
-                <span className="stat-label">Đang theo dõi</span>
+                <UserIcon size={16} />
+                <span className="stat-count">{followStats?.followingCount || 0}</span>
+                <span className="stat-name">Đang theo dõi</span>
               </button>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Cột form chỉnh sửa */}
-        <div className="card profile-details-card">
-          <h3>Thông tin tài khoản</h3>
+      {/* Profile Edit Section */}
+      <section className="profile-edit-section">
+        <div className="edit-card">
+          <div className="edit-card-header">
+            <h2>Chỉnh sửa thông tin</h2>
+            <p>Cập nhật tên hiển thị và tiểu sử cá nhân của bạn</p>
+          </div>
 
-          <form onSubmit={handleUpdateProfile} className="profile-form mt-4">
+          {message && <Alert type="success" message={message} className="mb-4" />}
+          {error && <Alert type="error" message={error} className="mb-4" />}
+
+          <form onSubmit={handleUpdateProfile} className="profile-form">
             <div className="form-group">
               <label>Địa chỉ Email (chỉ đọc)</label>
               <input
                 type="email"
                 value={profile?.email || ''}
                 disabled
-                className="form-input disabled"
+                className="form-control disabled-input"
               />
-              <span className="text-xs text-muted">
-                Trạng thái: {profile?.emailConfirmed ? '✅ Đã xác minh' : '⚠️ Chưa xác minh'}
-              </span>
             </div>
 
             <div className="form-group">
-              <label htmlFor="profile-displayName">Tên hiển thị</label>
+              <label htmlFor="profile-displayName">Tên hiển thị *</label>
               <input
                 id="profile-displayName"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
-                className="form-input"
+                className="form-control"
+                placeholder="Nhập tên hiển thị của bạn"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="profile-bio">Tiểu sử (Bio)</label>
+              <div className="form-label-row">
+                <label htmlFor="profile-bio">Tiểu sử (Bio)</label>
+                <span className="char-hint">{bio.length}/500</span>
+              </div>
               <textarea
                 id="profile-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                rows={4}
-                placeholder="Giới thiệu đôi nét về bản thân..."
-                className="form-input"
+                rows={3}
+                placeholder="Giới thiệu ngắn về chuyên môn, sở thích hoặc dự án..."
+                className="form-control"
+                maxLength={500}
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn btn-primary"
-              id="save-profile-btn"
-            >
-              {saving ? 'Đang lưu thay đổi...' : 'Lưu thông tin hồ sơ'}
-            </button>
+            <div className="profile-form-footer">
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                disabled={saving}
+                loading={saving}
+                id="save-profile-btn"
+              >
+                Lưu thông tin hồ sơ
+              </Button>
+            </div>
           </form>
         </div>
-      </div>
+      </section>
 
-      {/* Modal xem danh sách Followers / Following */}
+      {/* Modal danh sách Followers / Following */}
       {followModal && (
-        <div className="modal-overlay" onClick={() => setFollowModal(null)}>
+        <div className="modal-overlay" onClick={() => setFollowModal(null)} role="dialog">
           <div className="modal-content follow-list-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{followModal === 'followers' ? '👥 Người theo dõi' : '👤 Đang theo dõi'}</h2>
+              <h2>{followModal === 'followers' ? 'Người theo dõi' : 'Đang theo dõi'}</h2>
               <button
                 type="button"
                 className="btn-close-modal"
                 onClick={() => setFollowModal(null)}
+                aria-label="Đóng"
               >
-                ✕
+                <CloseIcon size={16} />
               </button>
             </div>
 
             <div className="modal-body">
               {followListLoading ? (
-                <div className="text-center py-4 text-muted">Đang tải danh sách...</div>
+                <div className="modal-loading-state">
+                  <span className="spinner-inline" />
+                  <span>Đang tải danh sách...</span>
+                </div>
               ) : followUsersList.length === 0 ? (
-                <div className="text-center py-4 text-muted">
-                  {followModal === 'followers'
-                    ? 'Chưa có ai theo dõi bạn.'
-                    : 'Bạn chưa theo dõi người dùng nào.'}
+                <div className="modal-empty-state">
+                  <p>
+                    {followModal === 'followers'
+                      ? 'Chưa có người dùng nào theo dõi bạn.'
+                      : 'Bạn chưa theo dõi người dùng nào.'}
+                  </p>
                 </div>
               ) : (
-                <div className="follow-users-list">
+                <div className="follow-users-stream">
                   {followUsersList.map((item) => (
-                    <div key={item.id} className="follow-user-row">
-                      <div className="avatar user-row-avatar">
-                        {item.avatarUrl ? (
-                          <img src={item.avatarUrl} alt={item.displayName} />
-                        ) : (
-                          <span>{item.displayName.charAt(0)}</span>
-                        )}
-                      </div>
-                      <div className="user-row-info">
-                        <div className="user-row-name">{item.displayName}</div>
-                        {item.bio && <div className="user-row-bio">{item.bio}</div>}
+                    <div key={item.id} className="follow-user-item">
+                      <Avatar
+                        src={item.avatarUrl}
+                        name={item.displayName}
+                        size="md"
+                      />
+                      <div className="follow-user-details">
+                        <span className="follow-user-name">{item.displayName}</span>
+                        {item.bio && <p className="follow-user-bio">{item.bio}</p>}
                       </div>
                     </div>
                   ))}

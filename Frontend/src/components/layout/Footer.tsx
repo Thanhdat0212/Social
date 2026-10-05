@@ -3,14 +3,11 @@ import { ENV } from '@/config';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="footer">
+    <footer className="app-footer">
       <div className="container footer-content">
-        <p>© 2026 {ENV.APP_NAME} — Phase 1 MVP (Auth &amp; Profile)</p>
-        <div className="footer-links">
-          <span className="api-status">
-            <span className="status-dot"></span> API: <code>{ENV.API_BASE_URL}</code>
-            {ENV.IS_DEV && <span> (Proxy: <code>{ENV.BACKEND_URL}</code>)</span>}
-          </span>
+        <div className="footer-brand-info">
+          <span className="footer-brand">{ENV.APP_NAME}</span>
+          <span className="footer-copyright">&copy; {new Date().getFullYear()} &bull; Nền tảng chia sẻ và kết nối cộng đồng</span>
         </div>
       </div>
     </footer>

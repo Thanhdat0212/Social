@@ -4,6 +4,7 @@ import { authApi } from '@/api/authApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { useTitle } from '@/hooks/useTitle';
 import { ROUTES } from '@/constants/routes';
+import { Button, Alert, LogoIcon, CheckIcon } from '@/components/common';
 
 export const ForgotPasswordPage: React.FC = () => {
   useTitle('Quên mật khẩu');
@@ -28,32 +29,39 @@ export const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="card auth-card">
-        <div className="auth-header">
-          <h2>Quên mật khẩu</h2>
-          <p>Nhập email để nhận liên kết đặt lại mật khẩu</p>
+    <div className="auth-view-container">
+      <div className="auth-box-card">
+        <div className="auth-box-header">
+          <div className="auth-logo-badge">
+            <LogoIcon size={32} />
+          </div>
+          <h1 className="auth-box-title">Quên mật khẩu</h1>
+          <p className="auth-box-subtitle">Nhập email để nhận liên kết đặt lại mật khẩu</p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error" message={error} className="mb-4" />}
 
         {submitted ? (
           <div className="text-center py-4">
-            <div className="auth-success-icon">📬</div>
-            <h3>Yêu cầu đã được gửi!</h3>
-            <p className="text-muted mt-2">
-              Nếu email <strong>{email}</strong> tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu có hiệu lực trong 1 giờ.
+            <div className="auth-success-badge mx-auto">
+              <CheckIcon size={28} />
+            </div>
+            <h2 className="auth-box-title mt-4">Yêu cầu đã được gửi!</h2>
+            <p className="auth-box-subtitle mt-2">
+              Nếu địa chỉ <strong>{email}</strong> tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu có hiệu lực trong 1 giờ.
             </p>
             <div className="mt-6">
-              <Link to={ROUTES.AUTH.LOGIN} className="btn btn-primary btn-block">
-                Quay lại đăng nhập
+              <Link to={ROUTES.AUTH.LOGIN}>
+                <Button variant="primary" size="md" block>
+                  Quay lại đăng nhập
+                </Button>
               </Link>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="auth-form">
+          <form onSubmit={handleSubmit} className="auth-box-form">
             <div className="form-group">
-              <label htmlFor="forgot-email">Email tài khoản</label>
+              <label htmlFor="forgot-email">Email tài khoản của bạn</label>
               <input
                 id="forgot-email"
                 type="email"
@@ -61,22 +69,26 @@ export const ForgotPasswordPage: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 required
-                className="form-input"
+                className="form-control"
+                autoComplete="email"
               />
             </div>
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="md"
+              block
+              loading={loading}
               disabled={loading}
-              className="btn btn-primary btn-block"
               id="forgot-submit-btn"
             >
-              {loading ? 'Đang gửi...' : 'Gửi liên kết đặt lại mật khẩu'}
-            </button>
+              Gửi liên kết đặt lại mật khẩu
+            </Button>
 
-            <div className="auth-footer">
-              Nhớ mật khẩu?{' '}
-              <Link to={ROUTES.AUTH.LOGIN} className="form-link">
+            <div className="auth-box-footer">
+              <span>Đã nhớ lại mật khẩu? </span>
+              <Link to={ROUTES.AUTH.LOGIN} className="link-accent">
                 Đăng nhập
               </Link>
             </div>

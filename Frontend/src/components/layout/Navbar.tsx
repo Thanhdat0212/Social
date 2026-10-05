@@ -2,15 +2,19 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
+import { NotificationBell } from './NotificationBell';
+import { Avatar, LogoIcon, HomeIcon, UserIcon, LogoutIcon } from '@/components/common';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
 
+  const isHomeActive = location.pathname === ROUTES.HOME;
+  const isProfileActive = location.pathname === ROUTES.PROFILE;
+
   const handleBrandOrHomeClick = (e: React.MouseEvent) => {
-    if (location.pathname === ROUTES.HOME) {
+    if (isHomeActive) {
       e.preventDefault();
-      // Cuộn lên đầu trang và reload lại trang để tải các bài đăng chưa xem
       window.scrollTo({ top: 0, behavior: 'smooth' });
       window.location.reload();
     }
@@ -19,48 +23,68 @@ export const Navbar: React.FC = () => {
   return (
     <header className="navbar">
       <div className="container nav-container">
+        {/* Brand Logo */}
         <Link
           to={ROUTES.HOME}
           className="nav-brand"
           onClick={handleBrandOrHomeClick}
-          title="Tải lại trang để cập nhật bài viết mới chưa xem"
+          title="Tải lại trang để cập nhật bài viết mới"
         >
-          <span className="brand-icon">⚡</span>
+          <LogoIcon size={26} className="brand-logo-icon" />
           <span className="brand-text">Social</span>
-          <span className="brand-badge">MVP</span>
         </Link>
 
+        {/* Desktop Navigation Links */}
         <nav className="nav-links">
           <Link
             to={ROUTES.HOME}
-            className="nav-link"
+            className={`nav-link ${isHomeActive ? 'active' : ''}`}
             onClick={handleBrandOrHomeClick}
-            title="Trang chủ"
           >
-            Trang chủ
+            <HomeIcon size={17} />
+            <span>Trang chủ</span>
           </Link>
+
           {isAuthenticated && (
-            <Link to={ROUTES.PROFILE} className="nav-link">
-              Hồ sơ
+            <Link
+              to={ROUTES.PROFILE}
+              className={`nav-link ${isProfileActive ? 'active' : ''}`}
+            >
+              <UserIcon size={17} />
+              <span>Hồ sơ</span>
             </Link>
           )}
         </nav>
 
+        {/* Right Actions */}
         <div className="nav-actions">
           {isAuthenticated ? (
             <div className="user-menu">
-              <Link to={ROUTES.PROFILE} className="user-profile-link">
-                {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.displayName} className="nav-avatar" />
-                ) : (
-                  <div className="nav-avatar-placeholder">
-                    {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                )}
+              <NotificationBell />
+
+              <Link
+                to={ROUTES.PROFILE}
+                className={`user-profile-link ${isProfileActive ? 'active' : ''}`}
+                title="Trang cá nhân của bạn"
+              >
+                <Avatar
+                  src={user?.avatarUrl}
+                  name={user?.displayName}
+                  size="sm"
+                />
                 <span className="nav-username">{user?.displayName || 'Người dùng'}</span>
               </Link>
-              <button onClick={logout} className="btn btn-secondary btn-sm" id="logout-btn">
-                Đăng xuất
+
+              <button
+                type="button"
+                onClick={logout}
+                className="btn-nav-logout"
+                id="logout-btn"
+                title="Đăng xuất"
+                aria-label="Đăng xuất"
+              >
+                <LogoutIcon size={17} />
+                <span className="logout-text">Đăng xuất</span>
               </button>
             </div>
           ) : (

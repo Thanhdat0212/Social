@@ -9,19 +9,28 @@ export const ENV = {
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api',
 
   /**
+   * Endpoint kết nối SignalR Hub (Trực tiếp backend trong production để tránh Vercel rewrite chặn WebSocket)
+   */
+  HUB_URL:
+    import.meta.env.VITE_HUB_URL ||
+    (import.meta.env.DEV
+      ? '/hubs/social'
+      : `${import.meta.env.VITE_BACKEND_URL || 'https://social-zs6q.onrender.com'}/hubs/social`),
+
+  /**
    * URL trực tiếp tới Backend ASP.NET Core (chủ yếu dùng cho Vite Proxy hoặc Fallback)
    */
-  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5126',
+  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:5126' : 'https://social-zs6q.onrender.com'),
 
   /**
    * Google OAuth 2.0 Client ID dùng cho Google Login
    */
-  GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID || '454826625597-7i6d9f6343e8r00c9o11q9s85184b12j.apps.googleusercontent.com',
 
   /**
    * Tên hiển thị của ứng dụng
    */
-  APP_NAME: import.meta.env.VITE_APP_NAME || 'Social Platform',
+  APP_NAME: import.meta.env.VITE_APP_NAME || 'Social Network',
 
   /**
    * Môi trường thực thi

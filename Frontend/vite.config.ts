@@ -23,6 +23,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/hubs': {
+          target: backendTarget,
+          changeOrigin: true,
+          ws: true,
+          secure: false,
+        },
       },
     },
   };

@@ -2,21 +2,27 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTitle } from '@/hooks/useTitle';
 import { ROUTES } from '@/constants/routes';
+import { Button, LogoIcon } from '@/components/common';
 
 export const NotFoundPage: React.FC = () => {
   useTitle('404 - Không tìm thấy trang');
 
   return (
-    <div className="auth-container">
-      <div className="card auth-card text-center py-12">
-        <h1 className="text-6xl font-extrabold text-accent">404</h1>
-        <h2 className="mt-2">Trang không tồn tại</h2>
-        <p className="text-muted mt-2">
-          Đường dẫn bạn yêu cầu không tồn tại hoặc đã được di chuyển.
+    <div className="auth-view-container">
+      <div className="auth-box-card text-center py-8">
+        <div className="auth-logo-badge mx-auto">
+          <LogoIcon size={32} />
+        </div>
+        <h1 className="notfound-code">404</h1>
+        <h2 className="auth-box-title">Trang không tồn tại</h2>
+        <p className="auth-box-subtitle mt-2">
+          Đường dẫn bạn yêu cầu không tồn tại hoặc đã được di chuyển sang địa chỉ mới.
         </p>
         <div className="mt-6">
-          <Link to={ROUTES.HOME} className="btn btn-primary" id="not-found-home-btn">
-            Về trang chủ
+          <Link to={ROUTES.HOME}>
+            <Button variant="primary" size="md" id="not-found-home-btn">
+              Trở về trang chủ
+            </Button>
           </Link>
         </div>
       </div>

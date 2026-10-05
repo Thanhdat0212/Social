@@ -6,3 +6,4 @@ export * from './post';
 export * from './comment';
 export * from './follow';
 export * from './interaction';
+export * from './realtime';

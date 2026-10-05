@@ -5,6 +5,7 @@ import { authApi } from '@/api/authApi';
 import { profileApi } from '@/api/profileApi';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
+import { signalrService } from '@/services/signalrService';
 
 export const App: React.FC = () => {
   const { setAuth, clearAuth, setInitializing } = useAuthStore();
@@ -39,6 +40,14 @@ export const App: React.FC = () => {
 
     restoreSession();
   }, [setAuth, clearAuth, setInitializing]);
+
+  const { isInitializing, accessToken } = useAuthStore();
+
+  useEffect(() => {
+    if (!isInitializing) {
+      signalrService.start();
+    }
+  }, [isInitializing, accessToken]);
 
   return (
     <ErrorBoundary>

@@ -5,6 +5,14 @@ import { interestApi } from '@/api/interestApi';
 import type { InterestDto } from '@/types/interest';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
+import {
+  Button,
+  Alert,
+  SearchIcon,
+  CheckIcon,
+  CloseIcon,
+  SparklesIcon,
+} from '@/components/common';
 
 export const OnboardingPage: React.FC = () => {
   useTitle('Khám phá sở thích của bạn');
@@ -37,7 +45,6 @@ export const OnboardingPage: React.FC = () => {
 
         setInterests(data);
 
-        // Nạp các sở thích đã chọn trước đó (nếu có)
         const initiallySelected = new Set(
           data.filter((item) => item.isSelected).map((item) => item.id)
         );
@@ -111,88 +118,98 @@ export const OnboardingPage: React.FC = () => {
   };
 
   return (
-    <div className="container onboarding-page">
-      <div className="onboarding-header">
-        <div className="badge onboarding-badge">✨ Cá nhân hóa trải nghiệm Feed</div>
-        <h1 className="onboarding-title">
-          Bạn quan tâm đến <span className="gradient-text">chủ đề nào?</span>
+    <div className="container onboarding-page-container">
+      <div className="onboarding-header-section">
+        <span className="onboarding-pill-tag">
+          <SparklesIcon size={14} />
+          <span>Cá nhân hóa Bảng tin</span>
+        </span>
+        <h1 className="onboarding-main-title">
+          Bạn quan tâm đến <span className="accent-text">chủ đề nào?</span>
         </h1>
-        <p className="onboarding-subtitle">
-          Chọn một hoặc nhiều chủ đề bạn yêu thích để hệ thống cá nhân hóa Bảng tin phù hợp nhất với bạn.
+        <p className="onboarding-subtext">
+          Chọn các chủ đề bạn yêu thích để hệ thống gợi ý bài viết phù hợp nhất cho trải nghiệm đọc của bạn.
         </p>
 
-        {/* Thanh trạng thái chọn & Thanh tìm kiếm */}
-        <div className="onboarding-controls">
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
+        {/* Thanh tìm kiếm & bộ lọc */}
+        <div className="onboarding-filter-bar">
+          <div className="search-field-wrapper">
+            <span className="search-field-icon">
+              <SearchIcon size={17} />
+            </span>
             <input
               type="text"
-              placeholder="Tìm kiếm chủ đề (ví dụ: Công nghệ, Lập trình, Game...)"
+              placeholder="Tìm kiếm chủ đề (ví dụ: Công nghệ, Lập trình, AI, Game...)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
+              className="search-field-input"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="search-clear-btn"
+                className="search-field-clear"
                 title="Xóa tìm kiếm"
+                aria-label="Xóa tìm kiếm"
               >
-                ✕
+                <CloseIcon size={14} />
               </button>
             )}
           </div>
 
-          <div className="selection-status-bar">
-            <div className={`selection-counter ${selectedIds.size >= MIN_REQUIRED ? 'counter-valid' : ''}`}>
-              Đã chọn: <strong>{selectedIds.size}</strong> chủ đề
-            </div>
+          <div className="onboarding-actions-row">
+            <span className={`selection-status-badge ${selectedIds.size >= MIN_REQUIRED ? 'is-valid' : ''}`}>
+              Đã chọn <strong>{selectedIds.size}</strong> chủ đề
+            </span>
 
-            <div className="selection-actions">
+            <div className="selection-quick-tools">
               {filteredInterests.length > 0 && searchQuery && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
                   onClick={handleSelectAllFiltered}
-                  className="btn btn-ghost btn-sm"
                 >
                   Chọn tất cả kết quả
-                </button>
+                </Button>
               )}
               {selectedIds.size > 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
                   onClick={handleClearSelection}
-                  className="btn btn-ghost btn-sm text-dim"
+                  className="text-dim"
                 >
                   Bỏ chọn tất cả
-                </button>
+                </Button>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {error && <div className="alert alert-error mt-3">{error}</div>}
-      {successMsg && <div className="alert alert-success mt-3">{successMsg}</div>}
+      {error && <Alert type="error" message={error} className="mb-4" />}
+      {successMsg && <Alert type="success" message={successMsg} className="mb-4" />}
 
-      {/* Grid danh sách các sở thích */}
+      {/* Grid danh sách sở thích */}
       {loading ? (
-        <div className="onboarding-loading">
-          <div className="spinner"></div>
+        <div className="onboarding-loading-state">
+          <span className="spinner-inline" />
           <p>Đang tải danh sách chủ đề...</p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="interests-grid">
+        <form onSubmit={handleSubmit} className="onboarding-form-wrap">
+          <div className="interests-grid-stream">
             {filteredInterests.map((interest) => {
               const isSelected = selectedIds.has(interest.id);
               return (
                 <div
                   key={interest.id}
                   onClick={() => toggleInterest(interest.id)}
-                  className={`interest-card ${isSelected ? 'interest-card-selected' : ''}`}
-                  role="button"
+                  className={`interest-tile ${isSelected ? 'is-selected' : ''}`}
+                  role="checkbox"
+                  aria-checked={isSelected}
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === ' ' || e.key === 'Enter') {
@@ -201,15 +218,15 @@ export const OnboardingPage: React.FC = () => {
                     }
                   }}
                 >
-                  <div className="interest-card-header">
-                    <span className="interest-icon">{interest.icon || '🏷️'}</span>
-                    <div className={`checkbox-indicator ${isSelected ? 'checked' : ''}`}>
-                      {isSelected ? '✓' : ''}
+                  <div className="tile-top-row">
+                    <span className="tile-icon">{interest.icon || '🏷️'}</span>
+                    <div className={`tile-check ${isSelected ? 'checked' : ''}`}>
+                      {isSelected && <CheckIcon size={12} />}
                     </div>
                   </div>
-                  <h3 className="interest-name">{interest.name}</h3>
+                  <h3 className="tile-title">{interest.name}</h3>
                   {interest.description && (
-                    <p className="interest-description">{interest.description}</p>
+                    <p className="tile-description">{interest.description}</p>
                   )}
                 </div>
               );
@@ -217,35 +234,41 @@ export const OnboardingPage: React.FC = () => {
           </div>
 
           {filteredInterests.length === 0 && (
-            <div className="no-interests-found">
+            <div className="onboarding-empty-search">
               <p>Không tìm thấy chủ đề nào khớp với từ khóa "{searchQuery}".</p>
             </div>
           )}
 
-          {/* Sticky Bottom Bar */}
-          <div className="onboarding-bottom-bar">
-            <div className="bottom-bar-content">
-              <div className="bottom-bar-info">
+          {/* Sticky Bottom Action Bar */}
+          <div className="onboarding-bottom-dock">
+            <div className="dock-content-wrapper">
+              <div className="dock-info">
                 {selectedIds.size === 0 ? (
-                  <span className="text-warning">
-                    ⚠️ Vui lòng chọn ít nhất 1 chủ đề bạn quan tâm
+                  <span className="dock-hint-warning">
+                    Vui lòng chọn ít nhất 1 chủ đề bạn quan tâm
                   </span>
                 ) : (
-                  <span className="text-success">
-                    🎉 Tuyệt vời! Bạn đã chọn {selectedIds.size} chủ đề
+                  <span className="dock-hint-success">
+                    ✓ Đã chọn {selectedIds.size} chủ đề
                   </span>
                 )}
               </div>
 
-              <div className="bottom-bar-buttons">
-                <button
+              <div className="dock-actions">
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
                   disabled={selectedIds.size < MIN_REQUIRED || saving}
-                  className="btn btn-primary btn-lg"
+                  loading={saving}
                   id="submit-interests-btn"
                 >
-                  {saving ? 'Đang lưu cài đặt...' : 'Tiếp tục vào Bảng tin →'}
-                </button>
+                  {saving
+                    ? 'Đang lưu...'
+                    : selectedIds.size >= MIN_REQUIRED
+                    ? `Tiếp tục vào Bảng tin (${selectedIds.size}) →`
+                    : 'Tiếp tục vào Bảng tin →'}
+                </Button>
               </div>
             </div>
           </div>

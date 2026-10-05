@@ -7,6 +7,7 @@ import { authApi } from '@/api/authApi';
 import { interestApi } from '@/api/interestApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
+import { Button, Alert, LogoIcon } from '@/components/common';
 
 export const LoginPage: React.FC = () => {
   useTitle('Đăng nhập');
@@ -59,18 +60,21 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="card auth-card">
-        <div className="auth-header">
-          <h2>Đăng nhập</h2>
-          <p>Chào mừng bạn trở lại với mạng xã hội Social</p>
+    <div className="auth-view-container">
+      <div className="auth-box-card">
+        <div className="auth-box-header">
+          <div className="auth-logo-badge">
+            <LogoIcon size={32} />
+          </div>
+          <h1 className="auth-box-title">Đăng nhập tài khoản</h1>
+          <p className="auth-box-subtitle">Chào mừng bạn trở lại với Social</p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error" message={error} className="mb-4" />}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-box-form">
           <div className="form-group">
-            <label htmlFor="login-email">Email</label>
+            <label htmlFor="login-email">Địa chỉ Email</label>
             <input
               id="login-email"
               type="email"
@@ -78,14 +82,15 @@ export const LoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="email"
             />
           </div>
 
           <div className="form-group">
             <div className="form-label-row">
               <label htmlFor="login-password">Mật khẩu</label>
-              <Link to={ROUTES.AUTH.FORGOT_PASSWORD} className="form-link">
+              <Link to={ROUTES.AUTH.FORGOT_PASSWORD} className="link-subtle">
                 Quên mật khẩu?
               </Link>
             </div>
@@ -96,25 +101,29 @@ export const LoginPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="current-password"
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="md"
+            block
+            loading={loading}
             disabled={loading}
-            className="btn btn-primary btn-block"
             id="login-submit-btn"
           >
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
+            Đăng nhập
+          </Button>
         </form>
 
-        <div className="auth-divider">
-          <span>hoặc đăng nhập bằng</span>
+        <div className="auth-separator">
+          <span>hoặc tiếp tục với</span>
         </div>
 
-        <div className="google-auth-btn-wrapper">
+        <div className="google-auth-wrapper">
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
               if (credentialResponse.credential) {
@@ -142,9 +151,12 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {needsConfirmation && (
-          <div className="alert alert-warning mt-4">
-            <p>Tài khoản chưa xác minh email?</p>
-            <button
+          <div className="resend-confirmation-box">
+            <p>Tài khoản chưa được kích hoạt?</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={async () => {
                 try {
                   await authApi.resendConfirmation({ email });
@@ -153,17 +165,16 @@ export const LoginPage: React.FC = () => {
                   alert(getApiErrorMessage(resendErr));
                 }
               }}
-              className="btn btn-secondary btn-sm mt-2"
               id="resend-conf-btn"
             >
               Gửi lại email xác minh
-            </button>
+            </Button>
           </div>
         )}
 
-        <div className="auth-footer">
-          Chưa có tài khoản?{' '}
-          <Link to={ROUTES.AUTH.REGISTER} className="form-link" id="to-register-link">
+        <div className="auth-box-footer">
+          <span>Chưa có tài khoản? </span>
+          <Link to={ROUTES.AUTH.REGISTER} className="link-accent">
             Đăng ký ngay
           </Link>
         </div>

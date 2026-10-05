@@ -1,10 +1,15 @@
 import React from 'react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'accent';
-  size?: 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'accent' | 'danger' | 'outline';
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   loading?: boolean;
   block?: boolean;
+  icon?: React.ReactNode;
+  iconRight?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -13,6 +18,8 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   loading = false,
   block = false,
+  icon,
+  iconRight,
   disabled,
   className = '',
   ...props
@@ -22,6 +29,7 @@ export const Button: React.FC<ButtonProps> = ({
     `btn-${variant}`,
     size !== 'md' ? `btn-${size}` : '',
     block ? 'btn-block' : '',
+    loading ? 'btn-loading' : '',
     className,
   ]
     .filter(Boolean)
@@ -30,12 +38,16 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <button disabled={disabled || loading} className={classes} {...props}>
       {loading ? (
-        <span className="flex-center gap-2">
-          <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-          <span>{children}</span>
+        <span className="btn-spinner-wrap">
+          <span className="spinner-inline" />
+          {children && <span>{children}</span>}
         </span>
       ) : (
-        children
+        <>
+          {icon && <span className="btn-icon-left">{icon}</span>}
+          {children && <span className="btn-text">{children}</span>}
+          {iconRight && <span className="btn-icon-right">{iconRight}</span>}
+        </>
       )}
     </button>
   );

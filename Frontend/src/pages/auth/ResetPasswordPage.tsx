@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTitle } from '@/hooks/useTitle';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
+import { Button, Alert, LogoIcon } from '@/components/common';
 
 export const ResetPasswordPage: React.FC = () => {
   useTitle('Đặt lại mật khẩu');
@@ -49,18 +50,21 @@ export const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="card auth-card">
-        <div className="auth-header">
-          <h2>Đặt lại mật khẩu</h2>
-          <p>Tạo mật khẩu mới an toàn cho tài khoản của bạn</p>
+    <div className="auth-view-container">
+      <div className="auth-box-card">
+        <div className="auth-box-header">
+          <div className="auth-logo-badge">
+            <LogoIcon size={32} />
+          </div>
+          <h1 className="auth-box-title">Đặt lại mật khẩu</h1>
+          <p className="auth-box-subtitle">Tạo mật khẩu mới an toàn cho tài khoản của bạn</p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error" message={error} className="mb-4" />}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-box-form">
           <div className="form-group">
-            <label htmlFor="reset-new-password">Mật khẩu mới (tối thiểu 8 ký tự, gồm chữ hoa, thường và số)</label>
+            <label htmlFor="reset-new-password">Mật khẩu mới (tối thiểu 8 ký tự)</label>
             <input
               id="reset-new-password"
               type="password"
@@ -68,7 +72,8 @@ export const ResetPasswordPage: React.FC = () => {
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="new-password"
             />
           </div>
 
@@ -81,23 +86,27 @@ export const ResetPasswordPage: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="new-password"
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="md"
+            block
+            loading={loading}
             disabled={loading}
-            className="btn btn-primary btn-block"
             id="reset-submit-btn"
           >
-            {loading ? 'Đang lưu mật khẩu...' : 'Xác nhận đổi mật khẩu'}
-          </button>
+            Lưu mật khẩu mới
+          </Button>
         </form>
 
-        <div className="auth-footer">
-          <Link to={ROUTES.AUTH.LOGIN} className="form-link">
-            Quay lại đăng nhập
+        <div className="auth-box-footer">
+          <Link to={ROUTES.AUTH.LOGIN} className="link-subtle">
+            &larr; Quay lại đăng nhập
           </Link>
         </div>
       </div>

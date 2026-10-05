@@ -3,6 +3,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { postApi } from '@/api/postApi';
 import type { PostDto } from '@/types/post';
 import { getApiErrorMessage } from '@/utils/error';
+import {
+  Avatar,
+  Button,
+  Alert,
+  ImageIcon,
+  CloseIcon,
+  SendIcon,
+} from '@/components/common';
 
 interface CreatePostBoxProps {
   onPostCreated: (post: PostDto) => void;
@@ -44,7 +52,6 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
     setPreviewUrls((prev) => [...prev, ...validPreviews]);
     setError(null);
 
-    // Reset input để có thể chọn lại cùng 1 file
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -70,7 +77,6 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
     try {
       const uploadedMediaUrls: string[] = [];
 
-      // Tải hình ảnh lên Cloudinary
       if (selectedFiles.length > 0) {
         for (let i = 0; i < selectedFiles.length; i++) {
           setUploadProgress(`Đang tải ảnh ${i + 1}/${selectedFiles.length}...`);
@@ -85,7 +91,6 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
         mediaUrls: uploadedMediaUrls,
       });
 
-      // Dọn dẹp trạng thái
       setContent('');
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
       setSelectedFiles([]);
@@ -102,100 +107,102 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
   };
 
   return (
-    <div className="card create-post-card">
-      <div className="create-post-header">
-        <div className="avatar user-avatar">
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.displayName} />
-          ) : (
-            <span className="avatar-fallback">{user?.displayName?.charAt(0) || 'U'}</span>
-          )}
-        </div>
-        <div className="user-info">
-          <span className="user-name">{user?.displayName || 'Thành viên'}</span>
-          <span className="post-privacy-badge">🌐 Công khai</span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="create-post-form">
-        <textarea
-          className="create-post-textarea"
-          rows={3}
-          placeholder="Bạn đang nghĩ gì hôm nay? Chia sẻ ý tưởng, công nghệ hoặc dự án..."
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            if (error) setError(null);
-          }}
-          disabled={isSubmitting}
-          maxLength={5000}
+    <div className="composer-card">
+      <div className="composer-main">
+        <Avatar
+          src={user?.avatarUrl}
+          name={user?.displayName}
+          size="md"
+          className="composer-avatar"
         />
 
-        {/* Xem trước ảnh đính kèm */}
-        {previewUrls.length > 0 && (
-          <div className="media-preview-grid">
-            {previewUrls.map((url, index) => (
-              <div key={index} className="preview-item">
-                <img src={url} alt={`preview-${index}`} />
-                <button
-                  type="button"
-                  className="btn-remove-image"
-                  onClick={() => handleRemoveImage(index)}
-                  title="Xóa ảnh"
-                  disabled={isSubmitting}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="composer-form">
+          <textarea
+            className="composer-textarea"
+            rows={3}
+            placeholder="Bạn đang nghĩ gì hôm nay? Chia sẻ ý tưởng, góc nhìn hoặc kiến thức..."
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              if (error) setError(null);
+            }}
+            disabled={isSubmitting}
+            maxLength={5000}
+          />
 
-        {/* Thông báo tiến trình hoặc lỗi */}
-        {uploadProgress && (
-          <div className="post-progress-status">
-            <span className="spinner-sm"></span>
-            <span>{uploadProgress}</span>
-          </div>
-        )}
+          {/* Xem trước ảnh đính kèm */}
+          {previewUrls.length > 0 && (
+            <div className="composer-previews-grid count-${Math.min(previewUrls.length, 5)}">
+              {previewUrls.map((url, index) => (
+                <div key={index} className="composer-preview-item">
+                  <img src={url} alt={`preview-${index}`} />
+                  <button
+                    type="button"
+                    className="btn-remove-preview"
+                    onClick={() => handleRemoveImage(index)}
+                    title="Xóa ảnh này"
+                    disabled={isSubmitting}
+                    aria-label="Xóa ảnh"
+                  >
+                    <CloseIcon size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {error && <div className="alert alert-error create-post-error">{error}</div>}
+          {/* Trạng thái tải lên hoặc lỗi */}
+          {uploadProgress && (
+            <div className="composer-progress">
+              <span className="spinner-inline" />
+              <span>{uploadProgress}</span>
+            </div>
+          )}
 
-        <div className="create-post-footer">
-          <div className="create-post-actions">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              style={{ display: 'none' }}
-              disabled={isSubmitting}
-            />
-            <button
-              type="button"
-              className="btn btn-outline btn-sm action-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSubmitting}
-              id="attach-image-btn"
-            >
-              🖼️ Đính kèm ảnh {selectedFiles.length > 0 && `(${selectedFiles.length}/5)`}
-            </button>
-          </div>
+          {error && <Alert type="error" message={error} className="composer-alert" />}
 
-          <div className="create-post-submit">
-            <span className="char-count">{content.length}/5000</span>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm submit-post-btn"
-              disabled={isSubmitting || (!content.trim() && selectedFiles.length === 0)}
-              id="submit-post-btn"
-            >
-              {isSubmitting ? 'Đang đăng...' : 'Đăng bài 🚀'}
-            </button>
+          {/* Footer toolbar */}
+          <div className="composer-footer">
+            <div className="composer-tools">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                style={{ display: 'none' }}
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="composer-tool-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting}
+                id="attach-image-btn"
+                title="Đính kèm tối đa 5 hình ảnh"
+              >
+                <ImageIcon size={18} />
+                <span>Ảnh {selectedFiles.length > 0 && `(${selectedFiles.length}/5)`}</span>
+              </button>
+            </div>
+
+            <div className="composer-submit-group">
+              <span className="composer-counter">{content.length}/5000</span>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={isSubmitting || (!content.trim() && selectedFiles.length === 0)}
+                loading={isSubmitting}
+                iconRight={<SendIcon size={14} />}
+                id="submit-post-btn"
+              >
+                Đăng bài
+              </Button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

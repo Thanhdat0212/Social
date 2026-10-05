@@ -1,30 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
-import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 import { useTitle } from '@/hooks/useTitle';
 import { authApi } from '@/api/authApi';
-import { interestApi } from '@/api/interestApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
+import { Button, Alert, LogoIcon, CheckIcon } from '@/components/common';
 
 export const RegisterPage: React.FC = () => {
   useTitle('Đăng ký tài khoản');
-  const { setAuth } = useAuth();
-  const navigate = useNavigate();
-
-  const handlePostLoginRedirect = async () => {
-    try {
-      const status = await interestApi.getOnboardingStatus();
-      if (!status.isOnboarded) {
-        navigate(ROUTES.ONBOARDING);
-        return;
-      }
-    } catch {
-      // Fallback
-    }
-    navigate(ROUTES.HOME);
-  };
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +16,6 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Cooldown timer cho nút gửi lại email
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
@@ -57,7 +39,7 @@ export const RegisterPage: React.FC = () => {
     try {
       await authApi.register({ displayName, email, password, confirmPassword });
       setIsSuccess(true);
-      setCooldown(60); // Bắt đầu đếm ngược 60s
+      setCooldown(60);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -78,33 +60,39 @@ export const RegisterPage: React.FC = () => {
 
   if (isSuccess) {
     return (
-      <div className="auth-container">
-        <div className="card auth-card text-center">
-          <div className="auth-success-icon">✉️</div>
-          <h2>Đăng ký thành công!</h2>
-          <p className="mt-2 text-muted">
-            Chúng tôi đã gửi liên kết xác minh đến địa chỉ email:
+      <div className="auth-view-container">
+        <div className="auth-box-card text-center">
+          <div className="auth-success-badge">
+            <CheckIcon size={28} />
+          </div>
+          <h1 className="auth-box-title">Đăng ký thành công!</h1>
+          <p className="auth-box-subtitle mt-2">
+            Chúng tôi đã gửi liên kết xác minh kích hoạt đến địa chỉ email:
           </p>
-          <p className="font-bold text-accent">{email}</p>
+          <p className="font-bold text-accent mt-1">{email}</p>
           <p className="text-sm mt-3 text-muted">
             Vui lòng kiểm tra hộp thư đến (hoặc hòm thư rác/spam) và nhấp vào liên kết để kích hoạt tài khoản.
           </p>
 
-          <div className="resend-box mt-4">
-            <p className="text-sm">Chưa nhận được email?</p>
-            <button
+          <div className="resend-confirmation-box mt-4">
+            <p>Chưa nhận được email xác nhận?</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={handleResend}
               disabled={cooldown > 0}
-              className="btn btn-secondary btn-sm mt-2"
               id="resend-confirmation-btn"
             >
               {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : 'Gửi lại email xác minh'}
-            </button>
+            </Button>
           </div>
 
-          <div className="mt-4">
-            <Link to={ROUTES.AUTH.LOGIN} className="btn btn-primary btn-block">
-              Quay lại đăng nhập
+          <div className="mt-6">
+            <Link to={ROUTES.AUTH.LOGIN}>
+              <Button variant="primary" size="md" block>
+                Quay lại đăng nhập
+              </Button>
             </Link>
           </div>
         </div>
@@ -113,16 +101,19 @@ export const RegisterPage: React.FC = () => {
   }
 
   return (
-    <div className="auth-container">
-      <div className="card auth-card">
-        <div className="auth-header">
-          <h2>Tạo tài khoản</h2>
-          <p>Tham gia cộng đồng Social ngay hôm nay</p>
+    <div className="auth-view-container">
+      <div className="auth-box-card">
+        <div className="auth-box-header">
+          <div className="auth-logo-badge">
+            <LogoIcon size={32} />
+          </div>
+          <h1 className="auth-box-title">Tạo tài khoản mới</h1>
+          <p className="auth-box-subtitle">Tham gia cộng đồng Social ngay hôm nay</p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error" message={error} className="mb-4" />}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-box-form">
           <div className="form-group">
             <label htmlFor="reg-name">Tên hiển thị</label>
             <input
@@ -130,14 +121,15 @@ export const RegisterPage: React.FC = () => {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Nguyễn Văn A"
+              placeholder="Ví dụ: Nguyễn Văn A"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="name"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="reg-email">Email</label>
+            <label htmlFor="reg-email">Địa chỉ Email</label>
             <input
               id="reg-email"
               type="email"
@@ -145,12 +137,13 @@ export const RegisterPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="email"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự, gồm số và ký tự đặc biệt)</label>
+            <label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự)</label>
             <input
               id="reg-password"
               type="password"
@@ -158,7 +151,8 @@ export const RegisterPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="new-password"
             />
           </div>
 
@@ -171,55 +165,28 @@ export const RegisterPage: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-input"
+              className="form-control"
+              autoComplete="new-password"
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="md"
+            block
+            loading={loading}
             disabled={loading}
-            className="btn btn-primary btn-block"
             id="register-submit-btn"
           >
-            {loading ? 'Đang khởi tạo tài khoản...' : 'Đăng ký tài khoản'}
-          </button>
+            Đăng ký tài khoản
+          </Button>
         </form>
 
-        <div className="auth-divider">
-          <span>hoặc tiếp tục với</span>
-        </div>
-
-        <div className="google-auth-btn-wrapper">
-          <GoogleLogin
-            onSuccess={async (credentialResponse) => {
-              if (credentialResponse.credential) {
-                setLoading(true);
-                setError(null);
-                try {
-                  const data = await authApi.googleLogin({ idToken: credentialResponse.credential });
-                  setAuth(data.accessToken, data.user);
-                  await handlePostLoginRedirect();
-                } catch (err) {
-                  setError(getApiErrorMessage(err));
-                } finally {
-                  setLoading(false);
-                }
-              }
-            }}
-            onError={() => {
-              setError('Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
-            }}
-            text="signup_with"
-            shape="pill"
-            size="large"
-            theme="filled_black"
-          />
-        </div>
-
-        <div className="auth-footer">
-          Đã có tài khoản?{' '}
-          <Link to={ROUTES.AUTH.LOGIN} className="form-link" id="to-login-link">
-            Đăng nhập
+        <div className="auth-box-footer">
+          <span>Đã có tài khoản? </span>
+          <Link to={ROUTES.AUTH.LOGIN} className="link-accent">
+            Đăng nhập ngay
           </Link>
         </div>
       </div>
