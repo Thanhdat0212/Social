@@ -24,3 +24,7 @@ Frontend Tham Kha/
 
 # OS / editor
 .vs/
+
+# AI Agent folders (internal tools, not part of project)
+_skill-source/
+antigravity-awesome-skills/
