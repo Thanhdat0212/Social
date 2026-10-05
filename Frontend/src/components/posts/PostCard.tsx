@@ -113,7 +113,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   .catch(() => {});
               }
             }
-          }, 600);
+          }, 250);
         } else {
           if (timer) {
             clearTimeout(timer);
@@ -121,7 +121,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           }
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.15 }
     );
 
     observer.observe(cardRef.current);

@@ -55,25 +55,29 @@ public class CandidateAggregator : ICandidateAggregator
             else
             {
                 // Thưởng điểm nhẹ vì bài viết xuất hiện ở nhiều kênh (Cross-Channel Boost)
-                existing.SourceWeight = Math.Min(1.5, existing.SourceWeight + 0.15);
+                existing.SourceWeight = Math.Max(existing.SourceWeight, candidate.SourceWeight) + 0.15;
             }
         }
 
         // Bổ sung các bài viết mới đăng gần đây (trong vòng 48h) của chính người dùng vào nhóm ứng viên để chấm điểm
         if (context.UserId.HasValue)
         {
-            var myRecentPosts = await _unitOfWork.Posts.GetPostsByAuthorIdAsync(context.UserId.Value, 1, 5, cancellationToken);
+            var myRecentPosts = await _unitOfWork.Posts.GetPostsByAuthorIdAsync(context.UserId.Value, 1, 10, cancellationToken);
             var recentCutoff = DateTime.UtcNow.AddHours(-48);
             foreach (var post in myRecentPosts.Where(p => p.CreatedAtUtc >= recentCutoff))
             {
-                if (!distinctMap.ContainsKey(post.Id))
+                if (!distinctMap.TryGetValue(post.Id, out var existing))
                 {
                     distinctMap[post.Id] = new CandidatePostDto
                     {
                         Post = post,
-                        Source = CandidateSource.Exploration,
-                        SourceWeight = 1.0
+                        Source = CandidateSource.Recent,
+                        SourceWeight = 1.8 // Trọng số cao để bài viết người dùng vừa đăng luôn hiển thị trên feed
                     };
+                }
+                else
+                {
+                    existing.SourceWeight = Math.Max(existing.SourceWeight, 1.8);
                 }
             }
         }

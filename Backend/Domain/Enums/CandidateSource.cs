@@ -7,5 +7,6 @@ public enum CandidateSource
     Trending = 3,
     Exploration = 4,
     Collaborative = 5,
-    Semantic = 6
+    Semantic = 6,
+    Recent = 7
 }

@@ -173,21 +173,29 @@ export const HomePage: React.FC = () => {
     };
   }, [activeTab, setTabScrollY]);
 
+  // Lắng nghe sự kiện click Logo / Trang chủ từ Navbar để làm mới feed
+  useEffect(() => {
+    const onCustomRefresh = () => {
+      handleManualRefresh();
+    };
+    window.addEventListener('social_refresh_feed', onCustomRefresh);
+    return () => window.removeEventListener('social_refresh_feed', onCustomRefresh);
+  }, [fetchPosts, activeTab]);
+
   // Realtime SignalR Listeners
   useSignalR<PostDto>('ReceiveNewPost', (newPost) => {
     if (!newPost || !newPost.id) return;
     if (user?.id && newPost.author?.id === user.id) return;
 
-    const isNearTop = window.scrollY < 250;
-    if (isNearTop) {
+    // Nếu người dùng đang ở đầu trang, tự động đẩy bài viết mới vào đầu feed luôn
+    const isAtTop = window.scrollY < 120;
+    if (isAtTop) {
+      prependTabPost(newPost);
+    } else {
+      // Nếu đang cuộn sâu đọc bài, đưa vào thông báo để tránh giật giao diện
       setPendingPosts((prev) => {
         if (prev.some((p) => p.id === newPost.id)) return prev;
         return [newPost, ...prev];
-      });
-    } else {
-      setBottomPendingPosts((prev) => {
-        if (prev.some((p) => p.id === newPost.id)) return prev;
-        return [...prev, newPost];
       });
     }
   });
@@ -207,6 +215,7 @@ export const HomePage: React.FC = () => {
 
   const handlePostCreated = (newPost: PostDto) => {
     prependTabPost(newPost);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePostDeleted = (postId: string) => {

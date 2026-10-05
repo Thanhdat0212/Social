@@ -46,6 +46,7 @@ public class RecommendationService : IRecommendationService
         {
             int quota = generator.Source switch
             {
+                CandidateSource.Recent => 100,
                 CandidateSource.Interest => 300,
                 CandidateSource.Following => 100,
                 CandidateSource.Trending => 100,

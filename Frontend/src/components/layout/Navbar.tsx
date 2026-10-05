@@ -16,7 +16,7 @@ export const Navbar: React.FC = () => {
     if (isHomeActive) {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      window.location.reload();
+      window.dispatchEvent(new CustomEvent('social_refresh_feed'));
     }
   };
 

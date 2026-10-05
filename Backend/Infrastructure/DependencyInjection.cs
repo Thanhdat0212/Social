@@ -154,6 +154,7 @@ public static class DependencyInjection
         // 10. Hybrid Recommendation Pipeline (Generators -> Aggregator -> Ranking -> Diversity)
         services.AddScoped<ICollaborativeFilteringService, CollaborativeFilteringService>();
         services.AddScoped<ISemanticVectorSearchService, SemanticVectorSearchService>();
+        services.AddScoped<ICandidateGenerator, RecentCandidateGenerator>();
         services.AddScoped<ICandidateGenerator, InterestCandidateGenerator>();
         services.AddScoped<ICandidateGenerator, FollowingCandidateGenerator>();
         services.AddScoped<ICandidateGenerator, TrendingCandidateGenerator>();

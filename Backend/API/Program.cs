@@ -172,6 +172,13 @@ app.MapPost("/api/admin/seed-1000", async (SocialDbContext db, ILoggerFactory lo
     return Results.Ok(new { message = $"Đã nạp thành công {inserted} bài viết vào database!", count = inserted });
 });
 
+app.MapPost("/api/admin/seed-dotnet", async (SocialDbContext db, ILoggerFactory loggerFactory, [Microsoft.AspNetCore.Mvc.FromQuery] int count = 1000) =>
+{
+    var logger = loggerFactory.CreateLogger("DotNetPostSeeder");
+    var inserted = await DotNetPostSeeder.SeedDotNetPostsAsync(db, logger, count);
+    return Results.Ok(new { message = $"Đã nạp thành công {inserted} bài viết chuyên sâu về .NET, C# và Backend!", count = inserted });
+});
+
 app.MapGet("/api/admin/stats", async (SocialDbContext db) =>
 {
     var userCount = await db.Users.CountAsync();
