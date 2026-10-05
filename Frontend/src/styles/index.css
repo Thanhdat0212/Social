@@ -304,6 +304,23 @@ input, textarea, select {
   to { transform: rotate(360deg); }
 }
 
+.loading-screen-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 1rem;
+  background-color: var(--color-bg-canvas);
+  color: var(--color-text-secondary);
+}
+
+.loading-screen-text {
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
 /* ==========================================================================
    5. NAVBAR & HEADER
    ========================================================================== */
@@ -881,10 +898,21 @@ input, textarea, select {
   color: #fca5a5;
 }
 
+.post-entry-time-link {
+  text-decoration: none;
+  display: inline-block;
+}
+
+.post-entry-time-link:hover .post-entry-time {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
 .post-entry-time {
   font-size: 0.78rem;
   color: var(--text-dim);
   margin-top: 0.1rem;
+  transition: color var(--transition-fast);
 }
 
 /* 3-dots Context Menu */
@@ -2009,6 +2037,141 @@ input, textarea, select {
   color: var(--text-muted);
 }
 
+.profile-stat-chip.active-chip {
+  background: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--accent-primary);
+}
+
+.profile-stat-chip.active-chip .stat-count {
+  color: var(--accent-primary);
+}
+
+/* Profile Section Navigation Tabs */
+.profile-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.15rem;
+}
+
+.profile-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  position: relative;
+  bottom: -1px;
+}
+
+.profile-tab-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-surface-hover);
+}
+
+.profile-tab-btn.is-active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+.profile-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* My Posts Container & Cards */
+.my-posts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.my-posts-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1.15rem 1.35rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.my-posts-header-info h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.my-posts-header-info p {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.my-posts-create-wrapper {
+  margin-bottom: 0.25rem;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.my-posts-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  gap: 0.85rem;
+}
+
+.my-posts-empty-card .empty-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.my-posts-empty-card h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.my-posts-empty-card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+.my-posts-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 /* Profile Edit Form Card */
 .edit-card {
   background: var(--bg-surface);
@@ -2741,3 +2904,78 @@ input, textarea, select {
 .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
 .mx-auto { margin-left: auto; margin-right: auto; }
 .hidden { display: none; }
+
+/* ==========================================================================
+   25. POST DETAIL PAGE & HIGHLIGHT
+   ========================================================================== */
+.post-detail-container {
+  max-width: 680px;
+  padding: 1.5rem 1.25rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.post-detail-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.btn-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.btn-back-link:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-hover);
+  color: var(--text-main);
+  transform: translateX(-2px);
+}
+
+.btn-back-link .arrow-left {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.post-detail-card-wrap {
+  width: 100%;
+}
+
+.post-detail-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@keyframes postHighlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7);
+    border-color: var(--accent-primary);
+  }
+  40% {
+    box-shadow: 0 0 0 8px rgba(14, 165, 233, 0.25);
+    border-color: var(--accent-primary);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+.post-highlight-pulse {
+  animation: postHighlightPulse 2s ease-out;
+  border-color: var(--accent-primary) !important;
+}
+

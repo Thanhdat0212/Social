@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { signalrService } from '@/services/signalrService';
 
 /**
@@ -9,10 +9,18 @@ export function useSignalR<T = any>(
   eventName: string,
   handler: (...args: T[]) => void
 ) {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
   useEffect(() => {
-    signalrService.on(eventName, handler);
-    return () => {
-      signalrService.off(eventName, handler);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const callback = (...args: any[]) => {
+      handlerRef.current(...args);
     };
-  }, [eventName, handler]);
+
+    signalrService.on(eventName, callback);
+    return () => {
+      signalrService.off(eventName, callback);
+    };
+  }, [eventName]);
 }

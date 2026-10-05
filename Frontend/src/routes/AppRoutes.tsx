@@ -14,6 +14,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { OnboardingPage } from '@/pages/onboarding/OnboardingPage';
+import { PostDetailPage } from '@/pages/post-detail/PostDetailPage';
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage';
 
 export const AppRoutes: React.FC = () => {
@@ -23,6 +24,7 @@ export const AppRoutes: React.FC = () => {
         {/* Public Routes */}
         <Route index element={<HomePage />} />
         <Route path={ROUTES.AUTH.VERIFY_EMAIL.slice(1)} element={<VerifyEmailPage />} />
+        <Route path="posts/:id" element={<PostDetailPage />} />
 
         {/* Guest Only Routes (chuyển hướng sang Profile nếu đã đăng nhập) */}
         <Route

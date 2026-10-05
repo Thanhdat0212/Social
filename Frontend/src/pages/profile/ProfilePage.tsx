@@ -3,8 +3,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTitle } from '@/hooks/useTitle';
 import { profileApi } from '@/api/profileApi';
 import { followApi } from '@/api/followApi';
+import { postApi } from '@/api/postApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { LoadingScreen } from '@/components/feedback/LoadingScreen';
+import { MyPostsList } from '@/components/profile';
 import {
   Avatar,
   Button,
@@ -13,10 +15,13 @@ import {
   ImageIcon,
   UsersIcon,
   UserIcon,
+  FileTextIcon,
+  EditIcon,
 } from '@/components/common';
 import type { ProfileDto, FollowStatsDto, UserFollowDto } from '@/types';
 
 type FollowModalType = 'followers' | 'following' | null;
+type ProfileTab = 'posts' | 'edit';
 
 export const ProfilePage: React.FC = () => {
   useTitle('Hồ sơ cá nhân');
@@ -29,6 +34,10 @@ export const ProfilePage: React.FC = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Tab & Post count state
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const [postCount, setPostCount] = useState<number>(0);
 
   // Follow Stats & Lists
   const [followStats, setFollowStats] = useState<FollowStatsDto | null>(null);
@@ -52,9 +61,15 @@ export const ProfilePage: React.FC = () => {
           setBio(profileData.bio || '');
 
           if (profileData.id) {
-            const stats = await followApi.getFollowStats(profileData.id).catch(() => null);
-            if (isMounted && stats) {
-              setFollowStats(stats);
+            const [stats, count] = await Promise.all([
+              followApi.getFollowStats(profileData.id).catch(() => null),
+              postApi.getUserPostCount(profileData.id).catch(() => 0),
+            ]);
+            if (isMounted) {
+              if (stats) {
+                setFollowStats(stats);
+              }
+              setPostCount(count);
             }
           }
         }
@@ -201,8 +216,20 @@ export const ProfilePage: React.FC = () => {
             <p className="profile-email-meta">{profile?.email}</p>
             {profile?.bio && <p className="profile-bio-text">{profile.bio}</p>}
 
-            {/* Follow Stats Chips */}
+            {/* Follow & Post Stats Chips */}
             <div className="profile-stats-row">
+              <button
+                type="button"
+                className={`profile-stat-chip ${activeTab === 'posts' ? 'active-chip' : ''}`}
+                onClick={() => setActiveTab('posts')}
+                id="profile-posts-btn"
+                title="Xem danh sách bài viết đã đăng"
+              >
+                <FileTextIcon size={16} />
+                <span className="stat-count">{postCount}</span>
+                <span className="stat-name">Bài viết</span>
+              </button>
+
               <button
                 type="button"
                 className="profile-stat-chip"
@@ -229,72 +256,103 @@ export const ProfilePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Profile Edit Section */}
-      <section className="profile-edit-section">
-        <div className="edit-card">
-          <div className="edit-card-header">
-            <h2>Chỉnh sửa thông tin</h2>
-            <p>Cập nhật tên hiển thị và tiểu sử cá nhân của bạn</p>
-          </div>
+      {/* Profile Section Navigation Tabs */}
+      <nav className="profile-tabs-nav" aria-label="Điều hướng hồ sơ">
+        <button
+          type="button"
+          className={`profile-tab-btn ${activeTab === 'posts' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('posts')}
+          id="profile-tab-posts"
+        >
+          <FileTextIcon size={17} />
+          <span>Bài viết ({postCount})</span>
+        </button>
 
-          {message && <Alert type="success" message={message} className="mb-4" />}
-          {error && <Alert type="error" message={error} className="mb-4" />}
+        <button
+          type="button"
+          className={`profile-tab-btn ${activeTab === 'edit' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('edit')}
+          id="profile-tab-edit"
+        >
+          <EditIcon size={17} />
+          <span>Chỉnh sửa hồ sơ</span>
+        </button>
+      </nav>
 
-          <form onSubmit={handleUpdateProfile} className="profile-form">
-            <div className="form-group">
-              <label>Địa chỉ Email (chỉ đọc)</label>
-              <input
-                type="email"
-                value={profile?.email || ''}
-                disabled
-                className="form-control disabled-input"
-              />
+      {/* Profile Tab Panels */}
+      {activeTab === 'posts' ? (
+        <section className="profile-tab-panel" id="panel-my-posts">
+          <MyPostsList
+            onPostCountChange={(delta) => setPostCount((prev) => Math.max(0, prev + delta))}
+          />
+        </section>
+      ) : (
+        <section className="profile-edit-section" id="panel-edit-profile">
+          <div className="edit-card">
+            <div className="edit-card-header">
+              <h2>Chỉnh sửa thông tin</h2>
+              <p>Cập nhật tên hiển thị và tiểu sử cá nhân của bạn</p>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="profile-displayName">Tên hiển thị *</label>
-              <input
-                id="profile-displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                className="form-control"
-                placeholder="Nhập tên hiển thị của bạn"
-              />
-            </div>
+            {message && <Alert type="success" message={message} className="mb-4" />}
+            {error && <Alert type="error" message={error} className="mb-4" />}
 
-            <div className="form-group">
-              <div className="form-label-row">
-                <label htmlFor="profile-bio">Tiểu sử (Bio)</label>
-                <span className="char-hint">{bio.length}/500</span>
+            <form onSubmit={handleUpdateProfile} className="profile-form">
+              <div className="form-group">
+                <label>Địa chỉ Email (chỉ đọc)</label>
+                <input
+                  type="email"
+                  value={profile?.email || ''}
+                  disabled
+                  className="form-control disabled-input"
+                />
               </div>
-              <textarea
-                id="profile-bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={3}
-                placeholder="Giới thiệu ngắn về chuyên môn, sở thích hoặc dự án..."
-                className="form-control"
-                maxLength={500}
-              />
-            </div>
 
-            <div className="profile-form-footer">
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                disabled={saving}
-                loading={saving}
-                id="save-profile-btn"
-              >
-                Lưu thông tin hồ sơ
-              </Button>
-            </div>
-          </form>
-        </div>
-      </section>
+              <div className="form-group">
+                <label htmlFor="profile-displayName">Tên hiển thị *</label>
+                <input
+                  id="profile-displayName"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                  className="form-control"
+                  placeholder="Nhập tên hiển thị của bạn"
+                />
+              </div>
+
+              <div className="form-group">
+                <div className="form-label-row">
+                  <label htmlFor="profile-bio">Tiểu sử (Bio)</label>
+                  <span className="char-hint">{bio.length}/500</span>
+                </div>
+                <textarea
+                  id="profile-bio"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={3}
+                  placeholder="Giới thiệu ngắn về chuyên môn, sở thích hoặc dự án..."
+                  className="form-control"
+                  maxLength={500}
+                />
+              </div>
+
+              <div className="profile-form-footer">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  disabled={saving}
+                  loading={saving}
+                  id="save-profile-btn"
+                >
+                  Lưu thông tin hồ sơ
+                </Button>
+              </div>
+            </form>
+          </div>
+        </section>
+      )}
 
       {/* Modal danh sách Followers / Following */}
       {followModal && (

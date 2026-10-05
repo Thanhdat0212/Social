@@ -51,6 +51,34 @@ export const postApi = {
   },
 
   /**
+   * Lấy danh sách bài viết của chính người dùng hiện tại đang đăng nhập
+   */
+  getMyPosts: async (page = 1, pageSize = 20) => {
+    const response = await apiClient.get<PostDto[]>('/posts/mine', {
+      params: { page, pageSize },
+    });
+    return response.data;
+  },
+
+  /**
+   * Lấy danh sách bài viết theo mã tác giả (User Profile)
+   */
+  getUserPosts: async (userId: string, page = 1, pageSize = 20) => {
+    const response = await apiClient.get<PostDto[]>(`/posts/user/${userId}`, {
+      params: { page, pageSize },
+    });
+    return response.data;
+  },
+
+  /**
+   * Lấy tổng số lượng bài viết của một người dùng
+   */
+  getUserPostCount: async (userId: string) => {
+    const response = await apiClient.get<{ count: number }>(`/posts/user/${userId}/count`);
+    return response.data.count;
+  },
+
+  /**
    * Lấy chi tiết một bài viết kèm thông tin tác giả và chủ đề AI
    */
   getPostById: async (id: string) => {

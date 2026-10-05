@@ -1,6 +1,8 @@
 using Application.DTOs.Recommendation;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Recommendation;
+using Domain.Entities;
+using Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Recommendation.Aggregator;
@@ -57,11 +59,36 @@ public class CandidateAggregator : ICandidateAggregator
             }
         }
 
+        // Bổ sung các bài viết mới đăng gần đây (trong vòng 48h) của chính người dùng vào nhóm ứng viên để chấm điểm
+        if (context.UserId.HasValue)
+        {
+            var myRecentPosts = await _unitOfWork.Posts.GetPostsByAuthorIdAsync(context.UserId.Value, 1, 5, cancellationToken);
+            var recentCutoff = DateTime.UtcNow.AddHours(-48);
+            foreach (var post in myRecentPosts.Where(p => p.CreatedAtUtc >= recentCutoff))
+            {
+                if (!distinctMap.ContainsKey(post.Id))
+                {
+                    distinctMap[post.Id] = new CandidatePostDto
+                    {
+                        Post = post,
+                        Source = CandidateSource.Exploration,
+                        SourceWeight = 1.0
+                    };
+                }
+            }
+        }
+
         var uniqueCandidates = distinctMap.Values.ToList();
 
-        // 3. Phân nhóm: Chưa xem (Unseen) và Đã xem (Viewed)
-        var unseen = uniqueCandidates.Where(c => !viewedPostIds.Contains(c.Post.Id)).ToList();
-        var viewed = uniqueCandidates.Where(c => viewedPostIds.Contains(c.Post.Id)).ToList();
+        // 3. Đánh dấu trạng thái đã xem (IsViewed) dựa trên viewedPostIds (từ localStorage và db interactions)
+        foreach (var candidate in uniqueCandidates)
+        {
+            candidate.IsViewed = viewedPostIds.Contains(candidate.Post.Id);
+        }
+
+        // Tách 2 nhóm ứng viên: Chưa xem (Unseen) và Đã xem (Viewed)
+        var unseen = uniqueCandidates.Where(c => !c.IsViewed).ToList();
+        var viewed = uniqueCandidates.Where(c => c.IsViewed).ToList();
 
         // Giới hạn số lượng ứng viên đưa vào Ranking để tối ưu hiệu năng
         var targetCount = context.TargetCandidateCount > 0 ? context.TargetCandidateCount : 700;

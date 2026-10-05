@@ -10,4 +10,6 @@ public class CandidatePostDto
     public Guid? PrimaryInterestId { get; set; }
     public string? PrimaryInterestName { get; set; }
     public double SourceWeight { get; set; } = 1.0;
+    public bool IsViewed { get; set; } = false;
 }
+

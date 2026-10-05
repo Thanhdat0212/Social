@@ -137,6 +137,50 @@ public class PostsController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách bài viết của người dùng hiện tại đang đăng nhập (My Posts)
+    /// </summary>
+    [HttpGet("mine")]
+    [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<PostDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyPosts(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var posts = await _postService.GetMyPostsAsync(page, pageSize, cancellationToken);
+        return Ok(posts);
+    }
+
+    /// <summary>
+    /// Lấy tổng số lượng bài viết của một người dùng
+    /// </summary>
+    [HttpGet("user/{userId:guid}/count")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUserPostCount(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var count = await _postService.GetPostCountByAuthorIdAsync(userId, cancellationToken);
+        return Ok(new { count });
+    }
+
+    /// <summary>
+    /// Lấy danh sách bài viết theo mã tác giả (profile user)
+    /// </summary>
+    [HttpGet("user/{userId:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(IReadOnlyList<PostDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPostsByAuthor(
+        Guid userId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var posts = await _postService.GetPostsByAuthorIdAsync(userId, page, pageSize, cancellationToken);
+        return Ok(posts);
+    }
+
+    /// <summary>
     /// Xem chi tiết một bài viết kèm thông tin tác giả và các chủ đề do AI phân loại
     /// </summary>
     [HttpGet("{id:guid}")]

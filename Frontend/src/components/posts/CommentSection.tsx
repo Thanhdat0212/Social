@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import type { CommentDto, CommentAddedEvent } from '@/types';
 import { postApi } from '@/api/postApi';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,11 @@ import {
   TrashIcon,
   ConfirmModal,
 } from '@/components/common';
+
+const isSameId = (a?: string | null, b?: string | null) => {
+  if (!a || !b) return false;
+  return a.toLowerCase() === b.toLowerCase();
+};
 
 interface CommentSectionProps {
   postId: string;
@@ -34,6 +39,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const [replyingTo, setReplyingTo] = useState<CommentDto | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   // Modal xóa comment
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -53,19 +59,19 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   // Lắng nghe bình luận mới từ SignalR
   useSignalR<CommentAddedEvent>('CommentAdded', (event) => {
-    if (event?.postId !== postId || !event?.comment) return;
+    if (!event?.postId || !isSameId(event.postId, postId) || !event?.comment) return;
     const incoming = event.comment;
 
     setComments((prev) => {
       const exists = prev.some(
-        (c) => c.id === incoming.id || c.replies?.some((r) => r.id === incoming.id)
+        (c) => isSameId(c.id, incoming.id) || c.replies?.some((r) => isSameId(r.id, incoming.id))
       );
       if (exists) return prev;
 
       if (incoming.parentCommentId) {
         return prev.map((c) => {
-          if (c.id === incoming.parentCommentId) {
-            const replyExists = c.replies?.some((r) => r.id === incoming.id);
+          if (isSameId(c.id, incoming.parentCommentId)) {
+            const replyExists = c.replies?.some((r) => isSameId(r.id, incoming.id));
             if (replyExists) return c;
             return {
               ...c,
@@ -79,7 +85,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       return [incoming, ...prev];
     });
 
-    onCommentCountChange?.(event.totalCommentCount);
+    if (typeof event.totalCommentCount === 'number') {
+      onCommentCountChange?.(event.totalCommentCount);
+    }
   });
 
   useEffect(() => {
@@ -111,8 +119,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || submitting) return;
+    if (!content.trim() || submitting || submittingRef.current) return;
 
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
 
@@ -122,33 +131,47 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         parentCommentId: replyingTo?.id || null,
       });
 
-      if (replyingTo) {
-        setComments((prev) =>
-          prev.map((c) => {
-            if (c.id === replyingTo.id) {
+      setComments((prev) => {
+        // Kiểm tra xem comment đã được SignalR thêm vào trước đó chưa
+        const alreadyExists = prev.some(
+          (c) => isSameId(c.id, newComment.id) || c.replies?.some((r) => isSameId(r.id, newComment.id))
+        );
+        let nextState: CommentDto[];
+        if (alreadyExists) {
+          nextState = prev;
+        } else if (replyingTo) {
+          nextState = prev.map((c) => {
+            if (isSameId(c.id, replyingTo.id)) {
+              const replyExists = c.replies?.some((r) => isSameId(r.id, newComment.id));
+              if (replyExists) return c;
               return {
                 ...c,
                 replies: [...(c.replies || []), newComment],
               };
             }
             return c;
-          })
+          });
+        } else {
+          nextState = [newComment, ...prev];
+        }
+
+        const totalCount = nextState.reduce(
+          (acc, curr) => acc + 1 + (curr.replies?.length || 0),
+          0
         );
-      } else {
-        setComments((prev) => [newComment, ...prev]);
-      }
+        setTimeout(() => {
+          onCommentCountChange?.(totalCount);
+        }, 0);
+
+        return nextState;
+      });
 
       setContent('');
       setReplyingTo(null);
-
-      const totalCount = comments.reduce(
-        (acc, curr) => acc + 1 + (curr.replies?.length || 0),
-        1
-      );
-      onCommentCountChange?.(totalCount);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

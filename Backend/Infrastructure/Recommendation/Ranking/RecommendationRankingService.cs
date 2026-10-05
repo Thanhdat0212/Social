@@ -96,6 +96,15 @@ public class RecommendationRankingService : IRecommendationRankingService
             // Áp dụng trọng số bổ sung từ CandidateSource (vd: Following được ưu tiên nhẹ)
             finalScore *= candidate.SourceWeight;
 
+            // 7. Giảm mạnh 85% điểm số đối với bài đã xem (Viewed penalty) để bài chưa xem luôn ưu tiên đứng trên
+            if (candidate.IsViewed)
+            {
+                finalScore *= 0.15;
+                // Thêm jitter nhẹ (±15%) để khi hệ thống ít bài và người dùng đã xem hết, các bài hiển thị lại vẫn có độ xáo trộn sinh động khi reload
+                var jitter = 1.0 + ((Random.Shared.NextDouble() - 0.5) * 0.3);
+                finalScore *= jitter;
+            }
+
             scoredList.Add(new ScoredCandidateDto
             {
                 Post = post,

@@ -73,8 +73,8 @@ public class RealtimeNotificationService : IRealtimeNotificationService
                 IsLiked = isLiked
             };
 
-            // 1. Gửi tới room xem bài viết post_{postId} để nhảy số like tức thì
-            await _hubContext.Clients.Group($"post_{postId}")
+            // 1. Phát sóng tới toàn bộ người dùng để cập nhật số lượt thích trên bảng tin và bài viết
+            await _hubContext.Clients.All
                 .SendAsync("PostLiked", likeEvent, cancellationToken);
 
             // 2. Nếu là thả like và không phải tự like bài của mình, gửi notification cho chủ bài viết
@@ -114,8 +114,8 @@ public class RealtimeNotificationService : IRealtimeNotificationService
                 Comment = comment
             };
 
-            // 1. Gửi tới room xem bài viết post_{postId} để danh sách bình luận nhảy ngay lập tức
-            await _hubContext.Clients.Group($"post_{postId}")
+            // 1. Phát sóng tới toàn bộ người dùng để cập nhật số lượng và danh sách bình luận bài viết
+            await _hubContext.Clients.All
                 .SendAsync("CommentAdded", commentEvent, cancellationToken);
 
             // 2. Gửi notification cho chủ bài viết nếu người comment không phải là chủ bài viết

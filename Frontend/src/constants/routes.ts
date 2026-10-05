@@ -13,4 +13,5 @@ export const ROUTES = {
   },
   PROFILE: '/profile',
   ONBOARDING: '/onboarding',
+  POST_DETAIL: '/posts/:id',
 } as const;

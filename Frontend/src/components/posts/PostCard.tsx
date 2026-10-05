@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { PostDto } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotificationStore } from '@/store';
@@ -24,9 +25,14 @@ import { CommentSection } from './CommentSection';
 interface PostCardProps {
   post: PostDto;
   onPostDeleted?: (postId: string) => void;
+  initialShowComments?: boolean;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
+export const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onPostDeleted,
+  initialShowComments = false,
+}) => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotificationStore();
 
@@ -42,10 +48,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const [likeLoading, setLikeLoading] = useState(false);
 
   // Comment state
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(initialShowComments);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
 
-  // Đồng bộ số lượng like và comment khi có cập nhật realtime từ cha
+  // Đồng bộ số lượng like, trạng thái like và comment khi có cập nhật từ cha hoặc realtime
+  useEffect(() => {
+    setLiked(post.isLikedByCurrentUser || false);
+  }, [post.isLikedByCurrentUser]);
+
   useEffect(() => {
     setLikeCount(post.likeCount || 0);
   }, [post.likeCount]);
@@ -90,6 +100,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
           timer = setTimeout(() => {
             if (!hasTrackedView.current) {
               hasTrackedView.current = true;
+              // Đánh dấu đã xem trên frontend
               seenPostsService.markAsSeen(post.id);
 
               if (isAuthenticated) {
@@ -141,6 +152,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
       const res = await postApi.toggleLike(post.id);
       setLiked(res.isLiked);
       setLikeCount(res.likeCount);
+      post.isLikedByCurrentUser = res.isLiked;
+      post.likeCount = res.likeCount;
     } catch {
       setLiked(previousLiked);
       setLikeCount(previousCount);
@@ -230,9 +243,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
                   </button>
                 )}
               </div>
-              <time className="post-entry-time" dateTime={post.createdAtUtc}>
-                {formatRelativeTime(post.createdAtUtc)}
-              </time>
+              <Link to={`/posts/${post.id}`} className="post-entry-time-link" title="Xem chi tiết bài viết">
+                <time className="post-entry-time" dateTime={post.createdAtUtc}>
+                  {formatRelativeTime(post.createdAtUtc)}
+                </time>
+              </Link>
             </div>
           </div>
 
@@ -250,6 +265,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
 
             {showMenu && (
               <div className="dropdown-menu-popover">
+                <Link
+                  to={`/posts/${post.id}`}
+                  className="dropdown-menu-item"
+                  onClick={() => setShowMenu(false)}
+                >
+                  <ShareIcon size={16} />
+                  <span>Xem chi tiết</span>
+                </Link>
                 <button type="button" className="dropdown-menu-item" onClick={handleCopyLink}>
                   <ShareIcon size={16} />
                   <span>Sao chép liên kết</span>
@@ -337,7 +360,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted }) => {
         {showComments && (
           <CommentSection
             postId={post.id}
-            onCommentCountChange={(count) => setCommentCount(count)}
+            onCommentCountChange={(count) => {
+              setCommentCount(count);
+              post.commentCount = count;
+            }}
           />
         )}
       </article>

@@ -1,184 +1,200 @@
-using Application.Common;
-using Application.DTOs.Posts;
-using Application.Interfaces;
-using Application.Interfaces.Repositories;
-using AutoMapper;
-using Domain.Entities;
-using Domain.Enums;
-using Domain.Exceptions;
-using Microsoft.Extensions.Logging;
+    using Application.Common;
+    using Application.DTOs.Posts;
+    using Application.Interfaces;
+    using Application.Interfaces.Repositories;
+    using AutoMapper;
+    using Domain.Entities;
+    using Domain.Enums;
+    using Domain.Exceptions;
+    using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.Services;
+    namespace Infrastructure.Services;
 
-public class PostService : IPostService
-{
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IPostAiChannel _postAiChannel;
-    private readonly IRealtimeNotificationService _realtimeNotificationService;
-    private readonly IMapper _mapper;
-    private readonly ILogger<PostService> _logger;
-
-    public PostService(
-        IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService,
-        IPostAiChannel postAiChannel,
-        IRealtimeNotificationService realtimeNotificationService,
-        IMapper mapper,
-        ILogger<PostService> logger)
+    public class PostService : IPostService
     {
-        _unitOfWork = unitOfWork;
-        _currentUserService = currentUserService;
-        _postAiChannel = postAiChannel;
-        _realtimeNotificationService = realtimeNotificationService;
-        _mapper = mapper;
-        _logger = logger;
-    }
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IPostAiChannel _postAiChannel;
+        private readonly IRealtimeNotificationService _realtimeNotificationService;
+        private readonly IMapper _mapper;
+        private readonly ILogger<PostService> _logger;
 
-    public async Task<PostDto> CreatePostAsync(CreatePostRequestDto request, CancellationToken cancellationToken = default)
-    {
-        var currentUserId = GetCurrentUserId();
-
-        var user = await _unitOfWork.Users.GetByIdAsync(currentUserId, cancellationToken);
-        if (user == null)
+        public PostService(
+            IUnitOfWork unitOfWork,
+            ICurrentUserService currentUserService,
+            IPostAiChannel postAiChannel,
+            IRealtimeNotificationService realtimeNotificationService,
+            IMapper mapper,
+            ILogger<PostService> logger)
         {
-            throw new NotFoundException("Người dùng không tồn tại.");
+            _unitOfWork = unitOfWork;
+            _currentUserService = currentUserService;
+            _postAiChannel = postAiChannel;
+            _realtimeNotificationService = realtimeNotificationService;
+            _mapper = mapper;
+            _logger = logger;
         }
 
-        var post = new Post
+        public async Task<PostDto> CreatePostAsync(CreatePostRequestDto request, CancellationToken cancellationToken = default)
         {
-            AuthorId = currentUserId,
-            Content = request.Content?.Trim() ?? string.Empty,
-            MediaUrls = request.MediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).Select(url => url.Trim()).ToList() ?? new List<string>(),
-            Status = PostStatus.Published,
-            LikeCount = 0,
-            CommentCount = 0,
-            ViewCount = 0,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            var currentUserId = GetCurrentUserId();
 
-        await _unitOfWork.Posts.AddAsync(post, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Đẩy PostId vào kênh bất đồng bộ để Gemini AI phân tích nội dung ngầm
-        if (!string.IsNullOrWhiteSpace(post.Content))
-        {
-            try
+            var user = await _unitOfWork.Users.GetByIdAsync(currentUserId, cancellationToken);
+            if (user == null)
             {
-                await _postAiChannel.WriteAsync(post.Id, cancellationToken);
-                _logger.LogInformation("Đã đẩy bài viết {PostId} vào hàng đợi phân tích AI.", post.Id);
+                throw new NotFoundException("Người dùng không tồn tại.");
             }
-            catch (Exception ex)
+
+            var post = new Post
             {
-                _logger.LogWarning(ex, "Không thể đẩy bài viết {PostId} vào hàng đợi AI.", post.Id);
-            }
-        }
+                AuthorId = currentUserId,
+                Content = request.Content?.Trim() ?? string.Empty,
+                MediaUrls = request.MediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).Select(url => url.Trim()).ToList() ?? new List<string>(),
+                Status = PostStatus.Published,
+                LikeCount = 0,
+                CommentCount = 0,
+                ViewCount = 0,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        var postDto = _mapper.Map<PostDto>(post);
-        postDto.Author = _mapper.Map<PostAuthorDto>(user);
-        postDto.Topics = new List<PostTopicDto>();
-        postDto.IsLikedByCurrentUser = false;
+            await _unitOfWork.Posts.AddAsync(post, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Phát tín hiệu realtime bài viết mới tới toàn bộ clients & followers
-        await _realtimeNotificationService.PublishNewPostAsync(postDto, cancellationToken);
-
-        return postDto;
-    }
-
-    public async Task<IReadOnlyList<PostDto>> GetRecentPostsAsync(int page = 1, int pageSize = 20, IEnumerable<Guid>? seenPostIds = null, CancellationToken cancellationToken = default)
-    {
-        if (page < 1) page = 1;
-        if (pageSize < 1 || pageSize > 50) pageSize = 20;
-
-        var viewedPostIds = new HashSet<Guid>();
-        if (seenPostIds != null)
-        {
-            foreach (var id in seenPostIds) viewedPostIds.Add(id);
-        }
-        if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
-        {
-            var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(_currentUserService.UserId.Value, 500, cancellationToken);
-            foreach (var id in dbViewed) viewedPostIds.Add(id);
-        }
-
-        // Lấy 200 bài viết mới nhất làm ứng viên
-        var candidatePosts = await _unitOfWork.Posts.GetRecentPostsAsync(1, 200, cancellationToken);
-        var unseen = candidatePosts.Where(p => !viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
-        var viewed = candidatePosts.Where(p => viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
-
-        var pagedPosts = unseen.Concat(viewed)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var postDtos = _mapper.Map<List<PostDto>>(pagedPosts);
-
-        if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
-        {
-            var likedPostIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
-                _currentUserService.UserId.Value,
-                postDtos.Select(p => p.Id),
-                cancellationToken)).ToHashSet();
-
-            foreach (var dto in postDtos)
+            // Đẩy PostId vào kênh bất đồng bộ để Gemini AI phân tích nội dung ngầm
+            if (!string.IsNullOrWhiteSpace(post.Content))
             {
-                dto.IsLikedByCurrentUser = likedPostIds.Contains(dto.Id);
+                try
+                {
+                    await _postAiChannel.WriteAsync(post.Id, cancellationToken);
+                    _logger.LogInformation("Đã đẩy bài viết {PostId} vào hàng đợi phân tích AI.", post.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Không thể đẩy bài viết {PostId} vào hàng đợi AI.", post.Id);
+                }
             }
+
+            var postDto = _mapper.Map<PostDto>(post);
+            postDto.Author = _mapper.Map<PostAuthorDto>(user);
+            postDto.Topics = new List<PostTopicDto>();
+            postDto.IsLikedByCurrentUser = false;
+
+            // Phát tín hiệu realtime bài viết mới tới toàn bộ clients & followers
+            await _realtimeNotificationService.PublishNewPostAsync(postDto, cancellationToken);
+
+            return postDto;
         }
 
-        return postDtos;
+        public async Task<IReadOnlyList<PostDto>> GetRecentPostsAsync(int page = 1, int pageSize = 20, IEnumerable<Guid>? seenPostIds = null, CancellationToken cancellationToken = default)
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 50) pageSize = 20;
+
+            // Bảng tin "Mới nhất" hiển thị chuẩn theo thứ tự thời gian tạo giảm dần (CreatedAtUtc DESC)
+            var pagedPosts = await _unitOfWork.Posts.GetRecentPostsAsync(page, pageSize, cancellationToken);
+            var postDtos = _mapper.Map<List<PostDto>>(pagedPosts);
+
+            if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
+            {
+                var likedPostIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
+                    _currentUserService.UserId.Value,
+                    postDtos.Select(p => p.Id),
+                    cancellationToken)).ToHashSet();
+
+                foreach (var dto in postDtos)
+                {
+                    dto.IsLikedByCurrentUser = likedPostIds.Contains(dto.Id);
+                }
+            }
+
+            return postDtos;
+        }
+
+        public async Task<PostDto> GetPostByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var post = await _unitOfWork.Posts.GetWithDetailsByIdAsync(id, cancellationToken);
+            if (post == null)
+            {
+                throw new NotFoundException("Bài viết không tồn tại hoặc đã bị xóa.");
+            }
+
+            var postDto = _mapper.Map<PostDto>(post);
+
+            if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
+            {
+                postDto.IsLikedByCurrentUser = await _unitOfWork.PostLikes.IsLikedAsync(
+                    _currentUserService.UserId.Value, post.Id, cancellationToken);
+            }
+
+            return postDto;
+        }
+
+        public async Task DeletePostAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var currentUserId = GetCurrentUserId();
+
+            var post = await _unitOfWork.Posts.GetByIdAsync(id, cancellationToken);
+            if (post == null)
+            {
+                throw new NotFoundException("Bài viết không tồn tại hoặc đã bị xóa.");
+            }
+
+            if (post.AuthorId != currentUserId)
+            {
+                throw new UnauthorizedAccessException("Bạn không có quyền xóa bài viết này.");
+            }
+
+            _unitOfWork.Posts.Delete(post);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Phát sự kiện realtime xóa bài viết tới toàn bộ clients
+            await _realtimeNotificationService.PublishPostDeletedAsync(id, cancellationToken);
+
+            _logger.LogInformation("Người dùng {UserId} đã xóa bài viết {PostId}.", currentUserId, id);
+        }
+
+        public async Task<IReadOnlyList<PostDto>> GetMyPostsAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        {
+            var currentUserId = GetCurrentUserId();
+            return await GetPostsByAuthorIdAsync(currentUserId, page, pageSize, cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<PostDto>> GetPostsByAuthorIdAsync(Guid authorId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 50) pageSize = 20;
+
+            var posts = await _unitOfWork.Posts.GetPostsByAuthorIdAsync(authorId, page, pageSize, cancellationToken);
+            var postDtos = _mapper.Map<List<PostDto>>(posts);
+
+            if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
+            {
+                var likedPostIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
+                    _currentUserService.UserId.Value,
+                    postDtos.Select(p => p.Id),
+                    cancellationToken)).ToHashSet();
+
+                foreach (var dto in postDtos)
+                {
+                    dto.IsLikedByCurrentUser = likedPostIds.Contains(dto.Id);
+                }
+            }
+
+            return postDtos;
+        }
+
+        public async Task<int> GetPostCountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default)
+        {
+            return await _unitOfWork.Posts.GetPostCountByAuthorIdAsync(authorId, cancellationToken);
+        }
+
+        private Guid GetCurrentUserId()
+        {
+            if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
+            {
+                throw new UnauthorizedAccessException("Yêu cầu xác thực tài khoản.");
+            }
+
+            return _currentUserService.UserId.Value;
+        }
     }
-
-    public async Task<PostDto> GetPostByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var post = await _unitOfWork.Posts.GetWithDetailsByIdAsync(id, cancellationToken);
-        if (post == null)
-        {
-            throw new NotFoundException("Bài viết không tồn tại hoặc đã bị xóa.");
-        }
-
-        var postDto = _mapper.Map<PostDto>(post);
-
-        if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
-        {
-            postDto.IsLikedByCurrentUser = await _unitOfWork.PostLikes.IsLikedAsync(
-                _currentUserService.UserId.Value, post.Id, cancellationToken);
-        }
-
-        return postDto;
-    }
-
-    public async Task DeletePostAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var currentUserId = GetCurrentUserId();
-
-        var post = await _unitOfWork.Posts.GetByIdAsync(id, cancellationToken);
-        if (post == null)
-        {
-            throw new NotFoundException("Bài viết không tồn tại hoặc đã bị xóa.");
-        }
-
-        if (post.AuthorId != currentUserId)
-        {
-            throw new UnauthorizedAccessException("Bạn không có quyền xóa bài viết này.");
-        }
-
-        _unitOfWork.Posts.Delete(post);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Phát sự kiện realtime xóa bài viết tới toàn bộ clients
-        await _realtimeNotificationService.PublishPostDeletedAsync(id, cancellationToken);
-
-        _logger.LogInformation("Người dùng {UserId} đã xóa bài viết {PostId}.", currentUserId, id);
-    }
-
-    private Guid GetCurrentUserId()
-    {
-        if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
-        {
-            throw new UnauthorizedAccessException("Yêu cầu xác thực tài khoản.");
-        }
-
-        return _currentUserService.UserId.Value;
-    }
-}

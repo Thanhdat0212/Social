@@ -56,7 +56,7 @@ export const HomePage: React.FC = () => {
       if (activeTab === 'following') {
         data = await postApi.getFollowingFeed(1, PAGE_SIZE, seenIds);
       } else if (activeTab === 'recent') {
-        data = await postApi.getRecentPosts(1, PAGE_SIZE, seenIds);
+        data = await postApi.getRecentPosts(1, PAGE_SIZE);
       } else {
         data = await postApi.getForYouFeed(1, PAGE_SIZE, seenIds);
       }
@@ -101,7 +101,7 @@ export const HomePage: React.FC = () => {
       if (activeTab === 'following') {
         nextBatch = await postApi.getFollowingFeed(nextPage, PAGE_SIZE, currentSeenIds);
       } else if (activeTab === 'recent') {
-        nextBatch = await postApi.getRecentPosts(nextPage, PAGE_SIZE, currentSeenIds);
+        nextBatch = await postApi.getRecentPosts(nextPage, PAGE_SIZE);
       } else {
         nextBatch = await postApi.getForYouFeed(nextPage, PAGE_SIZE, currentSeenIds);
       }
@@ -141,7 +141,7 @@ export const HomePage: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [fetchPosts]);
+  }, [fetchPosts, user?.id]);
 
   // Realtime SignalR Listeners
   useSignalR<PostDto>('ReceiveNewPost', (newPost) => {
@@ -164,15 +164,17 @@ export const HomePage: React.FC = () => {
 
   useSignalR<PostLikeEvent>('PostLiked', (event) => {
     if (!event?.postId) return;
+    const targetId = event.postId.toLowerCase();
     setPosts((prev) =>
-      prev.map((p) => (p.id === event.postId ? { ...p, likeCount: event.likeCount } : p))
+      prev.map((p) => (p.id.toLowerCase() === targetId ? { ...p, likeCount: event.likeCount } : p))
     );
   });
 
   useSignalR<CommentAddedEvent>('CommentAdded', (event) => {
     if (!event?.postId) return;
+    const targetId = event.postId.toLowerCase();
     setPosts((prev) =>
-      prev.map((p) => (p.id === event.postId ? { ...p, commentCount: event.totalCommentCount } : p))
+      prev.map((p) => (p.id.toLowerCase() === targetId ? { ...p, commentCount: event.totalCommentCount } : p))
     );
   });
 

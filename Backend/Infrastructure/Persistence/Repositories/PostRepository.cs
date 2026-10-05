@@ -129,5 +129,24 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
             .Take(limit)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Post>> GetPostsByAuthorIdAsync(Guid authorId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(p => p.Author)
+            .Include(p => p.PostInterests)
+                .ThenInclude(pi => pi.Interest)
+            .Where(p => p.AuthorId == authorId)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> GetPostCountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .CountAsync(p => p.AuthorId == authorId, cancellationToken);
+    }
 }
 

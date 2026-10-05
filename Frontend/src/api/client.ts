@@ -17,7 +17,38 @@ export const apiClient = axios.create({
 
 // Request interceptor: Gắn Access Token từ Zustand store và danh sách bài đã xem
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Không chờ đối với các endpoint auth cơ bản để tránh deadlock
+    const isAuthRoute =
+      config.url?.includes('/auth/login') ||
+      config.url?.includes('/auth/register') ||
+      config.url?.includes('/auth/refresh') ||
+      config.url?.includes('/auth/forgot-password') ||
+      config.url?.includes('/auth/reset-password');
+
+    // Nếu đang trong quá trình khôi phục phiên đăng nhập (F5/Reload trang),
+    // tạm dừng request cho đến khi xác thực xong để đảm bảo luôn có Authorization header
+    if (!isAuthRoute && useAuthStore.getState().isInitializing) {
+      await new Promise<void>((resolve) => {
+        if (!useAuthStore.getState().isInitializing) {
+          resolve();
+          return;
+        }
+        let timer: ReturnType<typeof setTimeout>;
+        const unsubscribe = useAuthStore.subscribe((state) => {
+          if (!state.isInitializing) {
+            clearTimeout(timer);
+            unsubscribe();
+            resolve();
+          }
+        });
+        timer = setTimeout(() => {
+          unsubscribe();
+          resolve();
+        }, 5000);
+      });
+    }
+
     const accessToken = useAuthStore.getState().accessToken;
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
