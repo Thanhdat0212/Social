@@ -116,16 +116,25 @@ public static class DependencyInjection
 
         // 6. Email Sender (Console / Smtp / Brevo)
         var emailSettings = configuration.GetSection(EmailSettings.SectionName).Get<EmailSettings>() ?? new EmailSettings();
-        if (string.Equals(emailSettings.Provider, "Smtp", StringComparison.OrdinalIgnoreCase))
-        {
-            services.AddScoped<IEmailSender, SmtpEmailSender>();
-        }
-        else if (string.Equals(emailSettings.Provider, "Brevo", StringComparison.OrdinalIgnoreCase))
+        var emailProvider = configuration["Email:Provider"]
+            ?? Environment.GetEnvironmentVariable("Email__Provider")
+            ?? Environment.GetEnvironmentVariable("EMAIL_PROVIDER")
+            ?? emailSettings.Provider;
+
+        var hasBrevoKey = !string.IsNullOrWhiteSpace(configuration["Brevo:ApiKey"])
+            || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("Brevo__ApiKey"))
+            || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BREVO_API_KEY"));
+
+        if (string.Equals(emailProvider, "Brevo", StringComparison.OrdinalIgnoreCase) || hasBrevoKey)
         {
             services.AddHttpClient<IEmailSender, BrevoEmailSender>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(15);
             });
+        }
+        else if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
         }
         else
         {
