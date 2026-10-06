@@ -98,7 +98,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Tạo link xác minh và gửi email
-        var baseUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        var baseUrl = GetFrontendBaseUrl();
         var verifyUrl = $"{baseUrl}/verify-email?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Chào mừng {user.DisplayName} đến với Social!</h2>
@@ -190,7 +190,7 @@ public class AuthService : IAuthService
         await _unitOfWork.VerificationTokens.AddAsync(newToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var baseUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        var baseUrl = GetFrontendBaseUrl();
         var verifyUrl = $"{baseUrl}/verify-email?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Xác minh lại tài khoản Social</h2>
@@ -457,7 +457,7 @@ public class AuthService : IAuthService
         await _unitOfWork.VerificationTokens.AddAsync(newToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var baseUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        var baseUrl = GetFrontendBaseUrl();
         var resetUrl = $"{baseUrl}/reset-password?userId={user.Id}&token={rawToken}";
         var emailBody = $@"
             <h2>Yêu cầu đặt lại mật khẩu</h2>
@@ -528,6 +528,31 @@ public class AuthService : IAuthService
             await _unitOfWork.RollbackTransactionAsync(cancellationToken);
             throw;
         }
+    }
+
+    private string GetFrontendBaseUrl()
+    {
+        var envUrl = Environment.GetEnvironmentVariable("App__FrontendBaseUrl")
+            ?? Environment.GetEnvironmentVariable("APP_FRONTEND_BASE_URL")
+            ?? Environment.GetEnvironmentVariable("FRONTEND_URL");
+
+        if (!string.IsNullOrWhiteSpace(envUrl))
+        {
+            return envUrl.Trim().TrimEnd('/');
+        }
+
+        var configuredUrl = (_appSettings.FrontendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+
+        // Nếu chạy trên Render (Render tự động có biến RENDER=true) hoặc Production mà URL vẫn là localhost:
+        var isRender = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RENDER"));
+        var isProduction = string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Production", StringComparison.OrdinalIgnoreCase);
+
+        if ((isRender || isProduction) && (string.IsNullOrWhiteSpace(configuredUrl) || configuredUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "https://social-tawny-gamma.vercel.app";
+        }
+
+        return string.IsNullOrWhiteSpace(configuredUrl) ? "https://social-tawny-gamma.vercel.app" : configuredUrl;
     }
 
     private static string GenerateSecureToken()
