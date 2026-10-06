@@ -122,7 +122,10 @@ public static class DependencyInjection
         }
         else if (string.Equals(emailSettings.Provider, "Brevo", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddHttpClient<IEmailSender, BrevoEmailSender>();
+            services.AddHttpClient<IEmailSender, BrevoEmailSender>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
         }
         else
         {

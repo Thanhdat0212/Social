@@ -40,6 +40,7 @@ public class SmtpEmailSender : IEmailSender
             message.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
+            client.Timeout = 10000; // 10 giây tối đa thay vì mặc định 100s
             var secureSocketOptions = _smtpSettings.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
             await client.ConnectAsync(_smtpSettings.Host, _smtpSettings.Port, secureSocketOptions, cancellationToken);
 

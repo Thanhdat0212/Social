@@ -10,6 +10,7 @@ using Domain.Enums;
 using Domain.Exceptions;
 using Google.Apis.Auth;
 using Infrastructure.Security;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services;
@@ -21,6 +22,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHasherService _passwordHasherService;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailSender _emailSender;
+    private readonly ILogger<AuthService> _logger;
     private readonly AppSettings _appSettings;
     private readonly GoogleSettings _googleSettings;
 
@@ -30,6 +32,7 @@ public class AuthService : IAuthService
         IPasswordHasherService passwordHasherService,
         IJwtTokenService jwtTokenService,
         IEmailSender emailSender,
+        ILogger<AuthService> logger,
         IOptions<AppSettings> appSettings,
         IOptions<GoogleSettings> googleSettings)
     {
@@ -38,6 +41,7 @@ public class AuthService : IAuthService
         _passwordHasherService = passwordHasherService;
         _jwtTokenService = jwtTokenService;
         _emailSender = emailSender;
+        _logger = logger;
         _appSettings = appSettings.Value;
         _googleSettings = googleSettings.Value;
     }
@@ -46,15 +50,40 @@ public class AuthService : IAuthService
     {
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
 
-        var isUnique = await _unitOfWork.Users.IsEmailUniqueAsync(normalizedEmail, cancellationToken);
-        if (!isUnique)
-        {
-            throw new ConflictException("Email này đã được sử dụng bởi tài khoản khác.");
-        }
+        var existingUser = await _unitOfWork.Users.GetByNormalizedEmailAsync(normalizedEmail, cancellationToken);
+        User user;
 
-        // Map DTO sang Entity qua AutoMapper
-        var user = _mapper.Map<User>(request);
-        user.PasswordHash = _passwordHasherService.HashPassword(user, request.Password);
+        if (existingUser != null)
+        {
+            // Nếu tài khoản đã xác nhận email rồi thì không cho phép đăng ký đè
+            if (existingUser.EmailConfirmed)
+            {
+                throw new ConflictException("Email này đã được sử dụng bởi tài khoản khác.");
+            }
+
+            // Tự phục hồi (Self-healing): Tài khoản đã lưu nhưng chưa xác nhận (hoặc lần trước bị timeout/lỗi gửi mail)
+            user = existingUser;
+            user.DisplayName = request.DisplayName.Trim();
+            user.PasswordHash = _passwordHasherService.HashPassword(user, request.Password);
+            user.UpdatedAtUtc = DateTime.UtcNow;
+            _unitOfWork.Users.Update(user);
+
+            // Thu hồi toàn bộ token xác minh cũ chưa dùng
+            var activeTokens = await _unitOfWork.VerificationTokens
+                .GetActiveTokensAsync(user.Id, VerificationPurpose.EmailConfirmation, cancellationToken);
+            foreach (var token in activeTokens)
+            {
+                token.ConsumedAtUtc = DateTime.UtcNow;
+                _unitOfWork.VerificationTokens.Update(token);
+            }
+        }
+        else
+        {
+            // Map DTO sang Entity qua AutoMapper
+            user = _mapper.Map<User>(request);
+            user.PasswordHash = _passwordHasherService.HashPassword(user, request.Password);
+            await _unitOfWork.Users.AddAsync(user, cancellationToken);
+        }
 
         var rawToken = GenerateSecureToken();
         var verificationToken = new VerificationToken
@@ -65,7 +94,6 @@ public class AuthService : IAuthService
             ExpiresAtUtc = DateTime.UtcNow.AddHours(24)
         };
 
-        await _unitOfWork.Users.AddAsync(user, cancellationToken);
         await _unitOfWork.VerificationTokens.AddAsync(verificationToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -79,7 +107,14 @@ public class AuthService : IAuthService
             <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{verifyUrl}"" style=""word-break:break-all;color:#007bff;"">{verifyUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 24 giờ.</p>";
 
-        await _emailSender.SendEmailAsync(user.Email, "Xác minh tài khoản Social của bạn", emailBody, cancellationToken);
+        try
+        {
+            await _emailSender.SendEmailAsync(user.Email, "Xác minh tài khoản Social của bạn", emailBody, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Không thể gửi email xác minh đến {Email}. Tài khoản đã được tạo an toàn.", user.Email);
+        }
     }
 
     public async Task ConfirmEmailAsync(Guid userId, string token, CancellationToken cancellationToken = default)
@@ -164,7 +199,14 @@ public class AuthService : IAuthService
             <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{verifyUrl}"" style=""word-break:break-all;color:#007bff;"">{verifyUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 24 giờ.</p>";
 
-        await _emailSender.SendEmailAsync(user.Email, "Gửi lại xác minh tài khoản Social của bạn", emailBody, cancellationToken);
+        try
+        {
+            await _emailSender.SendEmailAsync(user.Email, "Gửi lại xác minh tài khoản Social của bạn", emailBody, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gửi lại email xác minh đến {Email}.", user.Email);
+        }
     }
 
     public async Task<LoginResultDto> LoginAsync(LoginRequestDto request, string? ipAddress, CancellationToken cancellationToken = default)
@@ -424,7 +466,14 @@ public class AuthService : IAuthService
             <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{resetUrl}"" style=""word-break:break-all;color:#dc3545;"">{resetUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 1 giờ. Nếu bạn không gửi yêu cầu này, hãy bỏ qua email này.</p>";
 
-        await _emailSender.SendEmailAsync(user.Email, "Đặt lại mật khẩu tài khoản Social của bạn", emailBody, cancellationToken);
+        try
+        {
+            await _emailSender.SendEmailAsync(user.Email, "Đặt lại mật khẩu tài khoản Social của bạn", emailBody, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gửi email đặt lại mật khẩu đến {Email}.", user.Email);
+        }
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequestDto request, CancellationToken cancellationToken = default)
