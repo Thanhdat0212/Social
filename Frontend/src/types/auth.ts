@@ -5,6 +5,8 @@ export interface UserDto {
   bio?: string | null;
   avatarUrl?: string | null;
   emailConfirmed: boolean;
+  role?: string;
+  status?: string;
 }
 
 export interface LoginResponseDto {

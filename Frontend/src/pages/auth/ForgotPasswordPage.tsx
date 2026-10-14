@@ -4,7 +4,7 @@ import { authApi } from '@/api/authApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { useTitle } from '@/hooks/useTitle';
 import { ROUTES } from '@/constants/routes';
-import { Button, Alert, LogoIcon, CheckIcon } from '@/components/common';
+import { Button, Alert, LogoIcon, CheckIcon, FormField, Input } from '@/components/common';
 
 export const ForgotPasswordPage: React.FC = () => {
   useTitle('Quên mật khẩu');
@@ -60,19 +60,17 @@ export const ForgotPasswordPage: React.FC = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="auth-box-form">
-            <div className="form-group">
-              <label htmlFor="forgot-email">Email tài khoản của bạn</label>
-              <input
+            <FormField label="Email tài khoản của bạn">
+              <Input
                 id="forgot-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 required
-                className="form-control"
                 autoComplete="email"
               />
-            </div>
+            </FormField>
 
             <Button
               type="submit"

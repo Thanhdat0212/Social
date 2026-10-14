@@ -7,7 +7,7 @@ import { authApi } from '@/api/authApi';
 import { interestApi } from '@/api/interestApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
-import { Button, Alert, LogoIcon } from '@/components/common';
+import { Button, Alert, LogoIcon, FormField, Input } from '@/components/common';
 
 export const LoginPage: React.FC = () => {
   useTitle('Đăng nhập');
@@ -72,39 +72,41 @@ export const LoginPage: React.FC = () => {
 
         {error && <Alert type="error" message={error} className="mb-4" />}
 
-        <form onSubmit={handleSubmit} className="auth-box-form">
-          <div className="form-group">
-            <label htmlFor="login-email">Địa chỉ Email</label>
-            <input
+        <form onSubmit={handleSubmit} className="auth-box-form" noValidate>
+          <FormField id="login-email" label="Địa chỉ Email" required>
+            <Input
               id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
               required
-              className="form-control"
               autoComplete="email"
+              disabled={loading}
             />
-          </div>
+          </FormField>
 
-          <div className="form-group">
-            <div className="form-label-row">
-              <label htmlFor="login-password">Mật khẩu</label>
-              <Link to={ROUTES.AUTH.FORGOT_PASSWORD} className="link-subtle">
+          <FormField
+            id="login-password"
+            label="Mật khẩu"
+            required
+            extraAction={
+              <Link to={ROUTES.AUTH.FORGOT_PASSWORD} className="link-subtle" style={{ color: 'var(--accent-primary)', fontSize: '0.82rem' }}>
                 Quên mật khẩu?
               </Link>
-            </div>
-            <input
+            }
+          >
+            <Input
               id="login-password"
-              type="password"
+              passwordToggle
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-control"
               autoComplete="current-password"
+              disabled={loading}
             />
-          </div>
+          </FormField>
 
           <Button
             type="submit"
@@ -112,8 +114,9 @@ export const LoginPage: React.FC = () => {
             size="md"
             block
             loading={loading}
-            disabled={loading}
+            disabled={loading || !email.trim() || !password}
             id="login-submit-btn"
+            style={{ marginTop: '0.5rem' }}
           >
             Đăng nhập
           </Button>

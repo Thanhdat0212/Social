@@ -8,5 +8,7 @@ public class ProfileDto
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
     public bool EmailConfirmed { get; set; }
+    public string Role { get; set; } = "Member";
+    public string Status { get; set; } = "Active";
     public DateTime CreatedAtUtc { get; set; }
 }

@@ -12,21 +12,43 @@ public class InterestService : IInterestService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMapper _mapper;
+    private readonly ICacheService _cacheService;
 
     public InterestService(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
-        IMapper mapper)
+        IMapper mapper,
+        ICacheService cacheService)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _mapper = mapper;
+        _cacheService = cacheService;
     }
 
     public async Task<IReadOnlyList<InterestDto>> GetAllInterestsAsync(CancellationToken cancellationToken = default)
     {
-        var interests = await _unitOfWork.Interests.GetAllActiveAsync(cancellationToken);
-        var dtos = _mapper.Map<List<InterestDto>>(interests);
+        // 1. Lấy danh sách sở thích đang hoạt động từ Memory Cache (TTL 2 giờ, giảm tối đa truy vấn DB)
+        var cachedInterests = await _cacheService.GetOrCreateAsync(
+            Caching.CacheKeys.InterestsAllActive,
+            async ct =>
+            {
+                var interests = await _unitOfWork.Interests.GetAllActiveAsync(ct);
+                return _mapper.Map<List<InterestDto>>(interests);
+            },
+            TimeSpan.FromHours(2),
+            cancellationToken);
+
+        // 2. Clone danh sách để không ảnh hưởng dữ liệu trong cache khi gán IsSelected
+        var dtos = cachedInterests.Select(i => new InterestDto
+        {
+            Id = i.Id,
+            Name = i.Name,
+            Slug = i.Slug,
+            Description = i.Description,
+            Icon = i.Icon,
+            IsSelected = false
+        }).ToList();
 
         if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)
         {

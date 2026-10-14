@@ -12,6 +12,8 @@ Nền tảng mạng xã hội full-stack với hệ thống **gợi ý nội dun
 | 👤 **Hồ sơ cá nhân** | Cập nhật avatar (Cloudinary), bio, username, onboarding chọn sở thích |
 | 📝 **Bài viết** | Tạo/xóa bài viết, đính kèm ảnh/video, phân tích AI tự động (Gemini), gắn thẻ sở thích |
 | ❤️ **Tương tác** | Like, comment, theo dõi (follow/unfollow) |
+| 🛍️ **Gian hàng số** | Tạo gian hàng, quy trình xét duyệt/từ chối/kỷ luật Shop, Memory Cache tra cứu nhanh |
+| 📂 **Danh mục & Thuộc tính** | Cây danh mục 3 cấp, từ điển thuộc tính kế thừa tổ tiên, đề xuất mở danh mục từ Seller |
 | 🤖 **Gợi ý thông minh** | Pipeline Hybrid Recommendation (Interest · Following · Trending · Collaborative · Semantic · Exploration) |
 | 🔔 **Real-time** | Thông báo tức thì qua SignalR WebSocket (like, comment, follow, bài viết mới) |
 | 📱 **Giao diện** | Responsive, Mobile Navigation, Infinite Scroll, Dark Theme |
@@ -49,6 +51,7 @@ Social/
 |---|---|
 | Framework | ASP.NET Core 8 |
 | Database | PostgreSQL (Supabase) + Entity Framework Core |
+| Caching | In-Memory Caching (`IMemoryCache`) — Tối ưu hóa đọc dữ liệu & giảm tải Database |
 | Vector Search | pgvector (Semantic Search) |
 | Real-time | SignalR WebSocket |
 | AI | Google Gemini API (phân tích & embedding bài viết) |
@@ -255,6 +258,7 @@ npm run dev
 ```
 Backend/Infrastructure/
 ├── AI/                   # GeminiService, GeminiEmbeddingService, PostAiBackgroundWorker
+├── Caching/              # MemoryCacheService, CacheKeys, CacheInvalidation
 ├── Email/                # SmtpEmailSender, BrevoEmailSender, ConsoleEmailSender
 ├── Identity/             # CurrentUserService, PasswordHasherService, JwtTokenService
 ├── Media/                # CloudinaryAvatarService, CloudinaryPostMediaService
@@ -277,18 +281,107 @@ docker run -p 8080:8080 --env-file .env social-api
 
 ---
 
-## 🌐 Triển Khai (Production)
+---
 
-| Thành phần | Platform |
-|---|---|
-| Backend API | [Render](https://render.com/) |
-| Frontend | [Vercel](https://vercel.com/) |
-| Database | [Supabase](https://supabase.com/) (PostgreSQL + pgvector) |
-| Media Storage | [Cloudinary](https://cloudinary.com/) |
-| Email | SMTP Gmail / [Brevo](https://www.brevo.com/) |
+## 🛒 Lộ Trình Triển Khai Gian Hàng Số (Marketplace Tracking)
+
+> Hệ thống theo dõi tiến độ tích hợp module **Gian hàng hàng số (Digital Marketplace)** vào nền tảng Social.
+> Tham khảo chi tiết tại: [`ke-hoach-gian-hang-social.md`](file:///d:/Social/ke-hoach-gian-hang-social.md)
+
+### 📊 Bảng Trạng Thái Tổng Quan
+
+| Chặng | Giai đoạn | Mô tả trọng tâm | Trạng thái |
+|---|---|---|:---:|
+| **Chặng 1** | **M0 - M1** | Nền tảng Admin Role, Bảng Notification, Memory Cache (`IMemoryCache`), Quản lý Shop (Tạo, Duyệt, Sanction) | `[x] Đã hoàn thành` |
+| **Chặng 2** | **M2 - M4** | Danh mục tinh gọn (Cache Tree), Đăng sản phẩm (Cache chi tiết công khai) & Kho số bảo mật (AES-GCM, Account credentials) | `[x] Đã hoàn thành` |
+| **Chặng 3** | **M5** | Giỏ hàng, Checkout giữ chỗ (`SKIP LOCKED`), Mock Payment & Tự động giao hàng | `[x] Đã hoàn thành` |
+| **Chặng 4** | **M6 - M9** | Cổng thanh toán thật (PayOS/VietQR), Sổ cái (Ledger), Khiếu nại, Payout & Đối soát hệ thống | `[x] Đã hoàn thành` |
+
+---
+
+### 📌 Chi Tiết Từng Chặng & Checklist Nghiệm Thu
+
+#### 🔹 CHẶNG 1: Nền tảng & Quản trị Gian hàng (Foundation & Shop Management)
+* **Trạng thái**: `[x] Đã hoàn thành`
+* **Nhiệm vụ chính**:
+  - [x] **M0.1**: Bổ sung `Role` (`Admin`/`Member`) và `Status` (`Active`/`Suspended`) vào `User`. Gắn claim Role vào `JwtTokenService`. Tạo seed tài khoản Admin (`admin@social.com`).
+  - [x] **M0.2**: Thiết lập cấu trúc thư mục module `Marketplace` (Shops, Catalog, Orders, Payments, Ledger, Disputes, Payouts) xuyên suốt Domain, Application, Infrastructure, API.
+  - [x] **M0.3**: Tạo các lớp dùng chung: `IClock`/`SystemClock`, Value Object `Money` (long VND), Entity `Notification` lưu database + tích hợp phát realtime qua `SocialHub`.
+  - [x] **M0.4**: Tạo Entity `IdempotencyRecord` hỗ trợ khóa chống lặp idempotency cho các tác vụ nhạy cảm.
+  - [x] **M0.7**: Thiết lập tầng Memory Cache (`IMemoryCache` / `ICacheService`) dùng chung cho toàn bộ hệ thống (danh sách sở thích Interests, cây danh mục Categories, cấu hình hệ thống, hồ sơ shop/user), giảm tối đa số lần đọc từ Supabase PostgreSQL.
+  - [x] **M1.1 - M1.2**: Tạo Entity `Shop`, `ShopReview`, `ShopSanction` kế thừa `BaseEntity` (`CreatedAtUtc`), cấu hình EF Core & Migration `AddShops`.
+  - [x] **M1.3 - M1.7**: Viết Service tính `ShopEffectiveStatus`, API Seller đăng ký/mở/đóng Shop (`/api/shops`, `/api/shop`), API Admin duyệt/từ chối/phạt Shop (`/api/admin/shops`).
+  - [x] **M1.8**: Frontend: Trang đăng ký mở Shop, quản lý trạng thái Shop cá nhân, giao diện Admin duyệt Shop.
+* **Tiêu chuẩn nghiệm thu**:
+  - User thường gọi API Admin bị trả `403 Forbidden`.
+  - Một tài khoản chỉ tạo tối đa 1 Shop; bấm đúp bị chặn ở tầng DB Unique Index.
+  - Tầng Memory Cache hoạt động chuẩn xác: các truy vấn dữ liệu ít biến động (Interests, Categories) trả lời tức thì (< 2ms) mà không cần query lại DB.
+  - Admin từ chối bắt buộc có lý do; chủ shop nhận được thông báo trong hệ thống.
+  - Khóa tài khoản User thì Shop tự chuyển sang trạng thái tạm ngưng (`Suspended/UserUnavailable`).
+
+---
+
+#### 🔹 CHẶNG 2: Danh mục & Kho hàng số bảo mật (Catalog & Digital Inventory)
+* **Trạng thái**: `[x] Đã hoàn thành`
+* **Nhiệm vụ chính**:
+  - [x] **M2**: Seed sẵn cây danh mục hàng số 1-2 cấp (Key bản quyền, Tài khoản học tập/phần mềm, Tài liệu/Source code). Tích hợp Memory Cache cho `GET /api/categories/tree` và tự động evict khi Admin sửa danh mục.
+  - [x] **M3**: Entity `Product`, `ProductVariant` (giá, SKU, tồn kho nằm ở Variant). Quản lý vòng đời (`Draft` -> `Listed` <-> `Hidden` -> `Archived`). Caching trang chi tiết sản phẩm (`/products/{slug}`) và thông tin shop công khai.
+  - [x] **M4.1 - M4.3**: Entity `DigitalCode` cho kho số. Mã hóa `ValueEncrypted` (AES-GCM) và đối chiếu băm `ValueHash` (SHA-256) chống nạp trùng mã.
+  - [x] **M4.4**: Hỗ trợ sản phẩm dạng File tải về qua Cloudinary/Storage riêng tư với link chữ ký hết hạn ngắn.
+  - [x] **M4.5 [Đã chốt]**: Khóa học dùng chung kho số `DigitalCode` (chia sẻ tài khoản & mật khẩu học tập), không làm LMS/video.
+  - [x] **M3.5 & M4.6**: Frontend: Form Seller tạo sản phẩm & giao diện nạp kho số; trang công khai xem chi tiết sản phẩm.
+* **Tiêu chuẩn nghiệm thu**:
+  - Trong DB: cột `ValueEncrypted` hoàn toàn là chuỗi mã hóa bảo mật.
+  - Seller nạp 100 mã có 5 mã trùng -> Hệ thống nạp thành công 95 mã, báo cáo đúng 5 mã trùng.
+  - Khóa Shop -> Tất cả sản phẩm tự động ẩn khỏi danh sách công khai.
+  - Truy vấn cây danh mục và chi tiết sản phẩm công khai lấy từ Memory Cache; khi Seller cập nhật giá/thông tin hoặc Admin sửa danh mục, cache được xóa ngay lập tức (không hiển thị dữ liệu cũ).
+
+---
+
+#### 🔹 CHẶNG 3: Giỏ hàng, Concurrency Lock & Luồng mua hàng (Cart, Checkout & Mock Delivery)
+* **Trạng thái**: `[x] Đã hoàn thành`
+* **Nhiệm vụ chính**:
+  - [x] **M5.1**: Entity `Cart`, `CartItem` (giỏ không giữ hàng, giá luôn đọc lại từ DB).
+  - [x] **M5.2 - M5.3**: Tạo phiên `Checkout (Open, 15 phút)`. Giữ kho bằng lệnh `UPDATE digital_codes ... FOR UPDATE SKIP LOCKED` trong Transaction.
+  - [x] **M5.4**: Service `CompleteCheckoutPaymentAsync`: Chuyển mã `Reserved -> Delivered`, tạo `ShopOrder` + `OrderItem` snapshot giá.
+  - [x] **M5.5**: API Mock Payment (`/api/dev/checkouts/{id}/mock-pay`) dành riêng cho môi trường Development để test luồng.
+  - [x] **M5.6**: Job quét hủy Checkout quá hạn 15 phút, trả mã về lại `Available`.
+  - [x] **M5.8**: Frontend: Giỏ hàng, Checkout đếm ngược 15 phút, màn hình thanh toán thử nghiệm (Dev), trang đơn hàng và xem mã đã mua.
+* **Tiêu chuẩn nghiệm thu**:
+  - Kho chỉ còn 1 mã: Hai khách cùng bấm mua 1 giây -> Đúng 1 người thành công, 1 người báo hết hàng (không bao giờ bán trùng).
+  - Gọi thanh toán giả 2 lần cùng một mã giao dịch -> Idempotent chỉ sinh 1 đơn hàng.
+  - Người mua xem lại được mã đã giao trong lịch sử đơn hàng của mình.
+
+---
+
+#### 🔹 CHẶNG 4: Cổng thanh toán thực tế, Sổ cái & Rút tiền (Payment Gateway, Ledger & Payout)
+* **Trạng thái**: `[x] Đã hoàn thành`
+* **Nhiệm vụ chính**:
+  - [x] **M6.1 - M6.2**: Tích hợp cổng thanh toán QR (VietQR / PayOS). Xử lý Webhook an toàn có xác thực chữ ký.
+  - [x] **M6.3 - M6.6**: Hệ thống Sổ cái kép (`LedgerEntry` append-only). Phân bổ doanh thu: Tiền sàn, Tiền Shop tạm giữ (`ShopPending`).
+  - [x] **M7**: Xử lý Khiếu nại (Complaint) trong 48h: Giữ tiền khiếu nại, hỗ trợ Shop đổi mã mới hoặc hoàn tiền.
+  - [x] **M8**: Rút tiền (Payout) an toàn: Shop yêu cầu rút -> Khóa số dư khả dụng -> Admin chuyển khoản ngoài và xác nhận.
+  - [x] **M9**: Job định kỳ đối soát tự phục hồi (`DailyReconciliationWorker`), API Audit kiểm toán sổ cái kép, Rate limiting.
+  - [x] Frontend: Dashboard tài chính của Shop, sao kê sổ cái biến động Nợ/Có, quản lý tài khoản ngân hàng và yêu cầu rút tiền.
+* **Tiêu chuẩn nghiệm thu**:
+  - Mọi bút toán sổ cái: Tổng Nợ luôn bằng Tổng Có (`Debit == Credit`).
+  - Webhook gửi trùng 5 lần -> Chỉ ghi sổ và xử lý đơn đúng 1 lần.
+  - Shop không thể rút vượt quá số dư khả dụng (`ShopAvailable`).
+
+---
+
+### 💡 Ghi Chú Các Quyết Định Nghiệp Vụ Cốt Lõi
+1. **Khóa học**: Thực chất là hình thức chia sẻ **tài khoản & mật khẩu** (account credentials/license access). Giao tự động từ kho `DigitalCode`, không dựng video streaming hay LMS.
+2. **Quy ước Entity**: Kế thừa `BaseEntity` với `CreatedAtUtc` và `UpdatedAtUtc` để tương thích toàn bộ hệ thống Social hiện có.
+3. **Quản lý quyền**: Module Shop yêu cầu User có `Role = Admin` đối với API phê duyệt/phạt, và `Status = Active` đối với Seller/Buyer.
+4. **Chiến lược Memory Cache (`IMemoryCache`)**:
+   - Áp dụng kỹ thuật Cache-Aside cho các dữ liệu có tần suất đọc vượt trội so với ghi: Sở thích (Interests), Cây danh mục (Categories Tree), Thuộc tính danh mục (Category Attributes), Chi tiết sản phẩm công khai (Product detail), Thông tin Shop công khai.
+   - Cache Invalidation chủ động: Bắt buộc xóa cache khi có sự kiện thay đổi dữ liệu (Write/Update/Delete) để đảm bảo tính nhất quán.
+   - Không cache các luồng tài chính & giao dịch: Giỏ hàng, Checkout, Giữ mã số `SKIP LOCKED`, Ghi sổ cái Ledger, và Rút tiền Payout luôn đọc/ghi trực tiếp trên Database trong Transaction an toàn.
 
 ---
 
 ## 👤 Tác Giả
 
 **Thanhdat0212** — [GitHub](https://github.com/Thanhdat0212)
+

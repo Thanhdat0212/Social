@@ -31,5 +31,29 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (id.includes('node_modules')) {
+              if (
+                id.includes('react') ||
+                id.includes('react-dom') ||
+                id.includes('react-router-dom')
+              ) {
+                return 'vendor-react';
+              }
+              if (id.includes('axios') || id.includes('@microsoft/signalr')) {
+                return 'vendor-network';
+              }
+              if (id.includes('zustand') || id.includes('@react-oauth')) {
+                return 'vendor-auth';
+              }
+            }
+          },
+        },
+      },
+    },
   };
 });

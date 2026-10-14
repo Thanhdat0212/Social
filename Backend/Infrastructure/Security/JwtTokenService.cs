@@ -31,6 +31,7 @@ public class JwtTokenService : IJwtTokenService
             new(ClaimTypes.Email, user.Email),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Name, user.DisplayName),
+            new(ClaimTypes.Role, user.Role.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

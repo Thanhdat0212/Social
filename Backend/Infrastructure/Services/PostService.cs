@@ -57,6 +57,25 @@
                 CreatedAtUtc = DateTime.UtcNow
             };
 
+            // Gắn thẻ sản phẩm số trên Marketplace (Social Commerce)
+            if (request.TaggedProductIds != null && request.TaggedProductIds.Count > 0)
+            {
+                var distinctProductIds = request.TaggedProductIds.Distinct().Take(5).ToList();
+                foreach (var productId in distinctProductIds)
+                {
+                    var product = await _unitOfWork.Products.GetByIdAsync(productId, cancellationToken);
+                    if (product != null && product.Status == Domain.Enums.ProductStatus.Listed && !product.DeletedAtUtc.HasValue)
+                    {
+                        post.PostProducts.Add(new Domain.Entities.Marketplace.PostProduct
+                        {
+                            PostId = post.Id,
+                            ProductId = product.Id,
+                            CreatedAtUtc = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
             await _unitOfWork.Posts.AddAsync(post, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -74,7 +93,11 @@
                 }
             }
 
-            var postDto = _mapper.Map<PostDto>(post);
+            var savedPost = post.PostProducts.Count > 0
+                ? (await _unitOfWork.Posts.GetWithDetailsByIdAsync(post.Id, cancellationToken) ?? post)
+                : post;
+
+            var postDto = _mapper.Map<PostDto>(savedPost);
             postDto.Author = _mapper.Map<PostAuthorDto>(user);
             postDto.Topics = new List<PostTopicDto>();
             postDto.IsLikedByCurrentUser = false;

@@ -224,6 +224,11 @@ public class AuthService : IAuthService
             throw new ValidationAppException("EMAIL_NOT_CONFIRMED", "Tài khoản chưa được xác minh email. Vui lòng kiểm tra hộp thư hoặc gửi lại yêu cầu xác minh.");
         }
 
+        if (user.Status == Domain.Enums.UserStatus.Suspended)
+        {
+            throw new ValidationAppException("Account", "Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ ban quản trị.");
+        }
+
         var accessToken = _jwtTokenService.GenerateAccessToken(user);
         var accessTokenExpiresAt = _jwtTokenService.GetAccessTokenExpiration();
 
@@ -299,6 +304,11 @@ public class AuthService : IAuthService
         }
         else
         {
+            if (user.Status == Domain.Enums.UserStatus.Suspended)
+            {
+                throw new ValidationAppException("Account", "Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ ban quản trị.");
+            }
+
             // 3. Đã có tài khoản -> Liên kết GoogleId và kích hoạt email nếu chưa
             var isUpdated = false;
 

@@ -27,6 +27,8 @@ export const App: React.FC = () => {
             bio: profile.bio,
             avatarUrl: profile.avatarUrl,
             emailConfirmed: profile.emailConfirmed,
+            role: profile.role,
+            status: profile.status,
           });
         } else {
           clearAuth();

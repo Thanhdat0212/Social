@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { PostDto } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotificationStore, usePostModalStore } from '@/store';
@@ -35,6 +36,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotificationStore();
   const { openPostModal } = usePostModalStore();
+  const navigate = useNavigate();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -152,8 +154,6 @@ export const PostCard: React.FC<PostCardProps> = ({
       const res = await postApi.toggleLike(post.id);
       setLiked(res.isLiked);
       setLikeCount(res.likeCount);
-      post.isLikedByCurrentUser = res.isLiked;
-      post.likeCount = res.likeCount;
     } catch {
       setLiked(previousLiked);
       setLikeCount(previousCount);
@@ -206,8 +206,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleCopyLink = () => {
     setShowMenu(false);
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      showToast('Đã sao chép liên kết vào bộ nhớ tạm!', 'info');
+      const postUrl = `${window.location.origin}/posts/${post.id}`;
+      navigator.clipboard.writeText(postUrl);
+      showToast('Đã sao chép liên kết bài viết vào bộ nhớ tạm!', 'info');
     }
   };
 
@@ -225,23 +226,6 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="post-author-meta">
               <div className="author-headline">
                 <span className="author-display-name">{post.author.displayName}</span>
-                {isAuthenticated && !isAuthor && (
-                  <button
-                    type="button"
-                    className={`btn-follow-chip ${isFollowing ? 'following' : ''}`}
-                    onClick={handleToggleFollow}
-                    disabled={followLoading}
-                  >
-                    {isFollowing ? (
-                      <>
-                        <CheckIcon size={12} />
-                        <span>Đang theo dõi</span>
-                      </>
-                    ) : (
-                      <span>+ Theo dõi</span>
-                    )}
-                  </button>
-                )}
               </div>
               <button
                 type="button"
@@ -256,17 +240,37 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           </div>
 
-          {/* Context Menu 3-dots */}
-          <div className="post-entry-menu" ref={menuRef}>
-            <button
-              type="button"
-              className="btn-icon-ghost"
-              onClick={() => setShowMenu((prev) => !prev)}
-              aria-label="Tùy chọn bài viết"
-              title="Tùy chọn"
-            >
-              <MoreVerticalIcon size={18} />
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {isAuthenticated && !isAuthor && (
+              <button
+                type="button"
+                className={`btn-follow-chip ${isFollowing ? 'following' : ''}`}
+                onClick={handleToggleFollow}
+                disabled={followLoading}
+                aria-label={isFollowing ? `Hủy theo dõi ${post.author.displayName}` : `Theo dõi ${post.author.displayName}`}
+              >
+                {isFollowing ? (
+                  <>
+                    <CheckIcon size={12} />
+                    <span>Đang theo dõi</span>
+                  </>
+                ) : (
+                  <span>+ Theo dõi</span>
+                )}
+              </button>
+            )}
+
+            {/* Context Menu 3-dots */}
+            <div className="post-entry-menu" ref={menuRef}>
+              <button
+                type="button"
+                className="btn-icon-ghost"
+                onClick={() => setShowMenu((prev) => !prev)}
+                aria-label="Tùy chọn bài viết"
+                title="Tùy chọn"
+              >
+                <MoreVerticalIcon size={18} />
+              </button>
 
             {showMenu && (
               <div className="dropdown-menu-popover">
@@ -300,6 +304,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 )}
               </div>
             )}
+            </div>
           </div>
         </header>
 
@@ -325,6 +330,55 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <img src={url} alt={`post-media-${index}`} loading="lazy" />
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Tagged Products Widget (Social Commerce) */}
+        {post.taggedProducts && post.taggedProducts.length > 0 && (
+          <div className="post-tagged-products-container">
+            <div className="post-tagged-products-header">
+              <span className="tagged-badge-icon">🛍️</span>
+              <span className="tagged-badge-title">Sản phẩm số đính kèm ({post.taggedProducts.length})</span>
+            </div>
+            <div className="post-tagged-products-list">
+              {post.taggedProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="post-tagged-product-card"
+                  onClick={() => navigate(`/marketplace/products/${product.slug}`)}
+                  title={`Xem chi tiết sản phẩm "${product.name}"`}
+                >
+                  <img
+                    src={product.coverImageUrl || 'https://via.placeholder.com/80'}
+                    alt={product.name}
+                    className="tagged-product-thumb"
+                  />
+                  <div className="tagged-product-info">
+                    <span className="tagged-product-shop">
+                      🏪 {product.shopName}
+                    </span>
+                    <h4 className="tagged-product-title">{product.name}</h4>
+                    <div className="tagged-product-pricing">
+                      <span className="tagged-product-price">
+                        {new Intl.NumberFormat('vi-VN').format(product.minPrice)} ₫
+                      </span>
+                    </div>
+                  </div>
+                  <div className="tagged-product-actions">
+                    <button
+                      type="button"
+                      className="btn-view-product"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/marketplace/products/${product.slug}`);
+                      }}
+                    >
+                      Xem chi tiết →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -370,7 +424,6 @@ export const PostCard: React.FC<PostCardProps> = ({
             postId={post.id}
             onCommentCountChange={(count) => {
               setCommentCount(count);
-              post.commentCount = count;
             }}
           />
         )}

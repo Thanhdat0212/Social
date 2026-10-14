@@ -50,6 +50,18 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(u => u.Role)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(Domain.Enums.UserRole.Member);
+
+        builder.Property(u => u.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(Domain.Enums.UserStatus.Active);
+
         builder.Property(u => u.CreatedAtUtc)
             .IsRequired();
 

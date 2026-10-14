@@ -22,4 +22,5 @@ public class Post : BaseEntity
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     public ICollection<UserInteraction> Interactions { get; set; } = new List<UserInteraction>();
     public PostEmbedding? Embedding { get; set; }
+    public ICollection<Domain.Entities.Marketplace.PostProduct> PostProducts { get; set; } = new List<Domain.Entities.Marketplace.PostProduct>();
 }

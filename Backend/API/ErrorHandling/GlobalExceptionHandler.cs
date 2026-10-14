@@ -96,6 +96,20 @@ public class GlobalExceptionHandler : IExceptionHandler
                 null
             ),
 
+            ArgumentException argEx => (
+                StatusCodes.Status400BadRequest,
+                "Dữ liệu không hợp lệ",
+                argEx.Message,
+                null
+            ),
+
+            InvalidOperationException opEx => (
+                StatusCodes.Status400BadRequest,
+                "Thao tác không hợp lệ",
+                opEx.Message,
+                null
+            ),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Lỗi máy chủ nội bộ",
@@ -103,5 +117,6 @@ public class GlobalExceptionHandler : IExceptionHandler
                 null
             )
         };
+
     }
 }

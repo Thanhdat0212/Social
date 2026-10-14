@@ -44,9 +44,21 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Icon, opt => opt.MapFrom(src => src.Interest.Icon))
             .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Confidence));
 
+        CreateMap<Domain.Entities.Marketplace.PostProduct, Application.DTOs.Posts.PostTaggedProductDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Product.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Product.Name))
+            .ForMember(dest => dest.Slug, opt => opt.MapFrom(src => src.Product.Slug))
+            .ForMember(dest => dest.MinPrice, opt => opt.MapFrom(src => src.Product.MinPriceCache))
+            .ForMember(dest => dest.MaxPrice, opt => opt.MapFrom(src => src.Product.MaxPriceCache))
+            .ForMember(dest => dest.CoverImageUrl, opt => opt.MapFrom(src => src.Product.Images.OrderBy(i => i.Position).Select(i => i.Url).FirstOrDefault()))
+            .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.Product.ShopId))
+            .ForMember(dest => dest.ShopName, opt => opt.MapFrom(src => src.Product.Shop != null ? src.Product.Shop.Name : string.Empty))
+            .ForMember(dest => dest.ShopSlug, opt => opt.MapFrom(src => src.Product.Shop != null ? src.Product.Shop.Slug : string.Empty));
+
         CreateMap<Post, Application.DTOs.Posts.PostDto>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
             .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author))
-            .ForMember(dest => dest.Topics, opt => opt.MapFrom(src => src.PostInterests));
+            .ForMember(dest => dest.Topics, opt => opt.MapFrom(src => src.PostInterests))
+            .ForMember(dest => dest.TaggedProducts, opt => opt.MapFrom(src => src.PostProducts));
     }
 }

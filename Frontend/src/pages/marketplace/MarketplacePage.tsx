@@ -1,0 +1,505 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { marketplaceApi } from '@/api/marketplaceApi';
+import type { Category, ProductListItem } from '@/types/marketplace';
+import {
+  PageContainer,
+  Input,
+  Select,
+  SearchIcon,
+  ProductCardSkeleton,
+  EmptyState,
+  ErrorState,
+  Button,
+  KeyIcon,
+  ShieldIcon,
+  CheckCheckIcon,
+  FilterIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@/components/common';
+
+type PricePreset = 'all' | 'under50k' | '50k-200k' | '200k-500k' | 'over500k' | 'custom';
+type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'name';
+
+export const MarketplacePage: React.FC = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Bộ lọc khoảng giá
+  const [pricePreset, setPricePreset] = useState<PricePreset>('all');
+  const [customMin, setCustomMin] = useState<string>('');
+  const [customMax, setCustomMax] = useState<string>('');
+
+  // Sắp xếp & Phân trang
+  const [sort, setSort] = useState<SortOption>('newest');
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 24;
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Load danh mục
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const tree = await marketplaceApi.getCategoriesTree();
+        setCategories(tree || []);
+      } catch (err) {
+        console.error('Lỗi khi tải danh mục:', err);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Tính toán minPrice và maxPrice gửi lên backend
+  const computePriceBounds = useCallback((): { minPrice?: number; maxPrice?: number } => {
+    switch (pricePreset) {
+      case 'under50k':
+        return { maxPrice: 50000 };
+      case '50k-200k':
+        return { minPrice: 50000, maxPrice: 200000 };
+      case '200k-500k':
+        return { minPrice: 200000, maxPrice: 500000 };
+      case 'over500k':
+        return { minPrice: 500000 };
+      case 'custom': {
+        const min = customMin ? parseInt(customMin, 10) : undefined;
+        const max = customMax ? parseInt(customMax, 10) : undefined;
+        return {
+          minPrice: min && !isNaN(min) ? min : undefined,
+          maxPrice: max && !isNaN(max) ? max : undefined,
+        };
+      }
+      case 'all':
+      default:
+        return {};
+    }
+  }, [pricePreset, customMin, customMax]);
+
+  // Load sản phẩm
+  const loadProducts = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { minPrice, maxPrice } = computePriceBounds();
+      const res = await marketplaceApi.getProducts({
+        categoryId: selectedCategory || undefined,
+        search: debouncedSearch || undefined,
+        minPrice,
+        maxPrice,
+        sort,
+        page,
+        pageSize,
+      });
+      setProducts(res.items || []);
+      setTotalCount(res.totalCount || 0);
+    } catch (err: any) {
+      console.error('Lỗi khi tải sản phẩm:', err);
+      setError(err?.response?.data?.message || 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory, debouncedSearch, computePriceBounds, sort, page, pageSize]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const handleCategorySelect = (catId: string | null) => {
+    setSelectedCategory(catId);
+    setPage(1);
+  };
+
+  const handlePricePresetSelect = (preset: PricePreset) => {
+    setPricePreset(preset);
+    setPage(1);
+  };
+
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSort(e.target.value as SortOption);
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setSearchInput('');
+    setDebouncedSearch('');
+    setSelectedCategory(null);
+    setPricePreset('all');
+    setCustomMin('');
+    setCustomMax('');
+    setSort('newest');
+    setPage(1);
+  };
+
+  const hasActiveFilters =
+    Boolean(debouncedSearch) ||
+    selectedCategory !== null ||
+    pricePreset !== 'all' ||
+    sort !== 'newest';
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  return (
+    <PageContainer variant="wide" style={{ padding: '1.25rem 1rem 4rem' }}>
+      {/* Compact Hero Banner */}
+      <section
+        className="market-hero"
+        style={{
+          padding: '1.75rem 2rem',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)',
+          border: '1px solid var(--border-color)',
+          marginBottom: '1.5rem',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem' }}>
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38bdf8', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+              <KeyIcon size={14} />
+              <span>Chợ tài khoản & Bản quyền số</span>
+            </div>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 0.4rem', letterSpacing: '-0.02em' }}>
+              Chợ sản phẩm số
+            </h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0, maxWidth: '580px', lineHeight: '1.5' }}>
+              Khám phá bản quyền phần mềm, khóa học trực tuyến, key kích hoạt và tài khoản dịch vụ số với hệ thống kho tự động 24/7.
+            </p>
+          </div>
+
+          {/* Service Commitment Badges */}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.5rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <KeyIcon size={16} style={{ color: '#38bdf8' }} />
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>Giao tự động</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Nhận mã tức thì</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.5rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <ShieldIcon size={16} style={{ color: '#34d399' }} />
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>Bảo vệ 48h</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Khiếu nại an toàn</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.5rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <CheckCheckIcon size={16} style={{ color: '#fbbf24' }} />
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>VietQR Napas</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Khớp lệnh chuẩn xác</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Search Bar */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <Input
+          leftIcon={<SearchIcon size={18} />}
+          placeholder="Tìm kiếm tài khoản, khóa học, key phần mềm..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          clearable
+          onClear={() => setSearchInput('')}
+          inputSize="lg"
+          aria-label="Tìm kiếm sản phẩm"
+        />
+      </div>
+
+      {/* Category Pills (Horizontal scrollable) */}
+      <div
+        className="category-pill-list"
+        role="tablist"
+        aria-label="Danh mục sản phẩm"
+        style={{ marginBottom: '1.25rem' }}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={selectedCategory === null}
+          className={`category-pill ${selectedCategory === null ? 'active' : ''}`}
+          onClick={() => handleCategorySelect(null)}
+        >
+          Tất cả danh mục
+        </button>
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            role="tab"
+            aria-selected={selectedCategory === c.id}
+            className={`category-pill ${selectedCategory === c.id ? 'active' : ''}`}
+            onClick={() => handleCategorySelect(c.id)}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Advanced Filter & Sorting Toolbar */}
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '14px',
+          padding: '1rem 1.25rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          {/* Price Range Presets */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginRight: '0.25rem' }}>
+              <FilterIcon size={14} /> Mức giá:
+            </span>
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'under50k', label: '< 50k' },
+              { id: '50k-200k', label: '50k - 200k' },
+              { id: '200k-500k', label: '200k - 500k' },
+              { id: 'over500k', label: '> 500k' },
+              { id: 'custom', label: 'Tùy chỉnh' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handlePricePresetSelect(p.id as PricePreset)}
+                style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  padding: '0.3rem 0.75rem',
+                  borderRadius: '20px',
+                  border: pricePreset === p.id ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  background: pricePreset === p.id ? 'rgba(14, 165, 233, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                  color: pricePreset === p.id ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort & Reset Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>Sắp xếp:</span>
+              <Select
+                value={sort}
+                onChange={handleSortChange}
+                aria-label="Sắp xếp sản phẩm"
+                style={{ padding: '0.35rem 0.65rem', fontSize: '0.82rem', minWidth: '150px' }}
+              >
+                <option value="newest">Mới nhất</option>
+                <option value="price_asc">Giá: Thấp đến Cao</option>
+                <option value="price_desc">Giá: Cao đến Thấp</option>
+                <option value="name">Tên sản phẩm A-Z</option>
+              </Select>
+            </div>
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                style={{ fontSize: '0.78rem', color: '#f87171' }}
+              >
+                Đặt lại
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Custom Price Range Row (when 'custom' preset is selected) */}
+        {pricePreset === 'custom' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              paddingTop: '0.75rem',
+              borderTop: '1px dashed var(--border-color)',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Khoảng giá mong muốn (VND):</span>
+            <div style={{ width: '130px' }}>
+              <Input
+                type="number"
+                placeholder="Từ (đ)"
+                value={customMin}
+                onChange={(e) => setCustomMin(e.target.value)}
+                inputSize="sm"
+              />
+            </div>
+            <span style={{ color: 'var(--text-dim)' }}>—</span>
+            <div style={{ width: '130px' }}>
+              <Input
+                type="number"
+                placeholder="Đến (đ)"
+                value={customMax}
+                onChange={(e) => setCustomMax(e.target.value)}
+                inputSize="sm"
+              />
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setPage(1);
+                loadProducts();
+              }}
+              style={{ fontSize: '0.78rem' }}
+            >
+              Áp dụng giá
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Products Content */}
+      {isLoading ? (
+        <div className="products-grid">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : error ? (
+        <ErrorState
+          title="Không thể tải sản phẩm"
+          message={error}
+          onRetry={loadProducts}
+          retryText="Thử lại"
+        />
+      ) : products.length === 0 ? (
+        <EmptyState
+          title="Không tìm thấy sản phẩm phù hợp"
+          description={
+            hasActiveFilters
+              ? 'Không có sản phẩm nào thỏa mãn các tiêu chí lọc hiện tại. Thử bỏ bớt bộ lọc hoặc chọn từ khóa khác.'
+              : 'Hiện chưa có sản phẩm nào được bày bán trong danh mục này.'
+          }
+          action={
+            hasActiveFilters ? (
+              <Button variant="secondary" size="sm" onClick={handleResetFilters}>
+                Xóa tất cả bộ lọc
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', color: 'var(--text-dim)', fontSize: '0.82rem' }}>
+            <div>
+              Hiển thị <strong>{products.length}</strong> / {totalCount} sản phẩm số
+            </div>
+            {totalPages > 1 && (
+              <div>
+                Trang {page} / {totalPages}
+              </div>
+            )}
+          </div>
+
+          <div className="products-grid">
+            {products.map((p) => (
+              <Link
+                key={p.id}
+                to={`/marketplace/products/${p.slug}`}
+                className="product-card"
+                aria-label={`${p.name}, giá từ ${formatPrice(p.minPrice)}`}
+              >
+                <div className="product-thumb-wrap">
+                  <img
+                    src={p.coverImageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60'}
+                    alt={p.name}
+                    className="product-thumb"
+                    loading="lazy"
+                  />
+                  <span className="product-instant-badge">⚡ Tự động</span>
+                </div>
+                <div className="product-card-body">
+                  <span className="product-shop-name">{p.shopName || 'Gian hàng uy tín'}</span>
+                  <h3 className="product-title" title={p.name}>
+                    {p.name}
+                  </h3>
+                  <div className="product-price-row">
+                    <div>
+                      <span className="product-price-label">Giá từ </span>
+                      <span className="product-price">{formatPrice(p.minPrice)}</span>
+                    </div>
+                    {p.variantCount > 1 && (
+                      <span className="product-variants-count">{p.variantCount} gói</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Pagination Navigation Controls */}
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginTop: '2.5rem',
+              }}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={page <= 1}
+                icon={<ChevronLeftIcon size={16} />}
+              >
+                Trang trước
+              </Button>
+
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: '0 0.5rem' }}>
+                Trang <strong>{page}</strong> trên <strong>{totalPages}</strong>
+              </span>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={page >= totalPages}
+                icon={<ChevronRightIcon size={16} />}
+              >
+                Trang sau
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </PageContainer>
+  );
+};
+
+export default MarketplacePage;

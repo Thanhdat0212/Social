@@ -5,6 +5,8 @@ using Infrastructure.Common;
 using Infrastructure.Persistence;
 using Infrastructure.Realtime;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -50,10 +52,42 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddSignalR();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 
-// 5. Configure Swagger with JWT Authorize button
+
+// 5. Rate Limiting (M9.3 Chống lạm dụng & Spam)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("global-policy", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 60;
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("checkout-policy", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 15;
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("report-policy", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10;
+        opt.QueueLimit = 0;
+    });
+});
+
+// 6. Configure Swagger with JWT Authorize button
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -70,7 +104,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Nhập Access Token theo định dạng: Bearer {token}"
+        Description = "Nhập trực tiếp Access Token (KHÔNG cần gõ chữ 'Bearer ', Swagger UI sẽ tự động gắn 'Bearer ' vào header)."
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -124,6 +158,7 @@ using (var scope = app.Services.CreateScope())
 
         // Nạp bộ dữ liệu mẫu phong phú khi khởi động nếu database chưa có đủ bài viết
         await DatabaseSeeder.SeedAsync(context, logger);
+        await CategorySeeder.SeedAsync(context, logger);
 
         // Tự động sinh và nạp 1000 bài viết nếu cơ sở dữ liệu có dưới 500 bài viết
         var currentPostCount = await context.Posts.CountAsync();
@@ -166,10 +201,13 @@ app.UseHttpsRedirection();
 // 5. CORS
 app.UseCors();
 
-// 6. Authentication (Đọc JWT từ header hoặc query param cho WebSocket)
+// 6. Rate Limiter (M9.3)
+app.UseRateLimiter();
+
+// 7. Authentication (Đọc JWT từ header hoặc query param cho WebSocket)
 app.UseAuthentication();
 
-// 7. Authorization (Kiểm tra [Authorize])
+// 8. Authorization (Kiểm tra [Authorize])
 app.UseAuthorization();
 
 // 8. Map Controllers & SignalR Hubs
@@ -212,5 +250,31 @@ app.MapGet("/api/admin/stats", async (SocialDbContext db) =>
         totalPostInterests = postInterestCount
     });
 });
+
+app.MapGet("/api/test/redis", async (Application.Common.ICacheService cacheService, IServiceProvider sp) =>
+{
+    var redis = sp.GetService<StackExchange.Redis.IConnectionMultiplexer>();
+    var isConnected = redis?.IsConnected ?? false;
+    var testKey = "test:ping";
+
+    // Thử ghi vào cache
+    await cacheService.SetAsync(testKey, new
+    {
+        message = "Redis Cache hoạt động tốt!",
+        timestamp = DateTime.UtcNow
+    }, TimeSpan.FromMinutes(5));
+
+    // Thử đọc lại từ cache
+    var readData = await cacheService.GetAsync<object>(testKey);
+
+    return Results.Ok(new
+    {
+        status = "Success",
+        redisMultiplexerRegistered = redis != null,
+        isRedisConnected = isConnected,
+        cacheReadWriteSuccess = readData != null,
+        data = readData
+    });
+}).WithTags("Testing").AllowAnonymous();
 
 app.Run();

@@ -124,6 +124,26 @@ class SignalRService {
     }
   }
 
+  public async joinCheckoutGroup(checkoutId: string): Promise<void> {
+    if (this.connection && this.connection.state === HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke('JoinCheckoutGroup', checkoutId);
+      } catch (err) {
+        console.error(`[SignalR] Lỗi khi tham gia group checkout_${checkoutId}:`, err);
+      }
+    }
+  }
+
+  public async leaveCheckoutGroup(checkoutId: string): Promise<void> {
+    if (this.connection && this.connection.state === HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke('LeaveCheckoutGroup', checkoutId);
+      } catch (err) {
+        console.error(`[SignalR] Lỗi khi rời group checkout_${checkoutId}:`, err);
+      }
+    }
+  }
+
   public isConnected(): boolean {
     return this.connection?.state === HubConnectionState.Connected;
   }

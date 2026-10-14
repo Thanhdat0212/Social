@@ -4,7 +4,7 @@ import { useTitle } from '@/hooks/useTitle';
 import { authApi } from '@/api/authApi';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
-import { Button, Alert, LogoIcon, CheckIcon } from '@/components/common';
+import { Button, Alert, LogoIcon, CheckIcon, FormField, Input } from '@/components/common';
 
 export const RegisterPage: React.FC = () => {
   useTitle('Đăng ký tài khoản');
@@ -114,61 +114,55 @@ export const RegisterPage: React.FC = () => {
         {error && <Alert type="error" message={error} className="mb-4" />}
 
         <form onSubmit={handleSubmit} className="auth-box-form">
-          <div className="form-group">
-            <label htmlFor="reg-name">Tên hiển thị</label>
-            <input
+          <FormField label="Tên hiển thị">
+            <Input
               id="reg-name"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Ví dụ: Nguyễn Văn A"
               required
-              className="form-control"
               autoComplete="name"
             />
-          </div>
+          </FormField>
 
-          <div className="form-group">
-            <label htmlFor="reg-email">Địa chỉ Email</label>
-            <input
+          <FormField label="Địa chỉ Email">
+            <Input
               id="reg-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
               required
-              className="form-control"
               autoComplete="email"
             />
-          </div>
+          </FormField>
 
-          <div className="form-group">
-            <label htmlFor="reg-password">Mật khẩu (tối thiểu 8 ký tự)</label>
-            <input
+          <FormField label="Mật khẩu (tối thiểu 8 ký tự)">
+            <Input
               id="reg-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-control"
+              passwordToggle
               autoComplete="new-password"
             />
-          </div>
+          </FormField>
 
-          <div className="form-group">
-            <label htmlFor="reg-confirm-password">Xác nhận mật khẩu</label>
-            <input
+          <FormField label="Xác nhận mật khẩu">
+            <Input
               id="reg-confirm-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-control"
+              passwordToggle
               autoComplete="new-password"
             />
-          </div>
+          </FormField>
 
           <Button
             type="submit"

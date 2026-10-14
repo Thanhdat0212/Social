@@ -1,7 +1,10 @@
 using Domain.Entities;
+using Domain.Entities.Marketplace.Ledger;
+using Domain.Entities.Marketplace.Shops;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Infrastructure.Persistence;
 
@@ -9,15 +12,20 @@ public static class DatabaseSeeder
 {
     // Mật khẩu mặc định: Password123@
     private const string DefaultPasswordHash = "AQAAAAEAAYagAAAAEPdq8PSDH11CLwIgcC7XpeeJqZx/u6YfmMsvYooeSM6nFzTkmzoXExtUZNM8bGj5pw==";
+    // Mật khẩu người bán: Thanhdat1@
+    private const string SellerPasswordHash = "AQAAAAIAAYagAAAAEJbKMu0qyNnbdtc3bOqbkw3qMAZgh6pc8jUpjPY1dOnGv2TfGcbvxwiFehUSIGAAJQ==";
 
     public static async Task SeedAsync(SocialDbContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
         try
         {
+            // 0. Luôn đảm bảo tài khoản Người bán (Seller) và gian hàng tồn tại & đã được duyệt
+            await SeedSellerAccountAsync(context, logger, cancellationToken);
+
             var postCount = await context.Posts.CountAsync(cancellationToken);
             if (postCount >= 25)
             {
-                logger.LogInformation("Database đã có {Count} bài viết, bỏ qua bước nạp dữ liệu mẫu.", postCount);
+                logger.LogInformation("Database đã có {Count} bài viết, bỏ qua bước nạp dữ liệu mẫu bài viết & tương tác.", postCount);
                 return;
             }
 
@@ -39,6 +47,8 @@ public static class DatabaseSeeder
                     existing.AvatarUrl = user.AvatarUrl;
                     existing.PasswordHash = user.PasswordHash;
                     existing.EmailConfirmed = true;
+                    existing.Role = user.Role;
+                    existing.Status = user.Status;
                 }
             }
             await context.SaveChangesAsync(cancellationToken);
@@ -149,6 +159,22 @@ public static class DatabaseSeeder
         var now = DateTime.UtcNow;
         return new List<User>
         {
+            new()
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                Email = "thuthuycan5@gmail.com",
+                NormalizedEmail = "THUTHUYCAN5@GMAIL.COM",
+                PasswordHash = DefaultPasswordHash,
+                DisplayName = "Quản Trị Viên (Admin)",
+                Bio = "Tài khoản quản trị viên tối cao của hệ thống mạng xã hội & gian hàng Social.",
+                AvatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+                AvatarPublicId = "seed_avatar_admin",
+                EmailConfirmed = true,
+                Role = UserRole.Admin,
+                Status = UserStatus.Active,
+                CreatedAtUtc = now.AddDays(-30),
+                UpdatedAtUtc = now
+            },
             new()
             {
                 Id = Guid.Parse("11111111-1111-1111-1111-111111111101"),
@@ -804,4 +830,100 @@ public static class DatabaseSeeder
 
         return list;
     }
+
+    public static async Task SeedSellerAccountAsync(SocialDbContext context, ILogger logger, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            const string sellerEmail = "Thanhdatvv05@gmail.com";
+            var sellerUser = await context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == sellerEmail.ToLower(), cancellationToken);
+
+            if (sellerUser == null)
+            {
+                sellerUser = new User
+                {
+                    Id = Guid.Parse("930d0c12-4149-4a01-85bd-0ce475654283"),
+                    Email = sellerEmail,
+                    NormalizedEmail = sellerEmail.ToUpperInvariant(),
+                    PasswordHash = SellerPasswordHash,
+                    DisplayName = "Thành Đạt (Seller)",
+                    Bio = "Gian hàng chính thức của Thành Đạt - Chuyên phân phối tài khoản, key bản quyền số uy tín 24/7.",
+                    AvatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+                    EmailConfirmed = true,
+                    Role = UserRole.Member,
+                    Status = UserStatus.Active,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+                context.Users.Add(sellerUser);
+                await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Đã khởi tạo tài khoản người bán: {Email}", sellerEmail);
+            }
+            else
+            {
+                sellerUser.PasswordHash = SellerPasswordHash;
+                sellerUser.EmailConfirmed = true;
+                sellerUser.Status = UserStatus.Active;
+                if (string.IsNullOrWhiteSpace(sellerUser.DisplayName) || sellerUser.DisplayName.Contains("@"))
+                {
+                    sellerUser.DisplayName = "Thành Đạt (Seller)";
+                }
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
+            // Đảm bảo Gian hàng (Shop) tồn tại và được phê duyệt
+            var shop = await context.Shops.FirstOrDefaultAsync(s => s.OwnerUserId == sellerUser.Id, cancellationToken);
+            if (shop == null)
+            {
+                shop = new Shop(
+                    ownerUserId: sellerUser.Id,
+                    name: "Thành Đạt Digital Store",
+                    slug: "thanhdat-store",
+                    contactEmail: sellerEmail,
+                    description: "Gian hàng chính thức của Thành Đạt - Chuyên phân phối tài khoản, key bản quyền số và giải pháp phần mềm uy tín, kích hoạt 24/7.",
+                    logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80"
+                );
+                shop.Approve();
+                context.Shops.Add(shop);
+                await context.SaveChangesAsync(cancellationToken);
+
+                // Thêm lịch sử duyệt gian hàng
+                var snapshotJson = JsonSerializer.Serialize(new
+                {
+                    shop.Name,
+                    shop.Slug,
+                    shop.ContactEmail,
+                    shop.Description,
+                    shop.LogoUrl,
+                    OwnerUserId = sellerUser.Id,
+                    OwnerDisplayName = sellerUser.DisplayName,
+                    OwnerEmail = sellerUser.Email
+                });
+                var review = new ShopReview(shop.Id, 1, snapshotJson);
+                review.Approve(Guid.Parse("00000000-0000-0000-0000-000000000001"));
+                context.ShopReviews.Add(review);
+
+                // Khởi tạo cache số dư gian hàng
+                var balanceCache = new ShopBalanceCache(shop.Id);
+                context.ShopBalanceCaches.Add(balanceCache);
+
+                await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Đã khởi tạo và duyệt gian hàng người bán: {ShopName} ({Slug})", shop.Name, shop.Slug);
+            }
+            else if (shop.ApprovalStatus != ApprovalStatus.Approved || shop.OperatingStatus != OperatingStatus.Open)
+            {
+                if (shop.ApprovalStatus == ApprovalStatus.Pending)
+                {
+                    shop.Approve();
+                }
+                shop.Open();
+                await context.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Lỗi xảy ra trong quá trình seed tài khoản người bán: {Message}", ex.Message);
+        }
+    }
 }
+

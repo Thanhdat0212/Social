@@ -5,3 +5,6 @@ export * from './interestApi';
 export * from './postApi';
 export * from './followApi';
 export * from './interactionApi';
+export * from './marketplaceApi';
+export * from './adminApi';
+export * from './notificationApi';

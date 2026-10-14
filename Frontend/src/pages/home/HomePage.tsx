@@ -5,16 +5,21 @@ import { useTitle } from '@/hooks/useTitle';
 import { useSignalR } from '@/hooks/useSignalR';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { postApi } from '@/api/postApi';
+import { marketplaceApi } from '@/api/marketplaceApi';
+import { interestApi } from '@/api/interestApi';
 import type { PostDto, PostLikeEvent, CommentAddedEvent } from '@/types';
+import type { ProductListItem } from '@/types/marketplace';
+import type { InterestDto } from '@/types/interest';
 import { CreatePostBox, PostList, NewPostAlertPill } from '@/components/posts';
 import {
   ScrollToTopBtn,
   SparklesIcon,
   UsersIcon,
   ClockIcon,
-  UserIcon,
-  Avatar,
   Button,
+  PageContainer,
+  Badge,
+  MarketplaceIcon,
 } from '@/components/common';
 import { getApiErrorMessage } from '@/utils/error';
 import { seenPostsService } from '@/utils/seenPosts';
@@ -52,6 +57,22 @@ export const HomePage: React.FC = () => {
   // Bài viết mới nhận được qua SignalR
   const [pendingPosts, setPendingPosts] = useState<PostDto[]>([]);
   const [bottomPendingPosts, setBottomPendingPosts] = useState<PostDto[]>([]);
+
+  // Dữ liệu sidebar thực tế
+  const [featuredProducts, setFeaturedProducts] = useState<ProductListItem[]>([]);
+  const [topInterests, setTopInterests] = useState<InterestDto[]>([]);
+
+  useEffect(() => {
+    marketplaceApi
+      .getProducts({ page: 1, pageSize: 3 })
+      .then((res) => setFeaturedProducts(res.items || []))
+      .catch(() => {});
+
+    interestApi
+      .getAllInterests()
+      .then((res) => setTopInterests(res.slice(0, 6)))
+      .catch(() => {});
+  }, []);
 
   // Tải danh sách bài viết trang đầu tiên
   const fetchPosts = useCallback(
@@ -237,7 +258,7 @@ export const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="container home-page-container">
+    <PageContainer variant="feed" className="home-page-container">
       {/* Refined Welcome Banner for Guests (Compact, not pushing feed away) */}
       {!isAuthenticated && (
         <section className="guest-welcome-card" aria-label="Giới thiệu nền tảng">
@@ -336,33 +357,8 @@ export const HomePage: React.FC = () => {
 
         {/* Sidebar Column */}
         <aside className="feed-aside-col">
-          {isAuthenticated && user ? (
-            <div className="aside-widget profile-widget">
-              <div className="widget-user-header">
-                <Avatar
-                  src={user.avatarUrl}
-                  name={user.displayName}
-                  size="lg"
-                  className="widget-avatar"
-                />
-                <div className="widget-user-info">
-                  <h3 className="widget-user-name">{user.displayName}</h3>
-                  <p className="widget-user-email">{user.email}</p>
-                </div>
-              </div>
-
-              {user.bio && <p className="widget-user-bio">{user.bio}</p>}
-
-              <div className="widget-actions">
-                <Link to={ROUTES.PROFILE} className="widget-action-link" id="sidebar-profile-link">
-                  <UserIcon size={16} />
-                  <span>Trang cá nhân</span>
-                  <span className="arrow-hint">&rarr;</span>
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="aside-widget join-widget">
+          {!isAuthenticated && (
+            <div className="aside-widget join-widget" style={{ marginBottom: '1.25rem' }}>
               <h3 className="join-title">Tham gia cộng đồng</h3>
               <p className="join-desc">
                 Đăng nhập để theo dõi tác giả, lưu bài viết và tương tác với các chủ đề bạn yêu thích.
@@ -381,6 +377,70 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Widget: Sản phẩm số nổi bật (Real API) */}
+          {featuredProducts.length > 0 && (
+            <div className="aside-widget" style={{ padding: '1.25rem', marginBottom: '1.25rem', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
+                  <MarketplaceIcon size={16} />
+                  <span>Chợ số nổi bật</span>
+                </h3>
+                <Link to={ROUTES.MARKETPLACE.INDEX} style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                  Xem tất cả
+                </Link>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {featuredProducts.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/marketplace/products/${p.slug}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                      padding: '0.4rem',
+                      borderRadius: '8px',
+                      transition: 'background 0.15s ease',
+                    }}
+                    className="sidebar-product-item"
+                  >
+                    <img
+                      src={p.coverImageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60'}
+                      alt={p.name}
+                      style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                      loading="lazy"
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8', marginTop: '0.15rem' }}>
+                        {p.minPrice.toLocaleString('vi-VN')} đ
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Widget: Chủ đề gợi ý (Real API) */}
+          {topInterests.length > 0 && (
+            <div className="aside-widget" style={{ padding: '1.25rem', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px' }}>
+              <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.85rem' }}>
+                Chủ đề gợi ý
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                {topInterests.map((interest) => (
+                  <Badge key={interest.id} variant="neutral" size="sm" style={{ cursor: 'pointer', padding: '0.3rem 0.65rem' }}>
+                    #{interest.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
       </div>
 
@@ -389,6 +449,6 @@ export const HomePage: React.FC = () => {
         hasNewPosts={pendingPosts.length > 0}
         onClick={handleApplyPendingPosts}
       />
-    </div>
+    </PageContainer>
   );
 };

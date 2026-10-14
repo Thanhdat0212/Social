@@ -5,6 +5,8 @@ export interface ProfileDto {
   bio?: string | null;
   avatarUrl?: string | null;
   emailConfirmed: boolean;
+  role?: string;
+  status?: string;
   createdAtUtc: string;
 }
 

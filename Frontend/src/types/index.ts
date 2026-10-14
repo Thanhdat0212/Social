@@ -7,3 +7,5 @@ export * from './comment';
 export * from './follow';
 export * from './interaction';
 export * from './realtime';
+export * from './marketplace';
+export * from './admin';

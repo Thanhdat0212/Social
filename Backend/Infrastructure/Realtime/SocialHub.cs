@@ -68,6 +68,30 @@ public class SocialHub : Hub
         }
     }
 
+    /// <summary>
+    /// Cho phép client tham gia group của phiên checkout để nhận realtime tức thì khi tiền về
+    /// </summary>
+    public async Task JoinCheckoutGroup(string checkoutId)
+    {
+        if (Guid.TryParse(checkoutId, out var parsedCheckoutId))
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"checkout_{parsedCheckoutId}");
+            _logger.LogDebug("Client {ConnectionId} đã tham gia group checkout_{CheckoutId}", Context.ConnectionId, parsedCheckoutId);
+        }
+    }
+
+    /// <summary>
+    /// Rời group checkout khi hoàn tất hoặc chuyển trang
+    /// </summary>
+    public async Task LeaveCheckoutGroup(string checkoutId)
+    {
+        if (Guid.TryParse(checkoutId, out var parsedCheckoutId))
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"checkout_{parsedCheckoutId}");
+            _logger.LogDebug("Client {ConnectionId} đã rời group checkout_{CheckoutId}", Context.ConnectionId, parsedCheckoutId);
+        }
+    }
+
     private Guid? GetUserId()
     {
         var claim = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)

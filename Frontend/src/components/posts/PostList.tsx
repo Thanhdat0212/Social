@@ -1,7 +1,13 @@
 import React from 'react';
 import type { PostDto } from '@/types/post';
 import { PostCard } from './PostCard';
-import { Button, RefreshIcon, SparklesIcon } from '@/components/common';
+import {
+  Button,
+  RefreshIcon,
+  PostCardSkeleton,
+  ErrorState,
+  EmptyState,
+} from '@/components/common';
 
 interface PostListProps {
   posts: PostDto[];
@@ -27,21 +33,9 @@ export const PostList: React.FC<PostListProps> = ({
   // Skeleton Loading Initial State
   if (loading && posts.length === 0) {
     return (
-      <div className="posts-skeleton-stack" aria-busy="true" aria-label="Đang tải bài viết">
+      <div className="posts-skeleton-stack" aria-busy="true" aria-label="Đang tải bài viết" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {[1, 2, 3].map((i) => (
-          <div key={i} className="post-skeleton-item">
-            <div className="skeleton-header-row">
-              <div className="skeleton-avatar-circle skeleton-shimmer" />
-              <div className="skeleton-meta-col">
-                <div className="skeleton-bar bar-author skeleton-shimmer" />
-                <div className="skeleton-bar bar-time skeleton-shimmer" />
-              </div>
-            </div>
-            <div className="skeleton-body-block">
-              <div className="skeleton-bar bar-full skeleton-shimmer" />
-              <div className="skeleton-bar bar-mid skeleton-shimmer" />
-            </div>
-          </div>
+          <PostCardSkeleton key={i} />
         ))}
       </div>
     );
@@ -50,47 +44,35 @@ export const PostList: React.FC<PostListProps> = ({
   // Error State
   if (error && posts.length === 0) {
     return (
-      <div className="feed-status-card error-card">
-        <h3>Không thể tải bài viết</h3>
-        <p>{error}</p>
-        {onRefresh && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onRefresh}
-            icon={<RefreshIcon size={14} />}
-          >
-            Thử lại
-          </Button>
-        )}
-      </div>
+      <ErrorState
+        title="Không thể tải bài viết"
+        message={error}
+        onRetry={onRefresh}
+        retryText="Thử lại ngay"
+      />
     );
   }
 
   // Empty State
   if (posts.length === 0) {
     return (
-      <div className="feed-status-card empty-card">
-        <div className="empty-sparkle-wrap">
-          <SparklesIcon size={32} />
-        </div>
-        <h3>Chưa có bài viết nào</h3>
-        <p>
-          Hãy là người đầu tiên chia sẻ cảm nghĩ, công nghệ hoặc dự án của bạn để bắt đầu thảo luận!
-        </p>
-        {onRefresh && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onRefresh}
-            icon={<RefreshIcon size={14} />}
-          >
-            Làm mới bảng tin
-          </Button>
-        )}
-      </div>
+      <EmptyState
+        title="Chưa có bài viết nào"
+        description="Hãy là người đầu tiên chia sẻ cảm nghĩ, công nghệ hoặc dự án của bạn để bắt đầu thảo luận!"
+        action={
+          onRefresh ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onRefresh}
+              icon={<RefreshIcon size={14} />}
+            >
+              Làm mới bảng tin
+            </Button>
+          ) : undefined
+        }
+      />
     );
   }
 

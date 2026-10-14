@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTitle } from '@/hooks/useTitle';
 import { getApiErrorMessage } from '@/utils/error';
 import { ROUTES } from '@/constants/routes';
-import { Button, Alert, LogoIcon } from '@/components/common';
+import { Button, Alert, LogoIcon, FormField, Input } from '@/components/common';
 
 export const ResetPasswordPage: React.FC = () => {
   useTitle('Đặt lại mật khẩu');
@@ -63,33 +63,31 @@ export const ResetPasswordPage: React.FC = () => {
         {error && <Alert type="error" message={error} className="mb-4" />}
 
         <form onSubmit={handleSubmit} className="auth-box-form">
-          <div className="form-group">
-            <label htmlFor="reset-new-password">Mật khẩu mới (tối thiểu 8 ký tự)</label>
-            <input
+          <FormField label="Mật khẩu mới (tối thiểu 8 ký tự)">
+            <Input
               id="reset-new-password"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-control"
+              passwordToggle
               autoComplete="new-password"
             />
-          </div>
+          </FormField>
 
-          <div className="form-group">
-            <label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</label>
-            <input
+          <FormField label="Xác nhận mật khẩu mới">
+            <Input
               id="reset-confirm-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="form-control"
+              passwordToggle
               autoComplete="new-password"
             />
-          </div>
+          </FormField>
 
           <Button
             type="submit"

@@ -11,21 +11,29 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
     {
     }
 
-    public async Task<Post?> GetWithDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    private IQueryable<Post> GetBasePostQuery()
     {
-        return await _dbSet
+        return _dbSet
             .Include(p => p.Author)
             .Include(p => p.PostInterests)
                 .ThenInclude(pi => pi.Interest)
+            .Include(p => p.PostProducts)
+                .ThenInclude(pp => pp.Product)
+                    .ThenInclude(pr => pr.Shop)
+            .Include(p => p.PostProducts)
+                .ThenInclude(pp => pp.Product)
+                    .ThenInclude(pr => pr.Images);
+    }
+
+    public async Task<Post?> GetWithDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await GetBasePostQuery()
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Post>> GetRecentPostsAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        return await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        return await GetBasePostQuery()
             .OrderByDescending(p => p.CreatedAtUtc)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -34,10 +42,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
 
     public async Task<IReadOnlyList<Post>> GetCandidatePostsForFeedAsync(int limit = 200, CancellationToken cancellationToken = default)
     {
-        return await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        return await GetBasePostQuery()
             .OrderByDescending(p => p.CreatedAtUtc)
             .Take(limit)
             .ToListAsync(cancellationToken);
@@ -48,10 +53,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
         var idList = followingUserIds.ToList();
         if (idList.Count == 0) return Array.Empty<Post>();
 
-        return await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        return await GetBasePostQuery()
             .Where(p => idList.Contains(p.AuthorId))
             .OrderByDescending(p => p.CreatedAtUtc)
             .Skip((page - 1) * pageSize)
@@ -64,10 +66,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
         var idList = interestIds.ToList();
         if (idList.Count == 0) return Array.Empty<Post>();
 
-        return await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        return await GetBasePostQuery()
             .Where(p => p.PostInterests.Any(pi => idList.Contains(pi.InterestId)))
             .OrderByDescending(p => p.CreatedAtUtc)
             .Take(limit)
@@ -79,10 +78,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
         var cutoff = DateTime.UtcNow - timeWindow;
 
         // Ưu tiên bài viết trong khung thời gian có tương tác cao
-        var recentTrending = await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        var recentTrending = await GetBasePostQuery()
             .Where(p => p.CreatedAtUtc >= cutoff)
             .OrderByDescending(p => (p.LikeCount * 2) + (p.CommentCount * 3) + (p.ViewCount * 0.2))
             .Take(limit)
@@ -95,10 +91,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
 
         // Nếu hệ thống ít bài trong 48h, bổ sung bài có tương tác cao tổng thể
         var existingIds = recentTrending.Select(p => p.Id).ToHashSet();
-        var fallback = await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        var fallback = await GetBasePostQuery()
             .Where(p => !existingIds.Contains(p.Id))
             .OrderByDescending(p => (p.LikeCount * 2) + (p.CommentCount * 3) + (p.ViewCount * 0.2))
             .Take(limit - recentTrending.Count)
@@ -112,11 +105,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
     {
         var excludeList = excludeInterestIds.ToList();
 
-        var query = _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
-            .AsQueryable();
+        var query = GetBasePostQuery().AsQueryable();
 
         if (excludeList.Count > 0)
         {
@@ -132,10 +121,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
 
     public async Task<IReadOnlyList<Post>> GetPostsByAuthorIdAsync(Guid authorId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        return await _dbSet
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
+        return await GetBasePostQuery()
             .Where(p => p.AuthorId == authorId)
             .OrderByDescending(p => p.CreatedAtUtc)
             .Skip((page - 1) * pageSize)
@@ -149,4 +135,3 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
             .CountAsync(p => p.AuthorId == authorId, cancellationToken);
     }
 }
-

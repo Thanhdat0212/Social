@@ -8,4 +8,6 @@ public class UserDto
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
     public bool EmailConfirmed { get; set; }
+    public string Role { get; set; } = "Member";
+    public string Status { get; set; } = "Active";
 }

@@ -12,6 +12,18 @@ export interface PostTopicDto {
   confidence: number;
 }
 
+export interface PostTaggedProductDto {
+  id: string;
+  name: string;
+  slug: string;
+  minPrice: number;
+  maxPrice: number;
+  coverImageUrl?: string | null;
+  shopId: string;
+  shopName: string;
+  shopSlug: string;
+}
+
 export interface PostDto {
   id: string;
   content: string;
@@ -24,11 +36,13 @@ export interface PostDto {
   isLikedByCurrentUser: boolean;
   author: PostAuthorDto;
   topics: PostTopicDto[];
+  taggedProducts?: PostTaggedProductDto[];
 }
 
 export interface CreatePostRequestDto {
   content: string;
   mediaUrls?: string[];
+  taggedProductIds?: string[];
 }
 
 export interface PostMediaUploadResponseDto {

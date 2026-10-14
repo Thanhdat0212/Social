@@ -13,6 +13,8 @@ public class User : BaseEntity
     public string? AvatarUrl { get; set; }
     public string? AvatarPublicId { get; set; }
     public bool EmailConfirmed { get; set; }
+    public Domain.Enums.UserRole Role { get; set; } = Domain.Enums.UserRole.Member;
+    public Domain.Enums.UserStatus Status { get; set; } = Domain.Enums.UserStatus.Active;
 
     // Navigation properties
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>(); // quan hệ 1 -N 
@@ -25,4 +27,6 @@ public class User : BaseEntity
     public ICollection<UserFollow> Following { get; set; } = new List<UserFollow>();
     public ICollection<UserFollow> Followers { get; set; } = new List<UserFollow>();
     public ICollection<UserInteraction> Interactions { get; set; } = new List<UserInteraction>();
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public Marketplace.Shops.Shop? Shop { get; set; }
 }
