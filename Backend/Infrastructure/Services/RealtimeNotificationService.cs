@@ -1,8 +1,11 @@
+using System.Text.Json;
 using Application.DTOs.Comments;
+using Application.DTOs.Notifications;
 using Application.DTOs.Posts;
 using Application.DTOs.Realtime;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
+using Domain.Entities;
 using Infrastructure.Realtime;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -33,25 +36,67 @@ public class RealtimeNotificationService : IRealtimeNotificationService
             await _hubContext.Clients.All.SendAsync("ReceiveNewPost", post, cancellationToken);
             _logger.LogInformation("Đã phát sóng bài viết mới {PostId} tới toàn bộ kết nối SocialHub.", post.Id);
 
-            // 2. Gửi thông báo trực tiếp cho các follower của tác giả
+            // 2. Gửi thông báo trực tiếp và lưu database cho các follower của tác giả
             if (post.Author != null)
             {
                 var followers = await _unitOfWork.UserFollows.GetFollowersAsync(post.Author.Id, 1, 100, cancellationToken);
                 foreach (var follow in followers)
                 {
+                    var dataJson = JsonSerializer.Serialize(new
+                    {
+                        targetPostId = post.Id,
+                        actorId = post.Author.Id,
+                        actorName = post.Author.DisplayName,
+                        actorAvatar = post.Author.AvatarUrl
+                    });
+
+                    var entity = new Notification
+                    {
+                        UserId = follow.FollowerId,
+                        Type = "new_post",
+                        Title = "Bài viết mới",
+                        Body = $"{post.Author.DisplayName} vừa đăng một bài viết mới.",
+                        DataJson = dataJson,
+                        IsRead = false,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        UpdatedAtUtc = DateTime.UtcNow
+                    };
+
+                    await _unitOfWork.Notifications.AddAsync(entity, cancellationToken);
+
                     var notification = new UserNotificationEventDto
                     {
+                        Id = entity.Id,
                         Type = "new_post",
-                        Message = $"{post.Author.DisplayName} vừa đăng một bài viết mới.",
+                        Message = entity.Body,
                         TriggeredByUserId = post.Author.Id,
                         TriggeredByUserName = post.Author.DisplayName,
                         TriggeredByUserAvatar = post.Author.AvatarUrl,
                         TargetPostId = post.Id,
-                        CreatedAtUtc = DateTime.UtcNow
+                        CreatedAtUtc = entity.CreatedAtUtc
                     };
 
                     await _hubContext.Clients.Group($"user_{follow.FollowerId}")
                         .SendAsync("ReceiveNotification", notification, cancellationToken);
+
+                    var persistentDto = new NotificationDto
+                    {
+                        Id = entity.Id,
+                        Type = entity.Type,
+                        Title = entity.Title,
+                        Body = entity.Body,
+                        IsRead = entity.IsRead,
+                        DataJson = entity.DataJson,
+                        CreatedAtUtc = entity.CreatedAtUtc
+                    };
+
+                    await _hubContext.Clients.Group($"user_{follow.FollowerId}")
+                        .SendAsync("ReceivePersistentNotification", persistentDto, cancellationToken);
+                }
+
+                if (followers.Count > 0)
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
                 }
             }
         }
@@ -77,24 +122,62 @@ public class RealtimeNotificationService : IRealtimeNotificationService
             await _hubContext.Clients.All
                 .SendAsync("PostLiked", likeEvent, cancellationToken);
 
-            // 2. Nếu là thả like và không phải tự like bài của mình, gửi notification cho chủ bài viết
+            // 2. Nếu là thả like và không phải tự like bài của mình, lưu database và gửi notification cho chủ bài viết
             if (isLiked && userId != postAuthorId)
             {
                 var actor = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
                 var actorName = !string.IsNullOrWhiteSpace(actor?.DisplayName) ? actor.DisplayName : "Một người dùng";
+                var dataJson = JsonSerializer.Serialize(new
+                {
+                    targetPostId = postId,
+                    actorId = userId,
+                    actorName = actorName,
+                    actorAvatar = actor?.AvatarUrl
+                });
+
+                var entity = new Notification
+                {
+                    UserId = postAuthorId,
+                    Type = "like",
+                    Title = "Lượt thích mới",
+                    Body = $"{actorName} đã thích bài viết của bạn.",
+                    DataJson = dataJson,
+                    IsRead = false,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Notifications.AddAsync(entity, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
                 var notification = new UserNotificationEventDto
                 {
+                    Id = entity.Id,
                     Type = "like",
-                    Message = $"{actorName} đã thích bài viết của bạn.",
+                    Message = entity.Body,
                     TriggeredByUserId = userId,
                     TriggeredByUserName = actorName,
                     TriggeredByUserAvatar = actor?.AvatarUrl,
                     TargetPostId = postId,
-                    CreatedAtUtc = DateTime.UtcNow
+                    CreatedAtUtc = entity.CreatedAtUtc
                 };
 
                 await _hubContext.Clients.Group($"user_{postAuthorId}")
                     .SendAsync("ReceiveNotification", notification, cancellationToken);
+
+                var persistentDto = new NotificationDto
+                {
+                    Id = entity.Id,
+                    Type = entity.Type,
+                    Title = entity.Title,
+                    Body = entity.Body,
+                    IsRead = entity.IsRead,
+                    DataJson = entity.DataJson,
+                    CreatedAtUtc = entity.CreatedAtUtc
+                };
+
+                await _hubContext.Clients.Group($"user_{postAuthorId}")
+                    .SendAsync("ReceivePersistentNotification", persistentDto, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -103,7 +186,7 @@ public class RealtimeNotificationService : IRealtimeNotificationService
         }
     }
 
-    public async Task PublishCommentAddedAsync(Guid postId, int totalCommentCount, CommentDto comment, Guid postAuthorId, CancellationToken cancellationToken = default)
+    public async Task PublishCommentAddedAsync(Guid postId, int totalCommentCount, CommentDto comment, Guid postAuthorId, Guid? parentAuthorId = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -118,23 +201,129 @@ public class RealtimeNotificationService : IRealtimeNotificationService
             await _hubContext.Clients.All
                 .SendAsync("CommentAdded", commentEvent, cancellationToken);
 
-            // 2. Gửi notification cho chủ bài viết nếu người comment không phải là chủ bài viết
+            var authorName = !string.IsNullOrWhiteSpace(comment.Author?.DisplayName) ? comment.Author.DisplayName : "Một người dùng";
+            var commentSnippet = comment.Content?.Length > 60 ? comment.Content.Substring(0, 57) + "..." : comment.Content;
+
+            // 2. Gửi notification và lưu database cho chủ bài viết nếu người comment không phải là chủ bài viết
             if (comment.Author != null && comment.Author.Id != postAuthorId)
             {
-                var authorName = !string.IsNullOrWhiteSpace(comment.Author.DisplayName) ? comment.Author.DisplayName : "Một người dùng";
+                var dataJson = JsonSerializer.Serialize(new
+                {
+                    targetPostId = postId,
+                    commentId = comment.Id,
+                    actorId = comment.Author.Id,
+                    actorName = authorName,
+                    actorAvatar = comment.Author.AvatarUrl
+                });
+
+                var bodyText = !string.IsNullOrWhiteSpace(commentSnippet)
+                    ? $"{authorName} đã bình luận bài viết của bạn: \"{commentSnippet}\""
+                    : $"{authorName} đã bình luận bài viết của bạn.";
+
+                var entity = new Notification
+                {
+                    UserId = postAuthorId,
+                    Type = "comment",
+                    Title = "Bình luận mới",
+                    Body = bodyText,
+                    DataJson = dataJson,
+                    IsRead = false,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Notifications.AddAsync(entity, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
                 var notification = new UserNotificationEventDto
                 {
+                    Id = entity.Id,
                     Type = "comment",
-                    Message = $"{authorName} đã bình luận bài viết của bạn.",
+                    Message = entity.Body,
                     TriggeredByUserId = comment.Author.Id,
                     TriggeredByUserName = authorName,
                     TriggeredByUserAvatar = comment.Author.AvatarUrl,
                     TargetPostId = postId,
-                    CreatedAtUtc = DateTime.UtcNow
+                    CreatedAtUtc = entity.CreatedAtUtc
                 };
 
                 await _hubContext.Clients.Group($"user_{postAuthorId}")
                     .SendAsync("ReceiveNotification", notification, cancellationToken);
+
+                var persistentDto = new NotificationDto
+                {
+                    Id = entity.Id,
+                    Type = entity.Type,
+                    Title = entity.Title,
+                    Body = entity.Body,
+                    IsRead = entity.IsRead,
+                    DataJson = entity.DataJson,
+                    CreatedAtUtc = entity.CreatedAtUtc
+                };
+
+                await _hubContext.Clients.Group($"user_{postAuthorId}")
+                    .SendAsync("ReceivePersistentNotification", persistentDto, cancellationToken);
+            }
+
+            // 3. Nếu là phản hồi một bình luận khác, lưu database và gửi notification cho tác giả bình luận gốc
+            if (comment.Author != null && parentAuthorId.HasValue && parentAuthorId.Value != comment.Author.Id && parentAuthorId.Value != postAuthorId)
+            {
+                var dataJson = JsonSerializer.Serialize(new
+                {
+                    targetPostId = postId,
+                    commentId = comment.Id,
+                    actorId = comment.Author.Id,
+                    actorName = authorName,
+                    actorAvatar = comment.Author.AvatarUrl
+                });
+
+                var bodyText = !string.IsNullOrWhiteSpace(commentSnippet)
+                    ? $"{authorName} đã trả lời bình luận của bạn: \"{commentSnippet}\""
+                    : $"{authorName} đã trả lời bình luận của bạn.";
+
+                var entity = new Notification
+                {
+                    UserId = parentAuthorId.Value,
+                    Type = "comment",
+                    Title = "Phản hồi bình luận",
+                    Body = bodyText,
+                    DataJson = dataJson,
+                    IsRead = false,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Notifications.AddAsync(entity, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                var notification = new UserNotificationEventDto
+                {
+                    Id = entity.Id,
+                    Type = "comment",
+                    Message = entity.Body,
+                    TriggeredByUserId = comment.Author.Id,
+                    TriggeredByUserName = authorName,
+                    TriggeredByUserAvatar = comment.Author.AvatarUrl,
+                    TargetPostId = postId,
+                    CreatedAtUtc = entity.CreatedAtUtc
+                };
+
+                await _hubContext.Clients.Group($"user_{parentAuthorId.Value}")
+                    .SendAsync("ReceiveNotification", notification, cancellationToken);
+
+                var persistentDto = new NotificationDto
+                {
+                    Id = entity.Id,
+                    Type = entity.Type,
+                    Title = entity.Title,
+                    Body = entity.Body,
+                    IsRead = entity.IsRead,
+                    DataJson = entity.DataJson,
+                    CreatedAtUtc = entity.CreatedAtUtc
+                };
+
+                await _hubContext.Clients.Group($"user_{parentAuthorId.Value}")
+                    .SendAsync("ReceivePersistentNotification", persistentDto, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -147,8 +336,47 @@ public class RealtimeNotificationService : IRealtimeNotificationService
     {
         try
         {
+            var dataJson = JsonSerializer.Serialize(new
+            {
+                targetPostId = notification.TargetPostId,
+                actorId = notification.TriggeredByUserId,
+                actorName = notification.TriggeredByUserName,
+                actorAvatar = notification.TriggeredByUserAvatar
+            });
+
+            var entity = new Notification
+            {
+                UserId = userId,
+                Type = notification.Type,
+                Title = notification.Type == "follow" ? "Người theo dõi mới" : "Thông báo mới",
+                Body = notification.Message,
+                DataJson = dataJson,
+                IsRead = false,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Notifications.AddAsync(entity, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            notification.Id = entity.Id;
+
             await _hubContext.Clients.Group($"user_{userId}")
                 .SendAsync("ReceiveNotification", notification, cancellationToken);
+
+            var persistentDto = new NotificationDto
+            {
+                Id = entity.Id,
+                Type = entity.Type,
+                Title = entity.Title,
+                Body = entity.Body,
+                IsRead = entity.IsRead,
+                DataJson = entity.DataJson,
+                CreatedAtUtc = entity.CreatedAtUtc
+            };
+
+            await _hubContext.Clients.Group($"user_{userId}")
+                .SendAsync("ReceivePersistentNotification", persistentDto, cancellationToken);
         }
         catch (Exception ex)
         {

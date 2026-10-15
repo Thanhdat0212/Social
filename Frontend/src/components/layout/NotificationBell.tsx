@@ -17,27 +17,30 @@ import {
   Avatar,
 } from '@/components/common';
 
+interface ExtraNotificationData {
+  targetPostId?: string;
+  commentId?: string;
+  actorId?: string;
+  actorName?: string;
+  actorAvatar?: string;
+}
+
 export const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, addNotification, markAllAsRead } = useNotificationStore();
+  const { notifications, markAllAsRead, addNotification } = useNotificationStore();
   const { openPostModal } = usePostModalStore();
   const [isOpen, setIsOpen] = useState(false);
   const [systemNotifications, setSystemNotifications] = useState<SystemNotificationDto[]>([]);
   const [systemUnreadCount, setSystemUnreadCount] = useState<number>(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Lắng nghe sự kiện ReceiveNotification từ SignalR Hub
-  useSignalR<UserNotificationEvent>('ReceiveNotification', (notification) => {
-    if (notification) {
-      addNotification(notification);
-    }
-  });
+  const [hasNewAlert, setHasNewAlert] = useState(false);
 
-  // Tải thông báo hệ thống và chợ từ Backend
+  // Tải danh sách thông báo và số lượng chưa đọc từ Backend
   const loadSystemNotifications = async () => {
     try {
       const [list, count] = await Promise.all([
-        notificationApi.getMyNotifications(1, 20),
+        notificationApi.getMyNotifications(1, 30),
         notificationApi.getUnreadCount(),
       ]);
       setSystemNotifications(list);
@@ -46,6 +49,30 @@ export const NotificationBell: React.FC = () => {
       // Fallback im lặng nếu offline
     }
   };
+
+  // 1. Lắng nghe sự kiện ReceiveNotification từ SignalR Hub (Toast realtime + nhảy số badge ngay lập tức)
+  useSignalR<UserNotificationEvent>('ReceiveNotification', (notification) => {
+    if (notification) {
+      addNotification(notification);
+      setSystemUnreadCount((prev) => prev + 1);
+      setHasNewAlert(true);
+      setTimeout(() => setHasNewAlert(false), 1000);
+      loadSystemNotifications();
+    }
+  });
+
+  // 2. Lắng nghe sự kiện ReceivePersistentNotification từ SignalR Hub (Cập nhật tức thì vào danh sách)
+  useSignalR<SystemNotificationDto>('ReceivePersistentNotification', (pNotification) => {
+    if (pNotification) {
+      setSystemNotifications((prev) => [
+        pNotification,
+        ...prev.filter((item) => item.id !== pNotification.id),
+      ]);
+      setSystemUnreadCount((prev) => prev + 1);
+      setHasNewAlert(true);
+      setTimeout(() => setHasNewAlert(false), 1000);
+    }
+  });
 
   useEffect(() => {
     loadSystemNotifications();
@@ -77,17 +104,11 @@ export const NotificationBell: React.FC = () => {
   const handleMarkAllRead = async () => {
     markAllAsRead();
     setSystemUnreadCount(0);
+    setSystemNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
     try {
       await notificationApi.markAllAsRead();
     } catch {
       // ignore
-    }
-  };
-
-  const handleItemClick = (targetPostId?: string) => {
-    setIsOpen(false);
-    if (targetPostId) {
-      openPostModal(targetPostId);
     }
   };
 
@@ -101,10 +122,32 @@ export const NotificationBell: React.FC = () => {
     }
     setIsOpen(false);
 
+    let data: ExtraNotificationData = {};
+    try {
+      if (sn.dataJson) {
+        data = JSON.parse(sn.dataJson);
+      }
+    } catch {
+      // ignore
+    }
+
     const t = (sn.type || '').toLowerCase();
     const title = (sn.title || '').toLowerCase();
     const body = (sn.body || '').toLowerCase();
 
+    // 1. Mạng xã hội: Bài viết (Like, Comment, New Post)
+    if (data.targetPostId) {
+      openPostModal(data.targetPostId);
+      return;
+    }
+
+    // 2. Mạng xã hội: Người theo dõi mới
+    if (t === 'follow' && data.actorId) {
+      navigate(`/profile/${data.actorId}`);
+      return;
+    }
+
+    // 3. Sàn thương mại & Đơn hàng
     if (t.includes('order') || title.includes('đơn hàng') || body.includes('đơn hàng')) {
       if (title.includes('bán') || body.includes('người mua') || body.includes('khách')) {
         navigate('/seller/orders');
@@ -121,8 +164,6 @@ export const NotificationBell: React.FC = () => {
       navigate('/seller/products');
     }
   };
-
-  const totalUnread = unreadCount + systemUnreadCount;
 
   const renderTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -151,18 +192,49 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
+  // Đếm các thông báo realtime trong store chưa được đồng bộ vào systemNotifications
+  const localUnreadCount = notifications.filter(
+    (n) => !systemNotifications.some((s) => s.id === n.id)
+  ).length;
+
+  const totalUnread = Math.max(
+    systemUnreadCount,
+    systemNotifications.filter((s) => !s.isRead).length
+  ) + localUnreadCount;
+
+  // Lọc thêm các notification realtime cục bộ nếu chưa có trong systemNotifications
+  const mergedNotifications = [
+    ...systemNotifications,
+    ...notifications
+      .filter((n) => !systemNotifications.some((s) => s.id === n.id))
+      .map((n) => ({
+        id: n.id,
+        type: n.type,
+        title: n.type === 'like' ? 'Lượt thích mới' : n.type === 'comment' ? 'Bình luận mới' : 'Thông báo',
+        body: n.message,
+        isRead: false,
+        dataJson: JSON.stringify({
+          targetPostId: n.targetPostId,
+          actorId: n.triggeredByUserId,
+          actorName: n.triggeredByUserName,
+          actorAvatar: n.triggeredByUserAvatar,
+        }),
+        createdAtUtc: n.createdAtUtc,
+      })),
+  ];
+
   return (
     <div className="notification-bell-wrapper" ref={menuRef}>
       <button
         type="button"
-        className={`notification-bell-btn ${isOpen ? 'active' : ''}`}
+        className={`notification-bell-btn ${isOpen ? 'active' : ''} ${hasNewAlert ? 'has-new-alert' : ''}`}
         onClick={handleToggle}
         aria-label="Thông báo"
         title="Thông báo hệ thống và tương tác"
       >
         <BellIcon size={19} />
         {totalUnread > 0 && (
-          <span className="notification-badge">
+          <span className="notification-badge" key={totalUnread}>
             {totalUnread > 99 ? '99+' : totalUnread}
           </span>
         )}
@@ -172,7 +244,7 @@ export const NotificationBell: React.FC = () => {
         <div className="notification-dropdown">
           <div className="notification-header">
             <h3 className="notification-title">Thông báo</h3>
-            {(notifications.length > 0 || systemNotifications.length > 0) && (
+            {mergedNotifications.length > 0 && (
               <button
                 type="button"
                 className="notification-clear-btn"
@@ -184,7 +256,7 @@ export const NotificationBell: React.FC = () => {
           </div>
 
           <div className="notification-list">
-            {notifications.length === 0 && systemNotifications.length === 0 ? (
+            {mergedNotifications.length === 0 ? (
               <div className="notification-empty">
                 <div className="empty-bell-icon">
                   <BellIcon size={32} />
@@ -192,34 +264,55 @@ export const NotificationBell: React.FC = () => {
                 <p>Bạn chưa có thông báo mới nào</p>
               </div>
             ) : (
-              <>
-                {/* Thông báo Hệ thống & Chợ số */}
-                {systemNotifications.map((sn) => (
+              mergedNotifications.map((sn) => {
+                let data: ExtraNotificationData = {};
+                try {
+                  if (sn.dataJson) {
+                    data = JSON.parse(sn.dataJson);
+                  }
+                } catch {
+                  // ignore
+                }
+
+                return (
                   <div
                     key={sn.id}
                     className={`notification-item ${!sn.isRead ? 'unread' : ''}`}
                     onClick={() => handleSystemNotificationClick(sn)}
                   >
                     <div className="notification-avatar-col">
-                      <div
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          background: 'rgba(99, 102, 241, 0.15)',
-                          color: 'var(--accent-primary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {renderTypeIcon(sn.type)}
-                      </div>
+                      {data.actorAvatar || data.actorName ? (
+                        <div style={{ position: 'relative' }}>
+                          <Avatar
+                            src={data.actorAvatar}
+                            name={data.actorName || 'User'}
+                            size="sm"
+                          />
+                          <span className={`notification-type-badge badge-${sn.type.toLowerCase()}`}>
+                            {renderTypeIcon(sn.type)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'rgba(99, 102, 241, 0.15)',
+                            color: 'var(--accent-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {renderTypeIcon(sn.type)}
+                        </div>
+                      )}
                     </div>
 
                     <div className="notification-content-col">
                       <p className="notification-message" style={{ fontWeight: !sn.isRead ? 700 : 500 }}>
-                        <span style={{ color: 'var(--accent-cyan)', display: 'block', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--accent-cyan)', display: 'block', fontSize: '0.8rem', marginBottom: '2px' }}>
                           {sn.title}
                         </span>
                         {sn.body}
@@ -229,35 +322,8 @@ export const NotificationBell: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                ))}
-
-                {/* Thông báo Realtime Mạng xã hội */}
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className="notification-item"
-                    onClick={() => handleItemClick(n.targetPostId)}
-                  >
-                    <div className="notification-avatar-col">
-                      <Avatar
-                        src={n.triggeredByUserAvatar}
-                        name={n.triggeredByUserName}
-                        size="sm"
-                      />
-                      <span className={`notification-type-badge badge-${n.type}`}>
-                        {renderTypeIcon(n.type)}
-                      </span>
-                    </div>
-
-                    <div className="notification-content-col">
-                      <p className="notification-message">{n.message}</p>
-                      <span className="notification-time">
-                        {formatRelativeTime(n.createdAtUtc)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </>
+                );
+              })
             )}
           </div>
         </div>

@@ -18,10 +18,10 @@ public interface IRealtimeNotificationService
     CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Phát sự kiện khi có bình luận mới tới nhóm xem bài viết và gửi thông báo cho tác giả
+    /// Phát sự kiện khi có bình luận mới tới nhóm xem bài viết và gửi thông báo cho tác giả bài viết / người được phản hồi
     /// </summary>
     Task PublishCommentAddedAsync(Guid postId, int totalCommentCount, CommentDto comment, Guid postAuthorId, 
-    CancellationToken cancellationToken = default);
+    Guid? parentAuthorId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gửi thông báo trực tiếp tới một User cụ thể

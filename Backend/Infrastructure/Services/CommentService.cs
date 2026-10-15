@@ -49,6 +49,7 @@ public class CommentService : ICommentService
             throw new NotFoundException("Người dùng không tồn tại.");
         }
 
+        Guid? parentAuthorId = null;
         if (request.ParentCommentId.HasValue)
         {
             var parent = await _unitOfWork.Comments.GetByIdAsync(request.ParentCommentId.Value, cancellationToken);
@@ -56,6 +57,7 @@ public class CommentService : ICommentService
             {
                 throw new NotFoundException("Bình luận gốc không tồn tại trên bài viết này.");
             }
+            parentAuthorId = parent.AuthorId;
         }
 
         var comment = new Comment
@@ -113,8 +115,8 @@ public class CommentService : ICommentService
             Replies = new List<CommentDto>()
         };
 
-        // Phát sự kiện realtime tới room post_{postId} và gửi thông báo tới tác giả bài viết
-        await _realtimeNotificationService.PublishCommentAddedAsync(postId, post.CommentCount, commentDto, post.AuthorId, cancellationToken);
+        // Phát sự kiện realtime tới room post_{postId} và gửi thông báo tới tác giả bài viết / người được phản hồi
+        await _realtimeNotificationService.PublishCommentAddedAsync(postId, post.CommentCount, commentDto, post.AuthorId, parentAuthorId, cancellationToken);
 
         return commentDto;
     }

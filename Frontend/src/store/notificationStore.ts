@@ -38,6 +38,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   markAllAsRead: () =>
     set({
       unreadCount: 0,
+      notifications: [],
     }),
 
   clearAll: () =>
