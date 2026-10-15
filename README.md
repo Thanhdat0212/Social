@@ -286,7 +286,6 @@ docker run -p 8080:8080 --env-file .env social-api
 ## 🛒 Lộ Trình Triển Khai Gian Hàng Số (Marketplace Tracking)
 
 > Hệ thống theo dõi tiến độ tích hợp module **Gian hàng hàng số (Digital Marketplace)** vào nền tảng Social.
-> Tham khảo chi tiết tại: [`ke-hoach-gian-hang-social.md`](file:///d:/Social/ke-hoach-gian-hang-social.md)
 
 ### 📊 Bảng Trạng Thái Tổng Quan
 

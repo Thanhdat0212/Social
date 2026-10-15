@@ -1,22 +1,60 @@
+# ==============================================================================
+# SECRETS, CREDENTIALS & SENSITIVE DATA (KHÔNG ĐƯA LÊN GIT)
+# ==============================================================================
+# Environment variables
+**/.env
+**/.env.*
+**/*.env
+!**/.env.example
+
+# ASP.NET configuration secrets
+**/appsettings.json
+**/appsettings.*.json
+!**/appsettings.example.json
+!**/appsettings.template.json
+**/secrets.json
+**/*.user
+
+# Private keys, certificates & credentials
+**/*.pfx
+**/*.pem
+**/*.key
+**/*.cer
+**/*.crt
+**/credentials.json
+**/token.json
+**/id_rsa*
+**/id_ed25519*
+
+# Seed data & database backups/dumps
+*seed_data*.sql
+*seed*.sql
+*.sql.bak
+*.sql.dump
+*.dump
+*.bak
+
+# Temporary & Plan files
+*ke-hoach*.md
+*plan*.md
+scratch/
+
+# ==============================================================================
+# BUILD ARTIFACTS & DEPENDENCIES
+# ==============================================================================
 # Backend (.NET)
 Backend/**/bin/
 Backend/**/obj/
 Backend/.vs/
-**/*.user
-**/appsettings.Development.json
-**/.env
-**/.env.*
-!**/.env.example
+bin/
+obj/
 
 # Frontend (Vite/React)
 Frontend/node_modules/
 Frontend/dist/
-Frontend/.env
-Frontend/.env.local
+Frontend/dist-ssr/
 FE/node_modules/
 FE/dist/
-FE/.env
-FE/.env.local
 
 # Thư mục tham khảo, không thuộc project Social
 Mẫu Backend/
@@ -24,7 +62,15 @@ Frontend Tham Kha/
 
 # OS / editor
 .vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.userosscache
+*.sln.docstates
+.DS_Store
+Thumbs.db
 
-# AI Agent folders (internal tools, not part of project)
+# AI Agent folders (internal tools, không đưa lên project)
 _skill-source/
 antigravity-awesome-skills/
