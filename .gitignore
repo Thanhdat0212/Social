@@ -26,9 +26,8 @@
 **/id_rsa*
 **/id_ed25519*
 
-# Seed data & database backups/dumps
-*seed_data*.sql
-*seed*.sql
+# SQL scripts, seed data & database backups/dumps
+*.sql
 *.sql.bak
 *.sql.dump
 *.dump
