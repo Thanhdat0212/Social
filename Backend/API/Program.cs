@@ -1,10 +1,10 @@
-using API.ErrorHandling;
+﻿using API.ErrorHandling;
 using API.Extensions;
 using Application;
 using Infrastructure;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
-using Infrastructure.Realtime;
+using Infrastructure.External.Realtime;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;

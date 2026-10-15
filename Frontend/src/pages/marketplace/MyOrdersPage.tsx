@@ -9,7 +9,6 @@ import {
   PackageIcon,
   Skeleton,
   EmptyState,
-  Badge,
   EyeIcon,
   EyeOffIcon,
   CopyIcon,
@@ -22,6 +21,7 @@ import {
   ExternalLinkIcon,
   SearchIcon,
 } from '@/components/common';
+import { OrderStatusBadge } from '@/components/marketplace/OrderStatusBadge';
 
 export const MyOrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -149,24 +149,6 @@ export const MyOrdersPage: React.FC = () => {
     }
   };
 
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Delivered':
-        return <Badge variant="success" dot>Đã giao mã</Badge>;
-      case 'Completed':
-        return <Badge variant="primary">Đã hoàn tất</Badge>;
-      case 'Paid':
-        return <Badge variant="warning">Đang xuất kho</Badge>;
-      case 'Pending':
-        return <Badge variant="neutral">Chờ thanh toán</Badge>;
-      case 'Cancelled':
-        return <Badge variant="danger">Đã hủy</Badge>;
-      case 'Refunded':
-        return <Badge variant="warning">Đã hoàn tiền</Badge>;
-      default:
-        return <Badge variant="neutral">{status}</Badge>;
-    }
-  };
 
   // Lọc theo từ khóa tìm kiếm (Mã đơn hoặc tên mặt hàng)
   const filteredOrders = useMemo(() => {
@@ -349,7 +331,7 @@ export const MyOrdersPage: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    {renderStatusBadge(order.status)}
+                    <OrderStatusBadge status={order.status} />
                     <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
                       {formatPrice(orderTotal)}
                     </span>

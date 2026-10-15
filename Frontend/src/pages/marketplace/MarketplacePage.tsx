@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import type { Category, ProductListItem } from '@/types/marketplace';
 import {
@@ -18,6 +17,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@/components/common';
+import { ProductCard } from '@/components/marketplace/ProductCard';
 
 type PricePreset = 'all' | 'under50k' | '50k-200k' | '200k-500k' | 'over500k' | 'custom';
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'name';
@@ -150,9 +150,6 @@ export const MarketplacePage: React.FC = () => {
     pricePreset !== 'all' ||
     sort !== 'newest';
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
-  };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -565,44 +562,7 @@ export const MarketplacePage: React.FC = () => {
 
           <div className="products-grid">
             {products.map((p) => (
-              <Link
-                key={p.id}
-                to={`/marketplace/products/${p.slug}`}
-                className="product-card"
-                aria-label={`${p.name}, giá từ ${formatPrice(p.minPrice)}`}
-              >
-                <div className="product-thumb-wrap">
-                  <img
-                    src={p.coverImageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60'}
-                    alt={p.name}
-                    className="product-thumb"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.dataset.hasFallback) {
-                        target.dataset.hasFallback = 'true';
-                        target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';
-                      }
-                    }}
-                  />
-                  <span className="product-instant-badge">⚡ Tự động</span>
-                </div>
-                <div className="product-card-body">
-                  <span className="product-shop-name">{p.shopName || 'Gian hàng uy tín'}</span>
-                  <h3 className="product-title" title={p.name}>
-                    {p.name}
-                  </h3>
-                  <div className="product-price-row">
-                    <div>
-                      <span className="product-price-label">Giá từ </span>
-                      <span className="product-price">{formatPrice(p.minPrice)}</span>
-                    </div>
-                    {p.variantCount > 1 && (
-                      <span className="product-variants-count">{p.variantCount} gói</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
 
