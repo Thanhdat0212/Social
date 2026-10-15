@@ -1,128 +1,307 @@
-# 🌐 Social — Mạng Xã Hội Thông Minh
+# 🌐 Social — Mạng Xã Hội Thông Minh & Sàn Giao Dịch Hàng Số (Social Commerce)
 
-Nền tảng mạng xã hội full-stack với hệ thống **gợi ý nội dung lai (Hybrid Recommendation)**, **AI phân tích bài viết (Gemini)**, **real-time thông báo (SignalR)** và **xác thực bảo mật (JWT + Google OAuth)**.
+Nền tảng mạng xã hội kết hợp thương mại điện tử hàng số (**Social Commerce**) full-stack hiện đại: tích hợp hệ thống **gợi ý nội dung lai (Hybrid AI Recommendation)**, **AI phân tích nội dung (Gemini)**, **real-time WebSocket (SignalR)**, **chợ sản phẩm số bảo mật cao (AES-GCM)**, **cổng thanh toán VietQR (PayOS)** và **sổ cái kế toán kép (Double-Entry Ledger)**.
 
 ---
 
 ## ✨ Tính Năng Nổi Bật
 
-| Nhóm | Tính năng |
+| Phân hệ | Tính năng chi tiết |
 |---|---|
-| 🔐 **Xác thực** | Đăng ký/Đăng nhập, JWT (Access + Refresh Token), Google OAuth 2.0, Xác minh email, Quên/Đặt lại mật khẩu |
-| 👤 **Hồ sơ cá nhân** | Cập nhật avatar (Cloudinary), bio, username, onboarding chọn sở thích |
-| 📝 **Bài viết** | Tạo/xóa bài viết, đính kèm ảnh/video, phân tích AI tự động (Gemini), gắn thẻ sở thích |
-| ❤️ **Tương tác** | Like, comment, theo dõi (follow/unfollow) |
-| 🛍️ **Gian hàng số** | Tạo gian hàng, quy trình xét duyệt/từ chối/kỷ luật Shop, Memory Cache tra cứu nhanh |
-| 📂 **Danh mục & Thuộc tính** | Cây danh mục 3 cấp, từ điển thuộc tính kế thừa tổ tiên, đề xuất mở danh mục từ Seller |
-| 🤖 **Gợi ý thông minh** | Pipeline Hybrid Recommendation (Interest · Following · Trending · Collaborative · Semantic · Exploration) |
-| 🔔 **Real-time** | Thông báo tức thì qua SignalR WebSocket (like, comment, follow, bài viết mới) |
-| 📱 **Giao diện** | Responsive, Mobile Navigation, Infinite Scroll, Dark Theme |
+| 🔐 **Xác thực & Phân quyền** | Đăng ký/Đăng nhập, JWT (Access + Refresh Token), Google OAuth 2.0, Xác minh email, Phân quyền đa cấp (`Member`, `Seller`, `Admin`), Quản lý trạng thái (`Active`, `Suspended`). |
+| 👤 **Hồ sơ cá nhân** | Cập nhật avatar (Cloudinary), bio, username, thông tin liên hệ, onboarding chọn sở thích cá nhân hóa. |
+| 📝 **Mạng xã hội & AI** | Tạo/xóa bài viết, đính kèm đa phương tiện (ảnh, video), tự động phân tích nhãn/chủ đề và trích xuất vector ngữ nghĩa bằng Google Gemini AI, gắn thẻ sở thích. |
+| 🏷️ **Social Commerce (Gắn thẻ sản phẩm)** | Đính kèm sản phẩm số trực tiếp vào bài viết. Người dùng đọc bài có thể xem thông tin tóm tắt và bấm chuyển thẳng đến trang sản phẩm để mua ngay. |
+| ❤️ **Tương tác & Real-time** | Like, bình luận lồng nhau, theo dõi (Follow/Unfollow). Thông báo tức thì qua SignalR WebSocket (like, comment, follow, cập nhật đơn hàng). |
+| 🤖 **Gợi ý thông minh (Hybrid Feed)** | Pipeline 6 nguồn song song: Sở thích (Interests) · Người theo dõi (Following) · Xu hướng 24h (Trending) · Lọc cộng tác (Collaborative) · Tìm kiếm ngữ nghĩa vector (pgvector) · Khám phá (Exploration). |
+| 🛍️ **Chợ Hàng Số (Digital Marketplace)** | Khám phá sản phẩm số (Key bản quyền, phần mềm, tài khoản học tập, mã nguồn), bộ lọc đa tiêu chí, phân loại danh mục cây 3 cấp, tìm kiếm và sắp xếp giá linh hoạt. |
+| 📦 **Kho Số Bảo Mật (AES-256-GCM)** | Tự động hóa giao hàng số tức thì. Mã thẻ/tài khoản được mã hóa AES-GCM 256-bit, đối chiếu băm SHA-256 chống nạp trùng mã. Hỗ trợ tài liệu/source code tải về qua Signed URL có thời hạn. |
+| 🔒 **Chống Bán Trùng (Concurrency Lock)** | Phiên Checkout giữ chỗ 15 phút với kỹ thuật `FOR UPDATE SKIP LOCKED` trong Database Transaction, đảm bảo tuyệt đối không bao giờ xảy ra tình trạng bán vượt tồn kho (overselling) khi nhiều người mua cùng lúc. |
+| 💳 **Thanh Toán Tự Động (VietQR / PayOS)** | Tích hợp cổng thanh toán trực tuyến PayOS qua mã VietQR chuẩn NAPAS 247. Xử lý Webhook bảo mật với chữ ký Checksum Key; hỗ trợ cổng Mock Payment giả lập cho môi trường phát triển local. |
+| 📒 **Sổ Cái Kế Toán Kép (Double-Entry Ledger)** | Quản lý dòng tiền minh bạch chuẩn kế toán quốc tế: Mỗi giao dịch sinh bút toán cân bằng (`Total Debit == Total Credit`). Phân bổ doanh thu sàn, tiền tạm giữ của Shop (`ShopPending`), tiền khả dụng (`ShopAvailable`). |
+| 🏪 **Cổng Người Bán (Seller Portal)** | Đăng ký gian hàng, tạo sản phẩm & biến thể SKU, nạp kho số hàng loạt, theo dõi đơn hàng, quản lý dòng tiền, sao kê biến động sổ cái, liên kết tài khoản ngân hàng và gửi yêu cầu rút tiền (Payouts). |
+| ⚖️ **Khiếu Nại & Đánh Giá (Disputes & Reviews)** | Người mua đánh giá sao sau khi hoàn tất đơn hàng; gửi khiếu nại trong vòng 48h nếu mã lỗi/sai thông tin. Người bán hỗ trợ đổi mã mới hoặc hoàn tiền tự động qua sổ cái. |
+| 🛡️ **Bảng Điều Khiển Quản Trị (Admin Dashboard)** | Xét duyệt gian hàng, kiểm duyệt danh mục/sản phẩm toàn sàn, phân xử tranh chấp khiếu nại, duyệt lệnh rút tiền Payout của Seller, chạy công cụ đối soát sổ cái tự động. |
+| ⚙️ **Hệ Thống Tự Động Hóa (Background Workers)** | Các tác vụ ngầm chạy định kỳ: Quét hủy phiên Checkout quá hạn, tự động giải ngân tiền tạm giữ sang khả dụng sau 48h, tự động leo thang khiếu nại quá hạn, đối soát số dư toàn sàn hàng ngày. |
+| ⚡ **Hiệu Năng Cao & Cache Tầng** | In-Memory Cache (`IMemoryCache`) với kỹ thuật Cache-Aside cho Cây danh mục, Chi tiết sản phẩm, Hồ sơ Shop, Sở thích người dùng; tự động xóa cache chủ động khi có thay đổi. |
 
 ---
 
 ## 🏗️ Kiến Trúc Hệ Thống
 
+Dự án được xây dựng theo mô hình **Clean Architecture** (Backend) kết hợp **Component-Driven Modular Architecture** (Frontend):
+
 ```
 Social/
-├── Backend/                  # ASP.NET Core 8 — Clean Architecture
-│   ├── API/                  # Presentation Layer (Controllers, Auth, ErrorHandling)
-│   ├── Application/          # Business Logic (Interfaces, DTOs, Validators)
-│   ├── Domain/               # Entities, Domain Models
-│   └── Infrastructure/       # Implementations (DB, Services, AI, Realtime, ...)
+├── Backend/                                # ASP.NET Core 8 — Clean Architecture
+│   ├── API/                                # Presentation Layer
+│   │   ├── Controllers/                    # API Endpoints (Auth, Posts, Users, Social...)
+│   │   │   └── Marketplace/                # Các Controller chuyên trách Gian hàng số:
+│   │   │       ├── CatalogController.cs    # Khám phá sản phẩm, tìm kiếm, lọc
+│   │   │       ├── CategoriesController.cs # Cây danh mục, thuộc tính
+│   │   │       ├── ProductsController.cs   # Chi tiết sản phẩm & biến thể
+│   │   │       ├── CartController.cs       # Quản lý giỏ hàng
+│   │   │       ├── CheckoutsController.cs  # Phiên checkout giữ chỗ kho số
+│   │   │       ├── PaymentsController.cs   # Khởi tạo thanh toán VietQR / PayOS
+│   │   │       ├── PaymentWebhooksController.cs # Xử lý Webhook thanh toán an toàn
+│   │   │       ├── OrdersController.cs     # Đơn hàng, nhận mã số, tải file
+│   │   │       ├── ProductReviewsController.cs # Đánh giá sản phẩm
+│   │   │       ├── ComplaintsController.cs # Khiếu nại của người mua
+│   │   │       ├── InventoryController.cs  # Nạp kho số mã hóa (Seller)
+│   │   │       ├── ShopOrdersController.cs # Quản lý đơn hàng (Seller)
+│   │   │       ├── ShopFinanceController.cs# Sổ cái & số dư ví (Seller)
+│   │   │       ├── ShopPayoutsController.cs# Yêu cầu rút tiền (Seller)
+│   │   │       ├── AdminShopsController.cs # Duyệt gian hàng (Admin)
+│   │   │       ├── AdminPayoutsController.cs # Duyệt rút tiền (Admin)
+│   │   │       ├── AdminAuditController.cs # Đối soát sổ cái kép (Admin)
+│   │   │       └── ...
+│   │   ├── Extensions/                     # Dependency Injection extensions
+│   │   └── Middlewares/                    # Exception handling, JWT validation
+│   │
+│   ├── Application/                        # Core Business Logic Layer
+│   │   ├── DTOs/                           # Data Transfer Objects
+│   │   ├── Interfaces/                     # Service Interfaces & Abstractions
+│   │   └── Validators/                     # FluentValidation rules
+│   │
+│   ├── Domain/                             # Enterprise Domain Layer
+│   │   ├── Entities/                       # User, Post, Comment, Like, Follow, Notification
+│   │   │   └── Marketplace/                # Các thực thể nghiệp vụ E-Commerce:
+│   │   │       ├── Shops/                  # Shop, ShopReview, ShopSanction
+│   │   │       ├── Categories/             # Category, CategoryAttribute
+│   │   │       ├── Products/               # Product, ProductVariant, ProductReview
+│   │   │       ├── Inventory/              # DigitalCode (AES Encrypted)
+│   │   │       ├── Orders/                 # Cart, CartItem, Checkout, ShopOrder, OrderItem
+│   │   │       ├── Payments/               # PaymentTransaction, PaymentWebhookLog
+│   │   │       ├── Ledger/                 # LedgerEntry, LedgerAccount (Kế toán kép)
+│   │   │       ├── Complaints/             # Complaint, ComplaintTimeline
+│   │   │       └── Payouts/                # PayoutRequest, ShopBankAccount
+│   │   ├── Enums/                          # Trạng thái vòng đời của thực thể
+│   │   └── ValueObjects/                   # Money (long VND)
+│   │
+│   └── Infrastructure/                     # Implementation & External Services
+│       ├── AI/                             # Google Gemini AI & Vector Embeddings
+│       ├── Caching/                        # MemoryCacheService & Invalidation
+│       ├── Identity/                       # JwtTokenService, CurrentUserService
+│       ├── Media/                          # Cloudinary media upload
+│       ├── Persistence/                    # EF Core SocialDbContext, Migrations, Repositories
+│       ├── Realtime/                       # SignalR SocialHub, RealtimeNotificationService
+│       ├── Recommendation/                 # 6 Candidate Generators & Ranking pipeline
+│       ├── Security/                       # AesGcmCryptoService, SignedUrlService
+│       └── Services/Marketplace/           # 12+ Marketplace Business Services & 4 Background Workers:
+│           ├── Orders/CheckoutExpirationWorker.cs    # Tự động hủy checkout quá hạn
+│           ├── Orders/FundReleaseWorker.cs           # Tự động chuyển tiền tạm giữ sang khả dụng
+│           ├── Complaints/ComplaintEscalationWorker.cs # Tự động chuyển khiếu nại lên Admin
+│           └── Audit/DailyReconciliationWorker.cs    # Đối soát tự động số dư sổ cái
 │
-└── Frontend/                 # React 19 + TypeScript + Vite
+└── Frontend/                               # React 19 + TypeScript + Vite
     └── src/
-        ├── api/              # Axios HTTP clients
-        ├── components/       # UI components (common, layout, posts)
-        ├── hooks/            # Custom hooks (useSignalR, useInfiniteScroll, ...)
-        ├── pages/            # Routes (auth, home, profile, onboarding)
-        ├── services/         # SignalR service
-        ├── store/            # Zustand state management
-        ├── styles/           # Global CSS
-        └── types/            # TypeScript types
+        ├── api/                            # Axios API Clients (auth, posts, marketplace, admin...)
+        ├── components/
+        │   ├── common/                     # Button, Input, Modal, Badge, Dropdown, Skeleton...
+        │   ├── layout/                     # Navbar, MobileNav, Footer, NotificationBell
+        │   └── posts/                      # PostCard, CreatePostBox, ProductPickerModal
+        ├── pages/
+        │   ├── auth/                       # Đăng nhập, Đăng ký, Quên/Đặt lại mật khẩu
+        │   ├── home/                       # Feed mạng xã hội gợi ý thông minh
+        │   ├── profile/                    # Hồ sơ cá nhân, đổi avatar, bài viết cá nhân
+        │   ├── marketplace/                # Chợ hàng số, Chi tiết SP, Giỏ hàng, Checkout, Đơn hàng
+        │   ├── seller/                     # Cổng Người Bán (Quản lý SP, Kho số, Đơn hàng, Ví, Rút tiền)
+        │   └── admin/                      # Bảng Quản Trị Sàn (Duyệt shop, Duyệt tiền, Kiểm toán)
+        ├── routes/                         # React Router DOM v7 (AdminRoute, ProtectedRoute, GuestRoute)
+        ├── store/                          # Zustand Stores (auth, cart, feed, notification, postModal)
+        ├── styles/                         # Vanilla CSS & Design Tokens (Dark Theme, Marketplace UI)
+        └── types/                          # TypeScript definitions (auth, post, marketplace, admin...)
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
 
 ### Backend
-| Thành phần | Công nghệ |
-|---|---|
-| Framework | ASP.NET Core 8 |
-| Database | PostgreSQL (Supabase) + Entity Framework Core |
-| Caching | In-Memory Caching (`IMemoryCache`) — Tối ưu hóa đọc dữ liệu & giảm tải Database |
-| Vector Search | pgvector (Semantic Search) |
-| Real-time | SignalR WebSocket |
-| AI | Google Gemini API (phân tích & embedding bài viết) |
-| Xác thực | JWT Bearer + Refresh Token + Google OAuth 2.0 |
-| Email | SMTP / Brevo |
-| Media Storage | Cloudinary |
-| Kiến trúc | Clean Architecture (Domain → Application → Infrastructure → API) |
+| Phân loại | Công nghệ / Thư viện | Vai trò |
+|---|---|---|
+| **Runtime & Core** | .NET 8 (ASP.NET Core 8) | RESTful API, DI Container, Configuration |
+| **Kiến trúc** | Clean Architecture | Đảm bảo tính mở rộng, bảo trì và phân tách trách nhiệm |
+| **Cơ sở dữ liệu** | PostgreSQL (Supabase) + EF Core | Lưu trữ quan hệ ACID, Migration quản lý bằng mã C# |
+| **Vector Search** | pgvector | Tìm kiếm tương đồng vector cho thuật toán gợi ý Semantic |
+| **Caching** | `Microsoft.Extensions.Caching.Memory` | In-Memory Caching (Cache-Aside pattern) tối ưu tốc độ đọc |
+| **Mã hóa bảo mật** | AES-256-GCM + SHA-256 | Mã hóa an toàn kho số và đối chiếu kiểm tra trùng lặp |
+| **Cổng thanh toán** | PayOS SDK (VietQR NAPAS 247) | Tạo mã thanh toán ngân hàng tự động, Webhook bảo mật |
+| **Real-time** | ASP.NET Core SignalR | WebSocket đẩy thông báo tức thì (like, comment, đơn hàng) |
+| **Trí tuệ nhân tạo** | Google Gemini API | Phân tích bài viết, sinh vector embeddings |
+| **Lưu trữ tệp** | Cloudinary API | Tải lên và tối ưu hóa hình ảnh, avatar, video |
+| **Xác thực** | JWT Bearer + Google OAuth 2.0 | Xác thực token không trạng thái (Stateless), Google Sign-In |
+| **Tiến trình nền** | `BackgroundService` / Hosted Workers | Chạy tác vụ ngầm tự động (Hủy checkout, Giải ngân, Đối soát) |
 
 ### Frontend
-| Thành phần | Công nghệ |
-|---|---|
-| Framework | React 19 + TypeScript |
-| Build Tool | Vite 8 |
-| State Management | Zustand |
-| Routing | React Router DOM v7 |
-| HTTP Client | Axios |
-| Real-time | @microsoft/signalr |
-| Auth | @react-oauth/google |
+| Phân loại | Công nghệ / Thư viện | Vai trò |
+|---|---|---|
+| **Framework** | React 19 + TypeScript | Xây dựng giao diện người dùng reactive và type-safe |
+| **Build Tool** | Vite 8 | Tốc độ biên dịch và Hot Module Replacement (HMR) cực nhanh |
+| **State Management**| Zustand | Quản lý trạng thái gọn nhẹ (Auth, Cart, Realtime Notifications) |
+| **Định tuyến** | React Router DOM v7 | Điều hướng client-side, Route Guards (`AdminRoute`, `ProtectedRoute`) |
+| **HTTP Client** | Axios | Tương tác REST API, tự động gắn Bearer Token & Interceptors |
+| **Real-time Client**| `@microsoft/signalr` | Nhận sự kiện trực tiếp từ máy chủ WebSocket |
+| **Xác thực Google** | `@react-oauth/google` | Đăng nhập Google One-Tap & OAuth button |
+| **Styling** | Vanilla CSS + CSS Variables | Hệ màu Dark Theme hiện đại, responsive, không phụ thuộc UI lib cồng kềnh |
 
 ---
 
-## 🤖 Hybrid Recommendation Pipeline
-
-Hệ thống gợi ý nội dung chạy theo **6 nguồn song song**, tổng hợp và xếp hạng:
+## 🛒 Quy Trình Nghiệp Vụ Gian Hàng Số (Marketplace Workflow)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  CANDIDATE GENERATORS                   │
-│                                                         │
-│  InterestCandidates    → dựa theo sở thích đăng ký     │
-│  FollowingCandidates   → bài viết từ người đang follow  │
-│  TrendingCandidates    → bài viết hot trong 24h         │
-│  CollaborativeCandidates → Collaborative Filtering      │
-│  SemanticCandidates    → Vector similarity (pgvector)   │
-│  ExplorationCandidates → khám phá nội dung mới          │
-└───────────────────┬─────────────────────────────────────┘
-                    │
-            CandidateAggregator (dedup + merge)
-                    │
-          RecommendationRankingService (scoring)
-                    │
-              DiversityService (MMR algorithm)
-                    │
-                 Final Feed ✅
+[Người Bán (Seller)]
+       │
+       ├── 1. Mở Shop & Chờ Admin phê duyệt
+       ├── 2. Tạo sản phẩm & phân loại biến thể (Key, Tài khoản, File)
+       └── 3. Nạp kho số hàng loạt (Hệ thống tự động mã hóa AES-GCM 256-bit)
+                                 │
+                                 ▼
+[Người Mua (Buyer)] ◄────── [Chợ Sản Phẩm Số] ◄────── [Gắn Thẻ Bài Viết Feed]
+       │
+       ├── 1. Thêm sản phẩm vào giỏ hàng (Cart)
+       ├── 2. Bấm Checkout ──► Hệ thống tạo phiên 15 phút & KHÓA KHO BẰNG:
+       │                       `SELECT ... FOR UPDATE SKIP LOCKED`
+       │
+       ├── 3. Quét mã VietQR chuyển khoản (Cổng thanh toán PayOS)
+       │                       │
+       │                       ▼ (Webhook trả về có chữ ký Checksum)
+       ├── 4. TỰ ĐỘNG GIAO HÀNG TỨC THÌ:
+       │       ├── Chuyển trạng thái mã: `Reserved` -> `Delivered`
+       │       ├── Người mua xem trực tiếp mã số đã giải mã tại trang đơn hàng
+       │       └── Hoặc tải file tài liệu đính kèm qua link bảo mật Signed URL
+       │
+       └── 5. GHI SỔ CÁI KÉP (Ledger Entry):
+               ├── Nợ: Tài khoản trung gian sàn thu tiền
+               ├── Có: Doanh thu phí sàn
+               └── Có: Tài khoản tạm giữ của Shop (`ShopPending`)
+                                 │
+                                 ▼ (Sau 48 giờ không có khiếu nại)
+                       `FundReleaseWorker` tự động giải ngân:
+                         `ShopPending` ──► `ShopAvailable` (Khả dụng)
+                                 │
+                                 ▼
+                       Người bán gửi yêu cầu rút tiền (Payout)
+                                 │
+                                 ▼
+                       Admin đối soát và chuyển khoản thành công
 ```
 
 ---
 
-## ⚡ Real-time (SignalR)
+## 📡 Danh Mục API Endpoints
 
-Hub endpoint: `/hubs/social`
+### 1. Xác thực & Tài khoản (Authentication & Profile)
+| Phương thức | Đường dẫn | Quyền hạn | Mô tả |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Public | Đăng ký tài khoản người dùng mới |
+| `POST` | `/api/auth/login` | Public | Đăng nhập bằng Email/Password, nhận JWT |
+| `POST` | `/api/auth/google` | Public | Đăng nhập bằng Google ID Token |
+| `POST` | `/api/auth/refresh-token` | Public | Làm mới Access Token bằng Refresh Token |
+| `POST` | `/api/auth/logout` | Authorized | Đăng xuất và vô hiệu hóa Refresh Token |
+| `POST` | `/api/auth/forgot-password` | Public | Yêu cầu gửi email khôi phục mật khẩu |
+| `POST` | `/api/auth/reset-password` | Public | Đặt lại mật khẩu với token xác minh |
+| `GET` | `/api/auth/verify-email` | Public | Xác minh địa chỉ email |
+| `GET` | `/api/profile/{username}` | Authorized | Xem thông tin hồ sơ người dùng |
+| `PUT` | `/api/profile` | Authorized | Cập nhật tên, tiểu sử cá nhân |
+| `POST` | `/api/profile/avatar` | Authorized | Tải lên và thay đổi ảnh đại diện |
 
-| Sự kiện | Mô tả |
-|---|---|
-| `NewPost` | Có bài viết mới từ người đang follow |
-| `NewLike` | Bài viết của bạn được like |
-| `NewComment` | Bài viết của bạn có comment mới |
-| `NewFollower` | Có người mới follow bạn |
+### 2. Mạng xã hội & Tương tác (Posts & Interactions)
+| Phương thức | Đường dẫn | Quyền hạn | Mô tả |
+|---|---|---|---|
+| `GET` | `/api/posts/feed` | Authorized | Lấy bảng tin gợi ý thông minh (Hybrid Recommendation) |
+| `POST` | `/api/posts` | Authorized | Đăng bài viết mới (hỗ trợ gắn thẻ sản phẩm số) |
+| `DELETE` | `/api/posts/{id}` | Authorized | Xóa bài viết của chính mình |
+| `POST` | `/api/posts/{id}/like` | Authorized | Thả tim bài viết (bắn SignalR cho tác giả) |
+| `DELETE` | `/api/posts/{id}/like` | Authorized | Bỏ thả tim bài viết |
+| `GET` | `/api/posts/{id}/comments` | Authorized | Lấy danh sách bình luận của bài viết |
+| `POST` | `/api/posts/{id}/comments` | Authorized | Thêm bình luận mới |
+| `POST` | `/api/follows/{userId}` | Authorized | Theo dõi người dùng khác |
+| `DELETE` | `/api/follows/{userId}` | Authorized | Hủy theo dõi người dùng |
+
+### 3. Khám phá Sản phẩm & Danh mục (Catalog & Categories)
+| Phương thức | Đường dẫn | Quyền hạn | Mô tả |
+|---|---|---|---|
+| `GET` | `/api/categories/tree` | Public (Cached) | Lấy toàn bộ cây danh mục sản phẩm 3 cấp |
+| `GET` | `/api/categories/{id}/attributes` | Public (Cached) | Lấy danh sách thuộc tính tiêu chuẩn theo danh mục |
+| `GET` | `/api/marketplace/products` | Public | Tìm kiếm, lọc và phân trang danh sách sản phẩm |
+| `GET` | `/api/marketplace/products/{slug}` | Public (Cached) | Chi tiết sản phẩm, biến thể SKU và giá bán |
+| `GET` | `/api/marketplace/products/{id}/reviews`| Public | Lấy danh sách đánh giá của khách hàng |
+| `GET` | `/api/shops/{slug}` | Public (Cached) | Xem thông tin công khai và các sản phẩm của Shop |
+
+### 4. Mua hàng & Thanh toán (Cart, Checkout & Payments)
+| Phương thức | Đường dẫn | Quyền hạn | Mô tả |
+|---|---|---|---|
+| `GET` | `/api/cart` | Authorized | Lấy danh sách sản phẩm trong giỏ hàng hiện tại |
+| `POST` | `/api/cart/items` | Authorized | Thêm một biến thể sản phẩm vào giỏ |
+| `PUT` | `/api/cart/items/{id}` | Authorized | Cập nhật số lượng sản phẩm trong giỏ |
+| `DELETE` | `/api/cart/items/{id}` | Authorized | Xóa sản phẩm khỏi giỏ hàng |
+| `POST` | `/api/checkouts` | Authorized | Tạo phiên Checkout và khóa giữ mã kho (`SKIP LOCKED` 15p) |
+| `GET` | `/api/checkouts/{id}` | Authorized | Lấy chi tiết phiên checkout và đếm ngược thời gian |
+| `POST` | `/api/payments/payos/create` | Authorized | Tạo liên kết thanh toán VietQR PayOS |
+| `POST` | `/api/payments/payos/webhook`| Public (Verify HMAC) | Webhook nhận xác nhận chuyển khoản từ PayOS |
+| `POST` | `/api/dev/checkouts/{id}/mock-pay` | Authorized (Dev only) | Giả lập thanh toán tức thì phục vụ kiểm thử |
+| `GET` | `/api/orders` | Authorized | Danh sách các đơn hàng cá nhân đã mua |
+| `GET` | `/api/orders/{id}` | Authorized | Chi tiết đơn hàng và hiển thị mã số đã giải mã |
+| `POST` | `/api/orders/{id}/reviews` | Authorized | Gửi đánh giá sao & nhận xét sau khi mua hàng |
+| `POST` | `/api/orders/{id}/complaints` | Authorized | Gửi yêu cầu khiếu nại (báo lỗi mã/hàng hỏng trong 48h) |
+
+### 5. Cổng Người Bán (Seller Portal)
+| Phương thức | Đường dẫn | Quyền hạn | Mô tả |
+|---|---|---|---|
+| `POST` | `/api/shops` | Authorized | Gửi hồ sơ đăng ký mở gian hàng mới |
+| `GET` | `/api/shops/my-shop` | Authorized | Xem trạng thái và thông tin gian hàng của mình |
+| `PUT` | `/api/shops/my-shop` | Seller | Cập nhật thông tin, logo, mô tả gian hàng |
+| `GET` | `/api/seller/products` | Seller | Danh sách sản phẩm của gian hàng |
+| `POST` | `/api/seller/products` | Seller | Đăng sản phẩm mới kèm các biến thể SKU |
+| `PUT` | `/api/seller/products/{id}` | Seller | Chỉnh sửa thông tin, giá, trạng thái sản phẩm |
+| `POST` | `/api/seller/inventory/codes` | Seller | Nạp danh sách mã số (Mã hóa tự động AES-GCM) |
+| `GET` | `/api/seller/orders` | Seller | Quản lý các đơn hàng khách đã mua từ shop |
+| `GET` | `/api/seller/finance` | Seller | Xem số dư ví: Khả dụng (`Available`), Tạm giữ (`Pending`) |
+| `GET` | `/api/seller/finance/ledger` | Seller | Xem sao kê chi tiết mọi biến động Nợ/Có của Shop |
+| `POST` | `/api/seller/payouts` | Seller | Tạo yêu cầu rút tiền về tài khoản ngân hàng |
+| `GET` | `/api/seller/complaints` | Seller | Danh sách các khiếu nại từ người mua |
+| `POST` | `/api/seller/complaints/{id}/resolve`| Seller | Xử lý khiếu nại (Đổi mã mới hoặc Hoàn tiền) |
+
+### 6. Bảng Điều Khiển Quản Trị (Admin Dashboard)
+| Phương thức | Đường dẫn | Quyền hạn | Mô tả |
+|---|---|---|---|
+| `GET` | `/api/admin/shops/pending` | Admin | Danh sách các gian hàng chờ xét duyệt |
+| `POST` | `/api/admin/shops/{id}/review` | Admin | Duyệt (`Approve`) hoặc Từ chối (`Reject`) gian hàng |
+| `POST` | `/api/admin/shops/{id}/sanctions` | Admin | Áp dụng hình phạt: Cảnh cáo, Khóa tạm thời hoặc Đình chỉ |
+| `POST` | `/api/admin/categories` | Admin | Thêm mới danh mục vào cây danh mục 3 cấp |
+| `PUT` | `/api/admin/categories/{id}` | Admin | Sửa tên, thứ tự hiển thị, thuộc tính danh mục |
+| `GET` | `/api/admin/payouts` | Admin | Danh sách yêu cầu rút tiền của các Seller |
+| `POST` | `/api/admin/payouts/{id}/approve` | Admin | Xác nhận đã chuyển khoản thành công |
+| `POST` | `/api/admin/payouts/{id}/reject` | Admin | Từ chối lệnh rút tiền và hoàn lại số dư khả dụng |
+| `GET` | `/api/admin/audit/reconciliation` | Admin | Kiểm toán tổng đối soát sổ cái toàn hệ thống |
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt
+## ⚡ Sự Kiện Real-time (SignalR WebSocket)
 
-### Yêu Cầu
+Hub Endpoint: `/hubs/social`
+
+| Tên sự kiện | Người nhận | Nội dung sự kiện |
+|---|---|---|
+| `NewPost` | Followers | Thông báo khi có người bạn theo dõi vừa đăng bài |
+| `NewLike` | Chủ bài viết | Thông báo khi bài viết nhận được một lượt thích |
+| `NewComment` | Chủ bài viết | Thông báo khi bài viết có thêm một bình luận mới |
+| `NewFollower` | Người được theo dõi | Thông báo khi có người dùng mới nhấn theo dõi |
+| `NotificationReceived` | Người dùng cụ thể | Đẩy thông báo hệ thống (Duyệt shop, Đơn hàng thành công, Khiếu nại, Rút tiền) |
+
+---
+
+## 🚀 Hướng Dẫn Cài Đặt & Chạy Cục Bộ (Local Setup)
+
+### Yêu Cầu Môi Trường
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Node.js 20+](https://nodejs.org/)
-- PostgreSQL database (khuyến nghị dùng [Supabase](https://supabase.com/))
+- [Node.js 20+](https://nodejs.org/) & `npm`
+- Cơ sở dữ liệu PostgreSQL (Khuyến nghị dùng [Supabase](https://supabase.com/))
 
 ---
 
-### 1. Clone Repository
+### Bước 1: Clone Repository
 
 ```bash
 git clone https://github.com/Thanhdat0212/Social.git
@@ -131,147 +310,78 @@ cd Social
 
 ---
 
-### 2. Cấu Hình Backend
+### Bước 2: Thiết Lập & Khởi Chạy Backend
 
-```bash
-cd Backend
-cp .env.example .env
-```
+1. Di chuyển vào thư mục Backend và sao chép cấu hình mẫu:
+   ```bash
+   cd Backend
+   cp .env.example .env
+   ```
 
-Mở file `.env` và điền các giá trị:
+2. Cập nhật các thông số quan trọng trong file `.env`:
+   ```env
+   # 1. Chuỗi kết nối Database Supabase PostgreSQL
+   ConnectionStrings__DefaultConnection="Host=<your-supabase-host>;Port=5432;Database=postgres;Username=postgres.<project-ref>;Password=<db-password>;SSL Mode=Require;Trust Server Certificate=true"
 
-```env
-# Database (Supabase PostgreSQL)
-ConnectionStrings__DefaultConnection="Host=<host>;Port=5432;Database=postgres;Username=postgres.<ref>;Password=<password>;SSL Mode=Require;Trust Server Certificate=true"
+   # 2. Khóa bảo mật ký JWT (tối thiểu 32 ký tự)
+   Jwt__SigningKey="your-super-secret-jwt-signing-key-minimum-32-chars-long"
 
-# JWT
-Jwt__SigningKey="your-super-secret-key-minimum-32-chars"
-Jwt__Issuer="SocialApi"
-Jwt__Audience="SocialClient"
-Jwt__AccessTokenMinutes=15
-Jwt__RefreshTokenDays=7
+   # 3. Google OAuth 2.0 (Tùy chọn)
+   Google__ClientId="your-google-client-id.apps.googleusercontent.com"
+   Google__ClientSecret="your-google-client-secret"
 
-# Google OAuth
-Google__ClientId="your-google-client-id.apps.googleusercontent.com"
-Google__ClientSecret="your-google-client-secret"
+   # 4. Cloudinary (Lưu trữ ảnh & file)
+   Cloudinary__CloudName="your-cloud-name"
+   Cloudinary__ApiKey="your-api-key"
+   Cloudinary__ApiSecret="your-api-secret"
 
-# Cloudinary
-Cloudinary__CloudName="your-cloud-name"
-Cloudinary__ApiKey="your-api-key"
-Cloudinary__ApiSecret="your-api-secret"
+   # 5. Google Gemini AI (Gợi ý nội dung & Embeddings)
+   Gemini__ApiKey="your-gemini-api-key"
 
-# Google Gemini AI
-Gemini__ApiKey="your-gemini-api-key"
-Gemini__Model="gemini-2.0-flash"
+   # 6. Cổng thanh toán PayOS (VietQR NAPAS 247)
+   PayOs__ClientId="your-payos-client-id"
+   PayOs__ApiKey="your-payos-api-key"
+   PayOs__ChecksumKey="your-payos-checksum-key"
 
-# Email (SMTP)
-Email__Provider="Smtp"
-Smtp__Host="smtp.gmail.com"
-Smtp__Port=587
-Smtp__Username="your-email@gmail.com"
-Smtp__Password="your-app-password"
+   # 7. Cấu hình Frontend CORS
+   App__FrontendBaseUrl="http://localhost:5173"
+   ```
 
-# CORS
-App__FrontendBaseUrl="http://localhost:5173"
-```
-
-Khởi chạy Backend:
-
-```bash
-cd API
-dotnet run
-```
-
-> API chạy tại: `https://localhost:7xxx` — Swagger UI: `https://localhost:7xxx/swagger`
+3. Chạy Backend:
+   ```bash
+   cd API
+   dotnet run
+   ```
+   * Backend REST API khởi chạy tại: `https://localhost:7126` (hoặc `http://localhost:5126`)
+   * Tài liệu Swagger UI: `https://localhost:7126/swagger`
 
 ---
 
-### 3. Cấu Hình Frontend
+### Bước 3: Thiết Lập & Khởi Chạy Frontend
 
-```bash
-cd Frontend
-```
+1. Di chuyển vào thư mục Frontend:
+   ```bash
+   cd ../../Frontend
+   cp .env.example .env
+   ```
 
-Tạo file `.env.local`:
+2. Kiểm tra file `.env` đã trỏ đúng cổng của Backend:
+   ```env
+   VITE_API_BASE_URL=/api
+   VITE_BACKEND_URL=http://localhost:5126
+   VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+   ```
 
-```env
-VITE_API_URL=https://localhost:7xxx
-VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-```
-
-Cài dependencies và chạy:
-
-```bash
-npm install
-npm run dev
-```
-
-> Frontend chạy tại: `http://localhost:5173`
-
----
-
-## 📡 API Endpoints
-
-### Authentication
-| Method | Endpoint | Mô tả |
-|---|---|---|
-| `POST` | `/api/auth/register` | Đăng ký tài khoản |
-| `POST` | `/api/auth/login` | Đăng nhập |
-| `POST` | `/api/auth/google` | Đăng nhập Google OAuth |
-| `POST` | `/api/auth/refresh-token` | Làm mới Access Token |
-| `POST` | `/api/auth/logout` | Đăng xuất |
-| `POST` | `/api/auth/forgot-password` | Gửi email đặt lại mật khẩu |
-| `POST` | `/api/auth/reset-password` | Đặt lại mật khẩu |
-| `GET` | `/api/auth/verify-email` | Xác minh email |
-
-### Posts
-| Method | Endpoint | Mô tả |
-|---|---|---|
-| `GET` | `/api/posts/feed` | Lấy feed gợi ý (Hybrid AI) |
-| `POST` | `/api/posts` | Tạo bài viết mới |
-| `DELETE` | `/api/posts/{id}` | Xóa bài viết |
-| `POST` | `/api/posts/{id}/like` | Like bài viết |
-| `DELETE` | `/api/posts/{id}/like` | Bỏ like |
-| `GET` | `/api/posts/{id}/comments` | Lấy danh sách comment |
-| `POST` | `/api/posts/{id}/comments` | Thêm comment |
-
-### Users & Profile
-| Method | Endpoint | Mô tả |
-|---|---|---|
-| `GET` | `/api/profile/{username}` | Xem hồ sơ người dùng |
-| `PUT` | `/api/profile` | Cập nhật hồ sơ |
-| `POST` | `/api/profile/avatar` | Đổi avatar |
-| `GET` | `/api/users/search` | Tìm kiếm người dùng |
-| `POST` | `/api/follows/{userId}` | Follow người dùng |
-| `DELETE` | `/api/follows/{userId}` | Unfollow |
-
-### Interests & Onboarding
-| Method | Endpoint | Mô tả |
-|---|---|---|
-| `GET` | `/api/interests` | Lấy danh sách sở thích |
-| `POST` | `/api/interests/user` | Lưu sở thích người dùng |
+3. Cài đặt các gói phụ thuộc và khởi động máy chủ Dev:
+   ```bash
+   npm install
+   npm run dev
+   ```
+   * Ứng dụng Frontend truy cập tại: `http://localhost:5173`
 
 ---
 
-## 📁 Cấu Trúc Backend Chi Tiết
-
-```
-Backend/Infrastructure/
-├── AI/                   # GeminiService, GeminiEmbeddingService, PostAiBackgroundWorker
-├── Caching/              # MemoryCacheService, CacheKeys, CacheInvalidation
-├── Email/                # SmtpEmailSender, BrevoEmailSender, ConsoleEmailSender
-├── Identity/             # CurrentUserService, PasswordHasherService, JwtTokenService
-├── Media/                # CloudinaryAvatarService, CloudinaryPostMediaService
-├── Persistence/          # SocialDbContext, Repositories, Migrations
-├── Realtime/             # SocialHub (SignalR), RealtimeNotificationService
-├── Recommendation/       # 6 CandidateGenerators + Aggregator + Ranking + Diversity
-├── Security/             # Các dịch vụ bảo mật
-└── Services/             # AuthService, PostService, FeedService, LikeService, ...
-```
-
----
-
-## 🐳 Docker
+## 🐳 Triển Khai Với Docker
 
 ```bash
 cd Backend
@@ -281,106 +391,7 @@ docker run -p 8080:8080 --env-file .env social-api
 
 ---
 
----
+## 👤 Tác Giả & Bản Quyền
 
-## 🛒 Lộ Trình Triển Khai Gian Hàng Số (Marketplace Tracking)
-
-> Hệ thống theo dõi tiến độ tích hợp module **Gian hàng hàng số (Digital Marketplace)** vào nền tảng Social.
-
-### 📊 Bảng Trạng Thái Tổng Quan
-
-| Chặng | Giai đoạn | Mô tả trọng tâm | Trạng thái |
-|---|---|---|:---:|
-| **Chặng 1** | **M0 - M1** | Nền tảng Admin Role, Bảng Notification, Memory Cache (`IMemoryCache`), Quản lý Shop (Tạo, Duyệt, Sanction) | `[x] Đã hoàn thành` |
-| **Chặng 2** | **M2 - M4** | Danh mục tinh gọn (Cache Tree), Đăng sản phẩm (Cache chi tiết công khai) & Kho số bảo mật (AES-GCM, Account credentials) | `[x] Đã hoàn thành` |
-| **Chặng 3** | **M5** | Giỏ hàng, Checkout giữ chỗ (`SKIP LOCKED`), Mock Payment & Tự động giao hàng | `[x] Đã hoàn thành` |
-| **Chặng 4** | **M6 - M9** | Cổng thanh toán thật (PayOS/VietQR), Sổ cái (Ledger), Khiếu nại, Payout & Đối soát hệ thống | `[x] Đã hoàn thành` |
-
----
-
-### 📌 Chi Tiết Từng Chặng & Checklist Nghiệm Thu
-
-#### 🔹 CHẶNG 1: Nền tảng & Quản trị Gian hàng (Foundation & Shop Management)
-* **Trạng thái**: `[x] Đã hoàn thành`
-* **Nhiệm vụ chính**:
-  - [x] **M0.1**: Bổ sung `Role` (`Admin`/`Member`) và `Status` (`Active`/`Suspended`) vào `User`. Gắn claim Role vào `JwtTokenService`. Tạo seed tài khoản Admin (`admin@social.com`).
-  - [x] **M0.2**: Thiết lập cấu trúc thư mục module `Marketplace` (Shops, Catalog, Orders, Payments, Ledger, Disputes, Payouts) xuyên suốt Domain, Application, Infrastructure, API.
-  - [x] **M0.3**: Tạo các lớp dùng chung: `IClock`/`SystemClock`, Value Object `Money` (long VND), Entity `Notification` lưu database + tích hợp phát realtime qua `SocialHub`.
-  - [x] **M0.4**: Tạo Entity `IdempotencyRecord` hỗ trợ khóa chống lặp idempotency cho các tác vụ nhạy cảm.
-  - [x] **M0.7**: Thiết lập tầng Memory Cache (`IMemoryCache` / `ICacheService`) dùng chung cho toàn bộ hệ thống (danh sách sở thích Interests, cây danh mục Categories, cấu hình hệ thống, hồ sơ shop/user), giảm tối đa số lần đọc từ Supabase PostgreSQL.
-  - [x] **M1.1 - M1.2**: Tạo Entity `Shop`, `ShopReview`, `ShopSanction` kế thừa `BaseEntity` (`CreatedAtUtc`), cấu hình EF Core & Migration `AddShops`.
-  - [x] **M1.3 - M1.7**: Viết Service tính `ShopEffectiveStatus`, API Seller đăng ký/mở/đóng Shop (`/api/shops`, `/api/shop`), API Admin duyệt/từ chối/phạt Shop (`/api/admin/shops`).
-  - [x] **M1.8**: Frontend: Trang đăng ký mở Shop, quản lý trạng thái Shop cá nhân, giao diện Admin duyệt Shop.
-* **Tiêu chuẩn nghiệm thu**:
-  - User thường gọi API Admin bị trả `403 Forbidden`.
-  - Một tài khoản chỉ tạo tối đa 1 Shop; bấm đúp bị chặn ở tầng DB Unique Index.
-  - Tầng Memory Cache hoạt động chuẩn xác: các truy vấn dữ liệu ít biến động (Interests, Categories) trả lời tức thì (< 2ms) mà không cần query lại DB.
-  - Admin từ chối bắt buộc có lý do; chủ shop nhận được thông báo trong hệ thống.
-  - Khóa tài khoản User thì Shop tự chuyển sang trạng thái tạm ngưng (`Suspended/UserUnavailable`).
-
----
-
-#### 🔹 CHẶNG 2: Danh mục & Kho hàng số bảo mật (Catalog & Digital Inventory)
-* **Trạng thái**: `[x] Đã hoàn thành`
-* **Nhiệm vụ chính**:
-  - [x] **M2**: Seed sẵn cây danh mục hàng số 1-2 cấp (Key bản quyền, Tài khoản học tập/phần mềm, Tài liệu/Source code). Tích hợp Memory Cache cho `GET /api/categories/tree` và tự động evict khi Admin sửa danh mục.
-  - [x] **M3**: Entity `Product`, `ProductVariant` (giá, SKU, tồn kho nằm ở Variant). Quản lý vòng đời (`Draft` -> `Listed` <-> `Hidden` -> `Archived`). Caching trang chi tiết sản phẩm (`/products/{slug}`) và thông tin shop công khai.
-  - [x] **M4.1 - M4.3**: Entity `DigitalCode` cho kho số. Mã hóa `ValueEncrypted` (AES-GCM) và đối chiếu băm `ValueHash` (SHA-256) chống nạp trùng mã.
-  - [x] **M4.4**: Hỗ trợ sản phẩm dạng File tải về qua Cloudinary/Storage riêng tư với link chữ ký hết hạn ngắn.
-  - [x] **M4.5 [Đã chốt]**: Khóa học dùng chung kho số `DigitalCode` (chia sẻ tài khoản & mật khẩu học tập), không làm LMS/video.
-  - [x] **M3.5 & M4.6**: Frontend: Form Seller tạo sản phẩm & giao diện nạp kho số; trang công khai xem chi tiết sản phẩm.
-* **Tiêu chuẩn nghiệm thu**:
-  - Trong DB: cột `ValueEncrypted` hoàn toàn là chuỗi mã hóa bảo mật.
-  - Seller nạp 100 mã có 5 mã trùng -> Hệ thống nạp thành công 95 mã, báo cáo đúng 5 mã trùng.
-  - Khóa Shop -> Tất cả sản phẩm tự động ẩn khỏi danh sách công khai.
-  - Truy vấn cây danh mục và chi tiết sản phẩm công khai lấy từ Memory Cache; khi Seller cập nhật giá/thông tin hoặc Admin sửa danh mục, cache được xóa ngay lập tức (không hiển thị dữ liệu cũ).
-
----
-
-#### 🔹 CHẶNG 3: Giỏ hàng, Concurrency Lock & Luồng mua hàng (Cart, Checkout & Mock Delivery)
-* **Trạng thái**: `[x] Đã hoàn thành`
-* **Nhiệm vụ chính**:
-  - [x] **M5.1**: Entity `Cart`, `CartItem` (giỏ không giữ hàng, giá luôn đọc lại từ DB).
-  - [x] **M5.2 - M5.3**: Tạo phiên `Checkout (Open, 15 phút)`. Giữ kho bằng lệnh `UPDATE digital_codes ... FOR UPDATE SKIP LOCKED` trong Transaction.
-  - [x] **M5.4**: Service `CompleteCheckoutPaymentAsync`: Chuyển mã `Reserved -> Delivered`, tạo `ShopOrder` + `OrderItem` snapshot giá.
-  - [x] **M5.5**: API Mock Payment (`/api/dev/checkouts/{id}/mock-pay`) dành riêng cho môi trường Development để test luồng.
-  - [x] **M5.6**: Job quét hủy Checkout quá hạn 15 phút, trả mã về lại `Available`.
-  - [x] **M5.8**: Frontend: Giỏ hàng, Checkout đếm ngược 15 phút, màn hình thanh toán thử nghiệm (Dev), trang đơn hàng và xem mã đã mua.
-* **Tiêu chuẩn nghiệm thu**:
-  - Kho chỉ còn 1 mã: Hai khách cùng bấm mua 1 giây -> Đúng 1 người thành công, 1 người báo hết hàng (không bao giờ bán trùng).
-  - Gọi thanh toán giả 2 lần cùng một mã giao dịch -> Idempotent chỉ sinh 1 đơn hàng.
-  - Người mua xem lại được mã đã giao trong lịch sử đơn hàng của mình.
-
----
-
-#### 🔹 CHẶNG 4: Cổng thanh toán thực tế, Sổ cái & Rút tiền (Payment Gateway, Ledger & Payout)
-* **Trạng thái**: `[x] Đã hoàn thành`
-* **Nhiệm vụ chính**:
-  - [x] **M6.1 - M6.2**: Tích hợp cổng thanh toán QR (VietQR / PayOS). Xử lý Webhook an toàn có xác thực chữ ký.
-  - [x] **M6.3 - M6.6**: Hệ thống Sổ cái kép (`LedgerEntry` append-only). Phân bổ doanh thu: Tiền sàn, Tiền Shop tạm giữ (`ShopPending`).
-  - [x] **M7**: Xử lý Khiếu nại (Complaint) trong 48h: Giữ tiền khiếu nại, hỗ trợ Shop đổi mã mới hoặc hoàn tiền.
-  - [x] **M8**: Rút tiền (Payout) an toàn: Shop yêu cầu rút -> Khóa số dư khả dụng -> Admin chuyển khoản ngoài và xác nhận.
-  - [x] **M9**: Job định kỳ đối soát tự phục hồi (`DailyReconciliationWorker`), API Audit kiểm toán sổ cái kép, Rate limiting.
-  - [x] Frontend: Dashboard tài chính của Shop, sao kê sổ cái biến động Nợ/Có, quản lý tài khoản ngân hàng và yêu cầu rút tiền.
-* **Tiêu chuẩn nghiệm thu**:
-  - Mọi bút toán sổ cái: Tổng Nợ luôn bằng Tổng Có (`Debit == Credit`).
-  - Webhook gửi trùng 5 lần -> Chỉ ghi sổ và xử lý đơn đúng 1 lần.
-  - Shop không thể rút vượt quá số dư khả dụng (`ShopAvailable`).
-
----
-
-### 💡 Ghi Chú Các Quyết Định Nghiệp Vụ Cốt Lõi
-1. **Khóa học**: Thực chất là hình thức chia sẻ **tài khoản & mật khẩu** (account credentials/license access). Giao tự động từ kho `DigitalCode`, không dựng video streaming hay LMS.
-2. **Quy ước Entity**: Kế thừa `BaseEntity` với `CreatedAtUtc` và `UpdatedAtUtc` để tương thích toàn bộ hệ thống Social hiện có.
-3. **Quản lý quyền**: Module Shop yêu cầu User có `Role = Admin` đối với API phê duyệt/phạt, và `Status = Active` đối với Seller/Buyer.
-4. **Chiến lược Memory Cache (`IMemoryCache`)**:
-   - Áp dụng kỹ thuật Cache-Aside cho các dữ liệu có tần suất đọc vượt trội so với ghi: Sở thích (Interests), Cây danh mục (Categories Tree), Thuộc tính danh mục (Category Attributes), Chi tiết sản phẩm công khai (Product detail), Thông tin Shop công khai.
-   - Cache Invalidation chủ động: Bắt buộc xóa cache khi có sự kiện thay đổi dữ liệu (Write/Update/Delete) để đảm bảo tính nhất quán.
-   - Không cache các luồng tài chính & giao dịch: Giỏ hàng, Checkout, Giữ mã số `SKIP LOCKED`, Ghi sổ cái Ledger, và Rút tiền Payout luôn đọc/ghi trực tiếp trên Database trong Transaction an toàn.
-
----
-
-## 👤 Tác Giả
-
-**Thanhdat0212** — [GitHub](https://github.com/Thanhdat0212)
-
+* **Tác giả**: [Thanhdat0212](https://github.com/Thanhdat0212)
+* **Dự án**: Nền tảng Mạng Xã Hội Thông Minh & Thương Mại Điện Tử Hàng Số (Social Platform)
