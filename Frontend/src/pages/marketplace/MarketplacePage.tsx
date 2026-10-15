@@ -320,7 +320,7 @@ export const MarketplacePage: React.FC = () => {
         className="category-pill-list"
         role="tablist"
         aria-label="Danh mục sản phẩm"
-        style={{ marginBottom: '1.25rem' }}
+        style={{ marginBottom: '0.85rem' }}
       >
         <button
           type="button"
@@ -331,19 +331,69 @@ export const MarketplacePage: React.FC = () => {
         >
           Tất cả danh mục
         </button>
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            role="tab"
-            aria-selected={selectedCategory === c.id}
-            className={`category-pill ${selectedCategory === c.id ? 'active' : ''}`}
-            onClick={() => handleCategorySelect(c.id)}
-          >
-            {c.name}
-          </button>
-        ))}
+        {categories.map((c) => {
+          const isRootActive = selectedCategory === c.id || c.children?.some((sub) => sub.id === selectedCategory);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={isRootActive}
+              className={`category-pill ${isRootActive ? 'active' : ''}`}
+              onClick={() => handleCategorySelect(c.id)}
+            >
+              {c.name}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Subcategory Pills if active root category has children */}
+      {(() => {
+        const activeRoot = categories.find(
+          (c) => c.id === selectedCategory || c.children?.some((sub) => sub.id === selectedCategory)
+        );
+        if (!activeRoot?.children || activeRoot.children.length === 0) return null;
+
+        return (
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.45rem',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              marginBottom: '1.25rem',
+              padding: '0.45rem 0.8rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-dim)', marginRight: '0.2rem' }}>
+              Phân loại:
+            </span>
+            <button
+              type="button"
+              className={`category-pill ${selectedCategory === activeRoot.id ? 'active' : ''}`}
+              style={{ fontSize: '0.78rem', padding: '0.24rem 0.7rem' }}
+              onClick={() => handleCategorySelect(activeRoot.id)}
+            >
+              Tất cả {activeRoot.name}
+            </button>
+            {activeRoot.children.map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                className={`category-pill ${selectedCategory === sub.id ? 'active' : ''}`}
+                style={{ fontSize: '0.78rem', padding: '0.24rem 0.7rem' }}
+                onClick={() => handleCategorySelect(sub.id)}
+              >
+                {sub.name}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Advanced Filter & Sorting Toolbar */}
       <div
@@ -527,6 +577,13 @@ export const MarketplacePage: React.FC = () => {
                     alt={p.name}
                     className="product-thumb"
                     loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.dataset.hasFallback) {
+                        target.dataset.hasFallback = 'true';
+                        target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';
+                      }
+                    }}
                   />
                   <span className="product-instant-badge">⚡ Tự động</span>
                 </div>

@@ -277,12 +277,12 @@ export const ShopProfilePage: React.FC = () => {
                 border: '1px solid var(--border-color)',
               }}
             >
-              <div style={{ height: '150px', background: 'rgba(0,0,0,0.2)', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ aspectRatio: '1 / 1', background: 'var(--bg-surface, rgba(0,0,0,0.05))', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border-color)' }}>
                 {product.coverImageUrl ? (
                   <img
                     src={product.coverImageUrl}
                     alt={product.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -310,7 +310,7 @@ export const ShopProfilePage: React.FC = () => {
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      height: '2.6rem',
+                      minHeight: '2.8rem',
                     }}
                   >
                     {product.name}

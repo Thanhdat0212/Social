@@ -276,6 +276,13 @@ export const ProductDetailPage: React.FC = () => {
               }
               alt={product.name}
               className="main-image"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.hasFallback) {
+                  target.dataset.hasFallback = 'true';
+                  target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+                }
+              }}
             />
           </div>
           {product.images && product.images.length > 1 && (
@@ -287,7 +294,17 @@ export const ProductDetailPage: React.FC = () => {
                   className={`thumb-btn ${selectedImage === img.url ? 'active' : ''}`}
                   onClick={() => setSelectedImage(img.url)}
                 >
-                  <img src={img.url} alt="thumbnail" />
+                  <img
+                    src={img.url}
+                    alt="thumbnail"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.dataset.hasFallback) {
+                        target.dataset.hasFallback = 'true';
+                        target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+                      }
+                    }}
+                  />
                 </button>
               ))}
             </div>

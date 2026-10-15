@@ -233,6 +233,13 @@ export const CartPage: React.FC = () => {
                         }
                         alt={item.productName}
                         className="cart-item-thumb"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.hasFallback) {
+                            target.dataset.hasFallback = 'true';
+                            target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=60';
+                          }
+                        }}
                       />
 
                       <div style={{ flex: 1, minWidth: 0 }}>

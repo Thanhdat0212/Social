@@ -1,4 +1,5 @@
 using API.ErrorHandling;
+using API.Extensions;
 using Application;
 using Infrastructure;
 using Infrastructure.Common;
@@ -125,54 +126,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Tự động kiểm tra và áp dụng Database Migrations khi khởi động
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<SocialDbContext>();
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("Đang kiểm tra và áp dụng Database Migrations...");
-
-        // Tự động đồng bộ lịch sử migration cho PostEmbeddings nếu bảng đã được tạo thủ công trước đó
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-                DO $$
-                BEGIN
-                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PostEmbeddings') THEN
-                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-                        VALUES ('20260929044949_AddPostEmbeddings', '8.0.8')
-                        ON CONFLICT DO NOTHING;
-                    END IF;
-                END $$;");
-        }
-        catch (Exception migrationSyncEx)
-        {
-            logger.LogWarning("Không thể đồng bộ bảng migration trước: {Message}", migrationSyncEx.Message);
-        }
-
-        await context.Database.MigrateAsync();
-        logger.LogInformation("Database Migrations đã được áp dụng thành công.");
-
-        // Nạp bộ dữ liệu mẫu phong phú khi khởi động nếu database chưa có đủ bài viết
-        await DatabaseSeeder.SeedAsync(context, logger);
-        await CategorySeeder.SeedAsync(context, logger);
-
-        // Tự động sinh và nạp 1000 bài viết nếu cơ sở dữ liệu có dưới 500 bài viết
-        var currentPostCount = await context.Posts.CountAsync();
-        if (currentPostCount < 500)
-        {
-            await BulkPostSeeder.SeedBulkPostsAsync(context, logger, 1000);
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Lỗi xảy ra khi áp dụng database migrations hoặc seed data: {Message}", ex.Message);
-    }
-}
+// Tự động kiểm tra và áp dụng Database Migrations & nạp dữ liệu mẫu khởi động
+await app.ApplyMigrationsAndSeedAsync();
 
 
 // ==========================================
@@ -214,67 +169,11 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<SocialHub>("/hubs/social");
 
-// 9. Development Seed Endpoint
-app.MapPost("/api/admin/seed", async (SocialDbContext db, ILoggerFactory loggerFactory) =>
+// 9. Development & Testing Endpoints (Chỉ kích hoạt trong môi trường Development)
+if (app.Environment.IsDevelopment())
 {
-    var logger = loggerFactory.CreateLogger("DatabaseSeeder");
-    await DatabaseSeeder.SeedAsync(db, logger);
-    return Results.Ok(new { message = "Đã nạp thành công bộ dữ liệu mẫu phong phú!" });
-});
-
-app.MapPost("/api/admin/seed-1000", async (SocialDbContext db, ILoggerFactory loggerFactory) =>
-{
-    var logger = loggerFactory.CreateLogger("BulkPostSeeder");
-    var inserted = await BulkPostSeeder.SeedBulkPostsAsync(db, logger, 1000);
-    return Results.Ok(new { message = $"Đã nạp thành công {inserted} bài viết vào database!", count = inserted });
-});
-
-app.MapPost("/api/admin/seed-dotnet", async (SocialDbContext db, ILoggerFactory loggerFactory, [Microsoft.AspNetCore.Mvc.FromQuery] int count = 1000) =>
-{
-    var logger = loggerFactory.CreateLogger("DotNetPostSeeder");
-    var inserted = await DotNetPostSeeder.SeedDotNetPostsAsync(db, logger, count);
-    return Results.Ok(new { message = $"Đã nạp thành công {inserted} bài viết chuyên sâu về .NET, C# và Backend!", count = inserted });
-});
-
-app.MapGet("/api/admin/stats", async (SocialDbContext db) =>
-{
-    var userCount = await db.Users.CountAsync();
-    var postCount = await db.Posts.CountAsync();
-    var interestCount = await db.Interests.CountAsync();
-    var postInterestCount = await db.PostInterests.CountAsync();
-    return Results.Ok(new
-    {
-        totalUsers = userCount,
-        totalPosts = postCount,
-        totalInterests = interestCount,
-        totalPostInterests = postInterestCount
-    });
-});
-
-app.MapGet("/api/test/redis", async (Application.Common.ICacheService cacheService, IServiceProvider sp) =>
-{
-    var redis = sp.GetService<StackExchange.Redis.IConnectionMultiplexer>();
-    var isConnected = redis?.IsConnected ?? false;
-    var testKey = "test:ping";
-
-    // Thử ghi vào cache
-    await cacheService.SetAsync(testKey, new
-    {
-        message = "Redis Cache hoạt động tốt!",
-        timestamp = DateTime.UtcNow
-    }, TimeSpan.FromMinutes(5));
-
-    // Thử đọc lại từ cache
-    var readData = await cacheService.GetAsync<object>(testKey);
-
-    return Results.Ok(new
-    {
-        status = "Success",
-        redisMultiplexerRegistered = redis != null,
-        isRedisConnected = isConnected,
-        cacheReadWriteSuccess = readData != null,
-        data = readData
-    });
-}).WithTags("Testing").AllowAnonymous();
+    app.MapDevEndpoints();
+}
 
 app.Run();
+

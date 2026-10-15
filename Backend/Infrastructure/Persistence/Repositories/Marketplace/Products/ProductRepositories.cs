@@ -183,7 +183,25 @@ public class ProductRepository : IProductRepository
 
         if (categoryId.HasValue)
         {
-            query = query.Where(p => p.CategoryId == categoryId.Value);
+            var targetCategory = await _context.Categories.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == categoryId.Value, cancellationToken);
+
+            if (targetCategory != null)
+            {
+                var targetPath = targetCategory.Path;
+                var descendantCategoryIds = await _context.Categories.AsNoTracking()
+                    .Where(c => c.Id == targetCategory.Id 
+                             || (!string.IsNullOrEmpty(targetPath) && c.Path.StartsWith(targetPath))
+                             || c.ParentId == targetCategory.Id)
+                    .Select(c => c.Id)
+                    .ToListAsync(cancellationToken);
+
+                query = query.Where(p => p.CategoryId.HasValue && descendantCategoryIds.Contains(p.CategoryId.Value));
+            }
+            else
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -236,7 +254,25 @@ public class ProductRepository : IProductRepository
 
         if (categoryId.HasValue)
         {
-            query = query.Where(p => p.CategoryId == categoryId.Value);
+            var targetCategory = await _context.Categories.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == categoryId.Value, cancellationToken);
+
+            if (targetCategory != null)
+            {
+                var targetPath = targetCategory.Path;
+                var descendantCategoryIds = await _context.Categories.AsNoTracking()
+                    .Where(c => c.Id == targetCategory.Id 
+                             || (!string.IsNullOrEmpty(targetPath) && c.Path.StartsWith(targetPath))
+                             || c.ParentId == targetCategory.Id)
+                    .Select(c => c.Id)
+                    .ToListAsync(cancellationToken);
+
+                query = query.Where(p => p.CategoryId.HasValue && descendantCategoryIds.Contains(p.CategoryId.Value));
+            }
+            else
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(search))

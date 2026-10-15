@@ -3762,7 +3762,8 @@ input, textarea, select {
   width: 52px;
   height: 52px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--bg-surface, #f8fafc);
   flex-shrink: 0;
   border: 1px solid var(--border-color, #e4e6eb);
 }
