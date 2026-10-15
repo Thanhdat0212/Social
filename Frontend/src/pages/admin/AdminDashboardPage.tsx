@@ -288,8 +288,9 @@ export const AdminDashboardPage: React.FC = () => {
           padding: '2rem 2.5rem',
           borderRadius: '20px',
           marginBottom: '2rem',
-          border: '1px solid rgba(168, 85, 247, 0.3)',
-          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(15, 23, 42, 0.8) 100%)',
+          border: '1px solid rgba(168, 85, 247, 0.35)',
+          background: 'linear-gradient(135deg, #1a0f30 0%, #111827 50%, #0b1329 100%)',
+          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.35), 0 8px 10px -6px rgba(15, 23, 42, 0.2)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -301,11 +302,12 @@ export const AdminDashboardPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <span
               style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'rgba(168, 85, 247, 0.2)',
-                color: '#c084fc',
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'rgba(168, 85, 247, 0.25)',
+                color: '#d8b4fe',
+                border: '1px solid rgba(168, 85, 247, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -317,7 +319,7 @@ export const AdminDashboardPage: React.FC = () => {
               Trung Tâm Quản Trị Toàn Sàn
             </h1>
           </div>
-          <p style={{ color: '#cbd5e1', margin: 0, fontSize: '0.95rem', maxWidth: '700px' }}>
+          <p style={{ color: '#e2e8f0', margin: 0, fontSize: '0.95rem', maxWidth: '700px', lineHeight: 1.6 }}>
             Giám sát vận hành sàn hàng số, phân xử tranh chấp, kiểm toán sổ cái kép bất biến và quản lý quyền truy cập.
           </p>
         </div>
