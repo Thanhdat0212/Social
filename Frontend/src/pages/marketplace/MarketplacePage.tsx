@@ -164,48 +164,137 @@ export const MarketplacePage: React.FC = () => {
         style={{
           padding: '1.75rem 2rem',
           borderRadius: '16px',
-          background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(15, 23, 42, 0.9) 100%)',
-          border: '1px solid var(--border-color)',
+          background: 'linear-gradient(135deg, #0b1329 0%, #0f1f38 50%, #0d172a 100%)',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          boxShadow: '0 8px 24px -4px rgba(15, 23, 42, 0.35)',
           marginBottom: '1.5rem',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38bdf8', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-              <KeyIcon size={14} />
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: '#38bdf8',
+                background: 'rgba(56, 189, 248, 0.12)',
+                padding: '0.28rem 0.75rem',
+                borderRadius: '999px',
+                border: '1px solid rgba(56, 189, 248, 0.28)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '0.55rem',
+              }}
+            >
+              <KeyIcon size={13} />
               <span>Chợ tài khoản & Bản quyền số</span>
             </div>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 0.4rem', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', margin: '0 0 0.45rem', letterSpacing: '-0.02em' }}>
               Chợ sản phẩm số
             </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0, maxWidth: '580px', lineHeight: '1.5' }}>
+            <p style={{ color: '#cbd5e1', fontSize: '0.92rem', margin: 0, maxWidth: '580px', lineHeight: '1.55' }}>
               Khám phá bản quyền phần mềm, khóa học trực tuyến, key kích hoạt và tài khoản dịch vụ số với hệ thống kho tự động 24/7.
             </p>
           </div>
 
           {/* Service Commitment Badges */}
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.5rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-              <KeyIcon size={16} style={{ color: '#38bdf8' }} />
+          <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                background: 'rgba(255, 255, 255, 0.06)',
+                padding: '0.6rem 0.95rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <KeyIcon size={16} style={{ color: '#38bdf8' }} />
+              </div>
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>Giao tự động</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Nhận mã tức thì</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>Giao tự động</div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>Nhận mã tức thì</div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.5rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-              <ShieldIcon size={16} style={{ color: '#34d399' }} />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                background: 'rgba(255, 255, 255, 0.06)',
+                padding: '0.6rem 0.95rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'rgba(52, 211, 153, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <ShieldIcon size={16} style={{ color: '#34d399' }} />
+              </div>
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>Bảo vệ 48h</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Khiếu nại an toàn</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>Bảo vệ 48h</div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>Khiếu nại an toàn</div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.5rem 0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-              <CheckCheckIcon size={16} style={{ color: '#fbbf24' }} />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                background: 'rgba(255, 255, 255, 0.06)',
+                padding: '0.6rem 0.95rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'rgba(251, 191, 36, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <CheckCheckIcon size={16} style={{ color: '#fbbf24' }} />
+              </div>
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>VietQR Napas</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Khớp lệnh chuẩn xác</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>VietQR Napas</div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>Khớp lệnh chuẩn xác</div>
               </div>
             </div>
           </div>

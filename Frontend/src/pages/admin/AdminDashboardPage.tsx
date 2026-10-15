@@ -313,11 +313,11 @@ export const AdminDashboardPage: React.FC = () => {
             >
               <ShieldIcon size={22} />
             </span>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#ffffff' }}>
               Trung Tâm Quản Trị Toàn Sàn
             </h1>
           </div>
-          <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.95rem', maxWidth: '700px' }}>
+          <p style={{ color: '#cbd5e1', margin: 0, fontSize: '0.95rem', maxWidth: '700px' }}>
             Giám sát vận hành sàn hàng số, phân xử tranh chấp, kiểm toán sổ cái kép bất biến và quản lý quyền truy cập.
           </p>
         </div>
