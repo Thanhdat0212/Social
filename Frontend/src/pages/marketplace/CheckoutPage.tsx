@@ -54,8 +54,16 @@ export const CheckoutPage: React.FC = () => {
       try {
         const data = await marketplaceApi.createPayOsPayment(checkoutId);
         setPaymentData(data);
+        if (data?.status === 'Succeeded' || String(data?.status) === '2' || (data as any)?.status === 'Paid') {
+          setIsSuccess(true);
+        }
       } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Không thể tạo mã VietQR cho phiên thanh toán.');
+        const msg = err.response?.data?.message || '';
+        if (msg.includes('Paid')) {
+          setIsSuccess(true);
+        } else {
+          setErrorMsg(msg || 'Không thể tạo mã VietQR cho phiên thanh toán.');
+        }
       } finally {
         setIsLoading(false);
       }

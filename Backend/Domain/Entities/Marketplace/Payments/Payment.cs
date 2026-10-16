@@ -34,7 +34,8 @@ public class Payment : BaseEntity
         string method = "QR",
         string currency = "VND",
         string? qrCodeUrl = null,
-        string? paymentUrl = null)
+        string? paymentUrl = null,
+        string? rawPayloadRef = null)
     {
         if (checkoutId == Guid.Empty) throw new ArgumentException("CheckoutId không hợp lệ.", nameof(checkoutId));
         if (string.IsNullOrWhiteSpace(providerTxnId)) throw new ArgumentException("Mã giao dịch từ cổng không được để trống.", nameof(providerTxnId));
@@ -49,6 +50,13 @@ public class Payment : BaseEntity
         Status = PaymentStatus.Initiated;
         QrCodeUrl = qrCodeUrl;
         PaymentUrl = paymentUrl;
+        RawPayloadRef = rawPayloadRef;
+    }
+
+    public void SetRawPayloadRef(string rawPayloadRef)
+    {
+        RawPayloadRef = rawPayloadRef;
+        UpdatedAtUtc = DateTime.UtcNow;
     }
 
     public void MarkSucceeded(DateTime paidAt, string? rawPayloadRef = null)

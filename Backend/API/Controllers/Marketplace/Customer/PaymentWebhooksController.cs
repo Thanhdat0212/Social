@@ -24,15 +24,22 @@ public class PaymentWebhooksController : ControllerBase
 
     /// <summary>
     /// Endpoint tiếp nhận Webhook thanh toán từ cổng (PayOS, VietQR)
-    /// URL: POST /api/webhooks/payments/PayOs
+    /// Hỗ trợ cả các URL:
+    /// - POST /api/webhooks/payments/PayOs
+    /// - POST /api/payments/PayOs/webhook
+    /// - POST /api/payments/payos/webhook
+    /// - POST /api/webhooks/payos
     /// </summary>
     [HttpPost("{provider}")]
+    [HttpPost("/api/payments/{provider}/webhook")]
+    [HttpPost("/api/payments/payos/webhook")]
+    [HttpPost("/api/webhooks/payos")]
     [ProducesResponseType(typeof(WebhookProcessResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> HandleWebhook(
-        PaymentProvider provider,
-        [FromHeader(Name = "x-signature")] string? signature,
-        CancellationToken cancellationToken)
+        PaymentProvider provider = PaymentProvider.PayOs,
+        [FromHeader(Name = "x-signature")] string? signature = null,
+        CancellationToken cancellationToken = default)
     {
         using var reader = new StreamReader(Request.Body);
         var webhookBody = await reader.ReadToEndAsync(cancellationToken);

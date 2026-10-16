@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Marketplace.Orders;
 using Application.Interfaces;
 using Application.Interfaces.Marketplace.Ledger;
@@ -7,7 +7,9 @@ using Application.Interfaces.Repositories;
 using Domain.Entities.Marketplace.Orders;
 using Domain.Entities.Marketplace.Products;
 using Domain.Enums;
+using Infrastructure.External.Realtime;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +21,7 @@ public class CheckoutService : ICheckoutService
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationService _notificationService;
     private readonly ILedgerService _ledgerService;
+    private readonly IHubContext<SocialHub> _hubContext;
     private readonly ILogger<CheckoutService> _logger;
 
     public CheckoutService(
@@ -26,12 +29,14 @@ public class CheckoutService : ICheckoutService
         IUnitOfWork unitOfWork,
         INotificationService notificationService,
         ILedgerService ledgerService,
+        IHubContext<SocialHub> hubContext,
         ILogger<CheckoutService> logger)
     {
         _context = context;
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
         _ledgerService = ledgerService;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
@@ -437,18 +442,74 @@ public class CheckoutService : ICheckoutService
             // Lưu bản ghi Payment và hạch toán doanh thu vào Sổ cái cho các Shop
             try
             {
-                var payment = new Domain.Entities.Marketplace.Payments.Payment(
-                    checkoutId,
-                    PaymentProvider.Mock,
-                    mockTxnId,
-                    checkout.GrandTotal,
-                    "MockQr",
-                    "VND");
-                payment.MarkSucceeded(DateTime.UtcNow, "Thanh toán giả lập thành công");
-                await _unitOfWork.Payments.AddAsync(payment, cancellationToken);
+                var existingPayment = await _unitOfWork.Payments.GetByCheckoutIdAsync(checkoutId, cancellationToken);
+                Domain.Entities.Marketplace.Payments.Payment payment;
+
+                if (existingPayment != null)
+                {
+                    existingPayment.MarkSucceeded(DateTime.UtcNow, "Thanh toán giả lập thành công");
+                    _unitOfWork.Payments.Update(existingPayment);
+                    payment = existingPayment;
+                }
+                else
+                {
+                    payment = new Domain.Entities.Marketplace.Payments.Payment(
+                        checkoutId,
+                        PaymentProvider.Mock,
+                        mockTxnId,
+                        checkout.GrandTotal,
+                        "MockQr",
+                        "VND");
+                    payment.MarkSucceeded(DateTime.UtcNow, "Thanh toán giả lập thành công");
+                    await _unitOfWork.Payments.AddAsync(payment, cancellationToken);
+                }
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                try
+                {
+                    var gatewayClearing = await _unitOfWork.Ledgers.GetOrCreateSystemAccountAsync(LedgerAccountType.GatewayClearing, cancellationToken);
+                    var unallocated = await _unitOfWork.Ledgers.GetOrCreateSystemAccountAsync(LedgerAccountType.UnallocatedPayments, cancellationToken);
+
+                    var ledgerLinesA = new List<Application.DTOs.Marketplace.Ledger.LedgerPostingLine>
+                    {
+                        new() { AccountId = gatewayClearing.Id, Debit = payment.Amount, Credit = 0 },
+                        new() { AccountId = unallocated.Id, Debit = 0, Credit = payment.Amount }
+                    };
+
+                    await _ledgerService.PostTransactionAsync(
+                        LedgerTransactionType.PaymentReceived,
+                        "Payment",
+                        payment.Id,
+                        $"pay_recv:{payment.Id}",
+                        $"Nhận tiền thanh toán giả lập {payment.ProviderTxnId}",
+                        ledgerLinesA,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Lỗi ghi sổ nhận tiền ban đầu cho phiên giả lập {CheckoutId}", checkoutId);
+                }
+
                 await _ledgerService.SettleCheckoutPaymentAsync(checkoutId, payment, cancellationToken);
+
+                // Phát SignalR thông báo thanh toán thành công tới client đang mở trang Checkout
+                try
+                {
+                    await _hubContext.Clients.Group($"checkout_{checkoutId}").SendAsync("PaymentSucceeded", new
+                    {
+                        checkoutId = checkoutId,
+                        paymentId = payment.Id,
+                        amount = payment.Amount,
+                        status = "Succeeded",
+                        paidAt = DateTime.UtcNow
+                    }, cancellationToken);
+
+                    _logger.LogInformation("MockPay đã phát SignalR PaymentSucceeded tới group checkout_{CheckoutId}", checkoutId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Lỗi khi phát SignalR PaymentSucceeded từ MockPay cho Checkout {CheckoutId}", checkoutId);
+                }
             }
             catch (Exception ex)
             {

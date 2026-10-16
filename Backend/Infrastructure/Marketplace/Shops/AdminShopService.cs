@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Application.Common;
 using Application.DTOs.Marketplace.Shops;
 using Application.Interfaces;
@@ -8,6 +8,8 @@ using Domain.Entities.Marketplace.Shops;
 using Domain.Enums;
 using Domain.Exceptions;
 using Infrastructure.External.Caching;
+using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Marketplace.Shops;
@@ -15,6 +17,7 @@ namespace Infrastructure.Marketplace.Shops;
 public class AdminShopService : IAdminShopService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly SocialDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly INotificationService _notificationService;
     private readonly ICacheService _cacheService;
@@ -23,6 +26,7 @@ public class AdminShopService : IAdminShopService
 
     public AdminShopService(
         IUnitOfWork unitOfWork,
+        SocialDbContext dbContext,
         ICurrentUserService currentUserService,
         INotificationService notificationService,
         ICacheService cacheService,
@@ -30,6 +34,7 @@ public class AdminShopService : IAdminShopService
         ILogger<AdminShopService> logger)
     {
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _currentUserService = currentUserService;
         _notificationService = notificationService;
         _cacheService = cacheService;
@@ -37,7 +42,7 @@ public class AdminShopService : IAdminShopService
         _logger = logger;
     }
 
-    public async Task<(IReadOnlyList<ShopSummaryDto> Items, int Total)> GetShopsAsync(
+    public async Task<(IReadOnlyList<ShopSummaryDto> Items, int Total, AdminShopListStatsDto Stats)> GetShopsAsync(
         ApprovalStatus? status,
         string? search,
         int page,
@@ -47,15 +52,75 @@ public class AdminShopService : IAdminShopService
         var shops = await _unitOfWork.Shops.GetShopsAsync(status, search, page, pageSize, cancellationToken);
         var total = await _unitOfWork.Shops.GetTotalCountAsync(status, search, cancellationToken);
 
+        // Global stats across marketplace
+        var totalShops = await _dbContext.Shops.CountAsync(s => s.DeletedAtUtc == null, cancellationToken);
+        var approvedShops = await _dbContext.Shops.CountAsync(s => s.DeletedAtUtc == null && s.ApprovalStatus == ApprovalStatus.Approved, cancellationToken);
+        var pendingShops = await _dbContext.Shops.CountAsync(s => s.DeletedAtUtc == null && s.ApprovalStatus == ApprovalStatus.Pending, cancellationToken);
+        var rejectedShops = await _dbContext.Shops.CountAsync(s => s.DeletedAtUtc == null && s.ApprovalStatus == ApprovalStatus.Rejected, cancellationToken);
+        var totalOrdersSold = await _dbContext.ShopOrders.CountAsync(o => o.Status != OrderStatus.Cancelled, cancellationToken);
+        var totalRevenue = await _dbContext.ShopOrders.Where(o => o.Status != OrderStatus.Cancelled).SumAsync(o => (decimal?)o.Total, cancellationToken) ?? 0;
+
+        var stats = new AdminShopListStatsDto
+        {
+            TotalShops = totalShops,
+            ApprovedShops = approvedShops,
+            PendingShops = pendingShops,
+            RejectedShops = rejectedShops,
+            TotalOrdersSold = totalOrdersSold,
+            TotalRevenue = totalRevenue
+        };
+
+        var shopIds = shops.Select(s => s.Id).ToList();
+
+        // Query shop-level aggregated stats (skip if 0 shops)
+        var orderStats = shopIds.Count == 0
+            ? new Dictionary<Guid, (int TotalOrders, decimal TotalRevenue)>()
+            : (await _dbContext.ShopOrders
+                .Where(o => shopIds.Contains(o.ShopId) && o.Status != OrderStatus.Cancelled)
+                .GroupBy(o => o.ShopId)
+                .Select(g => new
+                {
+                    ShopId = g.Key,
+                    TotalOrders = g.Count(),
+                    TotalRevenue = g.Sum(o => (decimal)o.Total)
+                })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(x => x.ShopId, x => (x.TotalOrders, x.TotalRevenue));
+
+        var productStats = shopIds.Count == 0
+            ? new Dictionary<Guid, int>()
+            : (await _dbContext.Products
+                .Where(p => shopIds.Contains(p.ShopId) && p.DeletedAtUtc == null)
+                .GroupBy(p => p.ShopId)
+                .Select(g => new
+                {
+                    ShopId = g.Key,
+                    TotalProducts = g.Count()
+                })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(x => x.ShopId, x => x.TotalProducts);
+
+        var balanceStats = shopIds.Count == 0
+            ? new Dictionary<Guid, Domain.Entities.Marketplace.Ledger.ShopBalanceCache>()
+            : await _dbContext.ShopBalanceCaches
+                .Where(b => shopIds.Contains(b.ShopId))
+                .ToDictionaryAsync(b => b.ShopId, cancellationToken);
+
         var items = shops.Select(s =>
         {
             var hasActiveSanction = s.Sanctions.Any(sn => sn.IsActive(_clock.UtcNow));
-            var effectiveStatus = ShopStatusCalculator.Compute(s.OwnerUser!, s, hasActiveSanction);
+            var effectiveStatus = ShopStatusCalculator.Compute(s.OwnerUser, s, hasActiveSanction);
+
+            orderStats.TryGetValue(s.Id, out var oStat);
+            productStats.TryGetValue(s.Id, out var pCount);
+            balanceStats.TryGetValue(s.Id, out var bStat);
 
             return new ShopSummaryDto
             {
                 Id = s.Id,
                 OwnerUserId = s.OwnerUserId,
+                OwnerDisplayName = s.OwnerUser?.DisplayName ?? string.Empty,
+                OwnerEmail = s.OwnerUser?.Email ?? string.Empty,
                 Name = s.Name,
                 Slug = s.Slug,
                 LogoUrl = s.LogoUrl,
@@ -63,11 +128,16 @@ public class AdminShopService : IAdminShopService
                 ApprovalStatus = s.ApprovalStatus.ToString(),
                 OperatingStatus = s.OperatingStatus.ToString(),
                 EffectiveStatus = effectiveStatus.ToString(),
-                CreatedAtUtc = s.CreatedAtUtc
+                CreatedAtUtc = s.CreatedAtUtc,
+                TotalOrders = oStat.TotalOrders,
+                TotalRevenue = oStat.TotalRevenue,
+                TotalProducts = pCount,
+                AvailableBalance = bStat?.AvailableBalance ?? 0,
+                PendingBalance = bStat?.PendingBalance ?? 0
             };
         }).ToList();
 
-        return (items, total);
+        return (items, total, stats);
     }
 
     public async Task<ShopDetailDto> GetShopDetailAsync(Guid id, CancellationToken cancellationToken = default)
@@ -75,12 +145,85 @@ public class AdminShopService : IAdminShopService
         var shop = await _unitOfWork.Shops.GetByIdAsync(id, cancellationToken);
         if (shop == null) throw new NotFoundException("Shop", id);
 
-        var latestReview = await _unitOfWork.ShopReviews.GetLatestByShopIdAsync(shop.Id, cancellationToken);
-        var activeSanction = await _unitOfWork.ShopSanctions.GetActiveSanctionByShopIdAsync(shop.Id, _clock.UtcNow, cancellationToken);
         var allReviews = await _unitOfWork.ShopReviews.GetByShopIdAsync(shop.Id, cancellationToken);
         var allSanctions = await _unitOfWork.ShopSanctions.GetByShopIdAsync(shop.Id, cancellationToken);
+        var latestReview = allReviews.FirstOrDefault();
+        var activeSanction = allSanctions.FirstOrDefault(sn => sn.IsActive(_clock.UtcNow));
 
-        var dto = MapToDetailDto(shop, shop.OwnerUser!, latestReview, activeSanction);
+        // Additional stats & details for Admin inspection
+        var totalOrders = await _dbContext.ShopOrders
+            .CountAsync(o => o.ShopId == shop.Id && o.Status != OrderStatus.Cancelled, cancellationToken);
+        var totalRevenue = await _dbContext.ShopOrders
+            .Where(o => o.ShopId == shop.Id && o.Status != OrderStatus.Cancelled)
+            .SumAsync(o => (decimal?)o.Total, cancellationToken) ?? 0;
+        var totalProducts = await _dbContext.Products
+            .CountAsync(p => p.ShopId == shop.Id && p.DeletedAtUtc == null, cancellationToken);
+
+        var balance = await _dbContext.ShopBalanceCaches
+            .FirstOrDefaultAsync(b => b.ShopId == shop.Id, cancellationToken);
+
+        var bankAccount = await _dbContext.ShopBankAccounts
+            .FirstOrDefaultAsync(b => b.ShopId == shop.Id && b.Status == BankAccountStatus.Verified, cancellationToken);
+
+        var recentOrders = await _dbContext.ShopOrders
+            .Include(o => o.BuyerUser)
+            .Where(o => o.ShopId == shop.Id)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Take(10)
+            .Select(o => new ShopOrderSummaryDto
+            {
+                Id = o.Id,
+                OrderNo = o.OrderNo,
+                Status = o.Status.ToString(),
+                Total = o.Total,
+                ShopNet = o.ShopNet,
+                BuyerName = o.BuyerUser != null ? o.BuyerUser.DisplayName : "Khách hàng",
+                CreatedAtUtc = o.CreatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var recentProducts = await _dbContext.Products
+            .Where(p => p.ShopId == shop.Id && p.DeletedAtUtc == null)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .Take(10)
+            .Select(p => new ShopProductSummaryDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Slug = p.Slug,
+                Price = p.MinPriceCache,
+                Status = p.Status.ToString(),
+                SoldCount = 0,
+                CreatedAtUtc = p.CreatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var dto = MapToDetailDto(shop, shop.OwnerUser, latestReview, activeSanction);
+        dto.TotalOrders = totalOrders;
+        dto.TotalRevenue = totalRevenue;
+        dto.TotalProducts = totalProducts;
+        dto.AvailableBalance = balance?.AvailableBalance ?? 0;
+        dto.PendingBalance = balance?.PendingBalance ?? 0;
+        dto.LifetimeGrossRevenue = balance?.LifetimeGrossRevenue ?? 0;
+        dto.LifetimeCommissionPaid = balance?.LifetimeCommissionPaid ?? 0;
+        dto.OwnerAvatarUrl = shop.OwnerUser?.AvatarUrl;
+
+        if (bankAccount != null)
+        {
+            dto.BankAccount = new ShopBankAccountSummaryDto
+            {
+                Id = bankAccount.Id,
+                BankCode = bankAccount.BankCode,
+                BankName = bankAccount.BankName,
+                AccountHolderName = bankAccount.AccountHolderName,
+                MaskedAccountNumber = bankAccount.AccountNumberMasked,
+                IsActive = bankAccount.Status == BankAccountStatus.Verified
+            };
+        }
+
+        dto.RecentOrders = recentOrders;
+        dto.RecentProducts = recentProducts;
+
         dto.Reviews = allReviews.Select(r => new ShopReviewDto
         {
             Id = r.Id,
@@ -160,7 +303,7 @@ public class AdminShopService : IAdminShopService
         }
 
         shop.Reject();
-        latestReview.Reject(adminId, request.ReasonCode, request.ReasonNote, request.CanResubmit);
+        latestReview.Reject(adminId, request.ReasonCode ?? "REJECTED", request.ReasonNote, request.CanResubmit);
 
         _unitOfWork.Shops.Update(shop);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -272,7 +415,7 @@ public class AdminShopService : IAdminShopService
 
     private static ShopDetailDto MapToDetailDto(
         Shop shop,
-        Domain.Entities.User user,
+        Domain.Entities.User? user,
         ShopReview? latestReview,
         ShopSanction? activeSanction)
     {
@@ -288,8 +431,9 @@ public class AdminShopService : IAdminShopService
         {
             Id = shop.Id,
             OwnerUserId = shop.OwnerUserId,
-            OwnerDisplayName = user.DisplayName,
-            OwnerEmail = user.Email,
+            OwnerDisplayName = user?.DisplayName ?? string.Empty,
+            OwnerEmail = user?.Email ?? string.Empty,
+            OwnerAvatarUrl = user?.AvatarUrl,
             Name = shop.Name,
             Slug = shop.Slug,
             LogoUrl = shop.LogoUrl,

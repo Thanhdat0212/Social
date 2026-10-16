@@ -30,13 +30,14 @@ public class AdminShopsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var (items, total) = await _adminShopService.GetShopsAsync(status, search, page, pageSize, cancellationToken);
+        var (items, total, stats) = await _adminShopService.GetShopsAsync(status, search, page, pageSize, cancellationToken);
         return Ok(new
         {
             total,
             page,
             pageSize,
-            items
+            items,
+            stats
         });
     }
 

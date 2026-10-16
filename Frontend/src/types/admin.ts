@@ -1,3 +1,12 @@
+export interface AdminShopListStats {
+  totalShops: number;
+  approvedShops: number;
+  pendingShops: number;
+  rejectedShops: number;
+  totalOrdersSold: number;
+  totalRevenue: number;
+}
+
 export interface AdminShopItem {
   id: string;
   name: string;
@@ -5,12 +14,19 @@ export interface AdminShopItem {
   contactEmail: string;
   logoUrl?: string;
   description?: string;
-  approvalStatus: 'Pending' | 'Approved' | 'Rejected' | number;
-  operatingStatus: 'Open' | 'Closed' | number;
+  approvalStatus: 'Pending' | 'Approved' | 'Rejected' | number | string;
+  operatingStatus: 'Open' | 'Closed' | number | string;
   effectiveStatus?: string;
   ownerUserId: string;
+  ownerDisplayName?: string;
+  ownerEmail?: string;
   createdAtUtc: string;
   activeSanctionCount?: number;
+  totalOrders?: number;
+  totalProducts?: number;
+  totalRevenue?: number;
+  availableBalance?: number;
+  pendingBalance?: number;
 }
 
 export interface AdminShopDetail {
@@ -24,23 +40,65 @@ export interface AdminShopDetail {
   operatingStatus: string;
   effectiveStatus: string;
   ownerUserId: string;
+  ownerDisplayName?: string;
+  ownerEmail?: string;
+  ownerPhoneNumber?: string;
+  ownerAvatarUrl?: string;
   createdAtUtc: string;
+  updatedAtUtc?: string;
+  effectiveStatusReason?: string;
+  canResubmit?: boolean;
+  totalOrders?: number;
+  totalProducts?: number;
+  totalRevenue?: number;
+  availableBalance?: number;
+  pendingBalance?: number;
+  lifetimeGrossRevenue?: number;
+  lifetimeCommissionPaid?: number;
+  bankAccount?: {
+    id: string;
+    bankCode: string;
+    bankName: string;
+    accountHolderName: string;
+    maskedAccountNumber: string;
+    isActive: boolean;
+  };
+  recentOrders?: Array<{
+    id: string;
+    orderNo: string;
+    status: string;
+    total: number;
+    shopNet: number;
+    buyerName: string;
+    createdAtUtc: string;
+  }>;
+  recentProducts?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    status: string;
+    soldCount: number;
+    createdAtUtc: string;
+  }>;
   reviews?: Array<{
     id: string;
     submissionNo: number;
     decision: string;
     reasonCode?: string;
     reasonNote?: string;
-    reviewedAt?: string;
+    canResubmit?: boolean;
+    reviewedAtUtc?: string;
     snapshotJson?: string;
   }>;
   sanctions?: Array<{
     id: string;
     type: string;
     reason: string;
-    startAt: string;
-    endAt?: string;
-    liftedAt?: string;
+    startAtUtc: string;
+    endAtUtc?: string;
+    isActive?: boolean;
+    liftedAtUtc?: string;
   }>;
 }
 

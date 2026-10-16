@@ -12,10 +12,13 @@ import type {
 export const adminApi = {
   // 1. Quản lý Gian hàng (Shops)
   getShops: async (params?: { status?: string | number; search?: string; page?: number; pageSize?: number }) => {
-    const res = await apiClient.get<{ total: number; page: number; pageSize: number; items: AdminShopItem[] }>(
-      '/admin/shops',
-      { params }
-    );
+    const res = await apiClient.get<{
+      total: number;
+      page: number;
+      pageSize: number;
+      items: AdminShopItem[];
+      stats?: import('@/types/admin').AdminShopListStats;
+    }>('/admin/shops', { params });
     return res.data;
   },
 

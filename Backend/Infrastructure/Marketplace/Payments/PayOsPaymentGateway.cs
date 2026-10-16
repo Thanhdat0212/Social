@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Application.Interfaces.Marketplace.Payments;
@@ -117,12 +117,15 @@ public class PayOsPaymentGateway : IPaymentGateway
                     {
                         using var doc = JsonDocument.Parse(lastResponseContent);
                         var root = doc.RootElement;
-                        if (root.TryGetProperty("data", out var dataElem))
+                        var code = root.TryGetProperty("code", out var cElem) ? cElem.GetString() : null;
+
+                        if (code == "00" && root.TryGetProperty("data", out var dataElem) && dataElem.ValueKind == JsonValueKind.Object)
                         {
                             var checkoutUrl = dataElem.TryGetProperty("checkoutUrl", out var cUrl) ? cUrl.GetString() : null;
                             var qrCode = dataElem.TryGetProperty("qrCode", out var qr) ? qr.GetString() : null;
                             var accNumber = dataElem.TryGetProperty("accountNumber", out var aNum) ? aNum.GetString() : null;
                             var accName = dataElem.TryGetProperty("accountName", out var aName) ? aName.GetString() : null;
+                            var payOsDesc = dataElem.TryGetProperty("description", out var dProp) ? dProp.GetString() : sanitizedDesc;
 
                             // Chuyển chuỗi EMVCo VietQR của PayOS thành URL ảnh QR thật nếu chưa có prefix http
                             string? qrImageUrl = null;
@@ -142,10 +145,21 @@ public class PayOsPaymentGateway : IPaymentGateway
                                 QrCodeUrl = qrImageUrl,
                                 AccountNumber = accNumber,
                                 AccountName = accName,
-                                Description = sanitizedDesc,
-                                PaymentCode = orderCodeStr
+                                Description = payOsDesc ?? sanitizedDesc,
+                                PaymentCode = payOsDesc ?? orderCodeStr
                             };
                         }
+
+                        // Nếu PayOS trả về lỗi kèm mã lỗi cụ thể (ví dụ 20: mô tả quá dài, 231: đơn đã tồn tại)
+                        var desc = root.TryGetProperty("desc", out var dElem) ? dElem.GetString() : lastResponseContent;
+                        if (code == "231" && attempt < 2)
+                        {
+                            _logger.LogWarning("PayOS báo đơn {OrderCode} đã tồn tại. Thử lại với orderCode mới...", orderCode);
+                            continue;
+                        }
+
+                        _logger.LogError("PayOS trả về mã lỗi {Code}: {Desc}", code, desc);
+                        throw new InvalidOperationException($"Lỗi từ cổng PayOS ({code}): {desc}");
                     }
 
                     // Nếu PayOS báo đơn đã tồn tại (code 231) -> thử lại với orderCode mới
@@ -191,7 +205,7 @@ public class PayOsPaymentGateway : IPaymentGateway
             {
                 using var doc = JsonDocument.Parse(content);
                 var root = doc.RootElement;
-                if (root.TryGetProperty("data", out var dataElem))
+                if (root.TryGetProperty("data", out var dataElem) && dataElem.ValueKind == JsonValueKind.Object)
                 {
                     var status = dataElem.TryGetProperty("status", out var s) ? s.GetString() : null;
                     var amountPaid = dataElem.TryGetProperty("amountPaid", out var ap) ? ap.GetInt64() : 0;
@@ -233,7 +247,7 @@ public class PayOsPaymentGateway : IPaymentGateway
                 actualSig = sigElem.GetString() ?? string.Empty;
             }
 
-            if (!root.TryGetProperty("data", out var dataElem)) return false;
+            if (!root.TryGetProperty("data", out var dataElem) || dataElem.ValueKind != JsonValueKind.Object) return false;
 
             // Thu thập và sắp xếp các thuộc tính trong data theo thứ tự bảng chữ cái A-Z
             var dict = new SortedDictionary<string, string>(StringComparer.Ordinal);
@@ -269,11 +283,13 @@ public class PayOsPaymentGateway : IPaymentGateway
             using var doc = JsonDocument.Parse(webhookBody);
             var root = doc.RootElement;
 
-            if (root.TryGetProperty("data", out var dataElem))
+            if (root.TryGetProperty("data", out var dataElem) && dataElem.ValueKind == JsonValueKind.Object)
             {
                 if (dataElem.TryGetProperty("orderCode", out var orderCodeElem))
                 {
-                    return orderCodeElem.GetRawText();
+                    return orderCodeElem.ValueKind == JsonValueKind.Number
+                        ? orderCodeElem.GetInt64().ToString()
+                        : (orderCodeElem.GetString() ?? orderCodeElem.GetRawText());
                 }
             }
         }

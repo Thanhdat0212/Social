@@ -16,7 +16,7 @@ public interface IShopService
 
 public interface IAdminShopService
 {
-    Task<(IReadOnlyList<ShopSummaryDto> Items, int Total)> GetShopsAsync(
+    Task<(IReadOnlyList<ShopSummaryDto> Items, int Total, AdminShopListStatsDto Stats)> GetShopsAsync(
         ApprovalStatus? status,
         string? search,
         int page,

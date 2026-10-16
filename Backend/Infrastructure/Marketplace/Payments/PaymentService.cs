@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Marketplace.Ledger;
+using System.Text.Json;
+using Application.DTOs.Marketplace.Ledger;
 using Application.DTOs.Marketplace.Payments;
 using Application.Interfaces.Marketplace.Ledger;
 using Application.Interfaces.Marketplace.Orders;
@@ -48,6 +49,31 @@ public class PaymentService : IPaymentService
             throw new KeyNotFoundException("Không tìm thấy phiên thanh toán hợp lệ.");
         }
 
+        // Nếu đơn hàng đã thanh toán thành công (Paid), trả về trạng thái Succeeded ngay thay vì ném ngoại lệ
+        if (checkout.Status == CheckoutStatus.Paid)
+        {
+            var paidPayment = await _unitOfWork.Payments.GetByCheckoutIdAsync(checkout.Id, cancellationToken);
+            var (accNum, accName, desc, code) = ParseAccountPayload(paidPayment?.RawPayloadRef, $"Don {checkout.CheckoutNo}", paidPayment?.ProviderTxnId ?? string.Empty);
+
+            return new PaymentLinkDto
+            {
+                PaymentId = paidPayment?.Id ?? Guid.Empty,
+                CheckoutId = checkout.Id,
+                Provider = paidPayment?.Provider ?? request.Provider,
+                ProviderTxnId = paidPayment?.ProviderTxnId ?? string.Empty,
+                Amount = paidPayment?.Amount ?? checkout.GrandTotal,
+                Currency = paidPayment?.Currency ?? "VND",
+                QrCodeUrl = paidPayment?.QrCodeUrl,
+                PaymentUrl = paidPayment?.PaymentUrl,
+                PaymentCode = code,
+                Description = desc,
+                AccountNumber = accNum,
+                AccountName = accName,
+                Status = PaymentStatus.Succeeded,
+                CreatedAt = paidPayment?.CreatedAtUtc ?? checkout.CreatedAtUtc
+            };
+        }
+
         if (checkout.Status != CheckoutStatus.Open)
         {
             throw new InvalidOperationException($"Phiên thanh toán không ở trạng thái mở (Trạng thái hiện tại: {checkout.Status}).");
@@ -62,6 +88,8 @@ public class PaymentService : IPaymentService
         var existingPayment = await _unitOfWork.Payments.GetByCheckoutIdAsync(checkout.Id, cancellationToken);
         if (existingPayment != null && existingPayment.Status == PaymentStatus.Initiated && existingPayment.Provider == request.Provider)
         {
+            var (accNum, accName, desc, code) = ParseAccountPayload(existingPayment.RawPayloadRef, $"Don {checkout.CheckoutNo}", existingPayment.ProviderTxnId);
+
             return new PaymentLinkDto
             {
                 PaymentId = existingPayment.Id,
@@ -72,8 +100,10 @@ public class PaymentService : IPaymentService
                 Currency = existingPayment.Currency,
                 QrCodeUrl = existingPayment.QrCodeUrl,
                 PaymentUrl = existingPayment.PaymentUrl,
-                PaymentCode = existingPayment.ProviderTxnId,
-                Description = $"Don {checkout.CheckoutNo}",
+                PaymentCode = code,
+                Description = desc,
+                AccountNumber = accNum,
+                AccountName = accName,
                 Status = existingPayment.Status,
                 CreatedAt = existingPayment.CreatedAtUtc
             };
@@ -91,6 +121,8 @@ public class PaymentService : IPaymentService
             description,
             cancellationToken);
 
+        var accountPayload = BuildAccountPayload(linkResult.AccountNumber, linkResult.AccountName, linkResult.Description ?? description, linkResult.PaymentCode ?? linkResult.ProviderTxnId);
+
         var payment = new Payment(
             checkout.Id,
             request.Provider,
@@ -99,7 +131,8 @@ public class PaymentService : IPaymentService
             "QR",
             "VND",
             linkResult.QrCodeUrl,
-            linkResult.PaymentUrl);
+            linkResult.PaymentUrl,
+            accountPayload);
 
         await _unitOfWork.Payments.AddAsync(payment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -134,6 +167,10 @@ public class PaymentService : IPaymentService
         var payment = await _unitOfWork.Payments.GetByCheckoutIdAsync(checkoutId, cancellationToken);
         if (payment == null) return null;
 
+        var isSucceeded = checkout.Status == CheckoutStatus.Paid || payment.Status == PaymentStatus.Succeeded;
+        var status = isSucceeded ? PaymentStatus.Succeeded : payment.Status;
+        var (accNum, accName, desc, code) = ParseAccountPayload(payment.RawPayloadRef, $"Don {checkout.CheckoutNo}", payment.ProviderTxnId);
+
         return new PaymentDetailDto
         {
             Id = payment.Id,
@@ -143,12 +180,14 @@ public class PaymentService : IPaymentService
             Method = payment.Method,
             Amount = payment.Amount,
             Currency = payment.Currency,
-            Status = payment.Status,
-            PaidAt = payment.PaidAt,
+            Status = status,
+            PaidAt = payment.PaidAt ?? (isSucceeded ? checkout.PaidAtUtc ?? DateTime.UtcNow : null),
             QrCodeUrl = payment.QrCodeUrl,
             PaymentUrl = payment.PaymentUrl,
-            PaymentCode = payment.ProviderTxnId,
-            Description = $"Don {checkout.CheckoutNo}",
+            PaymentCode = code,
+            Description = desc,
+            AccountNumber = accNum,
+            AccountName = accName,
             CreatedAt = payment.CreatedAtUtc
         };
     }
@@ -222,8 +261,16 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Chưa khởi tạo giao dịch thanh toán cho phiên này.");
         }
 
-        if (payment.Status == PaymentStatus.Succeeded)
+        if (checkout.Status == CheckoutStatus.Paid || payment.Status == PaymentStatus.Succeeded)
         {
+            if (payment.Status != PaymentStatus.Succeeded)
+            {
+                payment.MarkSucceeded(checkout.PaidAtUtc ?? DateTime.UtcNow, "Checkout already paid");
+                _unitOfWork.Payments.Update(payment);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            var (accN, accNm, dsc, cd) = ParseAccountPayload(payment.RawPayloadRef, $"Don {checkout.CheckoutNo}", payment.ProviderTxnId);
             return new PaymentDetailDto
             {
                 Id = payment.Id,
@@ -233,10 +280,14 @@ public class PaymentService : IPaymentService
                 Method = payment.Method,
                 Amount = payment.Amount,
                 Currency = payment.Currency,
-                Status = payment.Status,
-                PaidAt = payment.PaidAt,
+                Status = PaymentStatus.Succeeded,
+                PaidAt = payment.PaidAt ?? checkout.PaidAtUtc ?? DateTime.UtcNow,
                 QrCodeUrl = payment.QrCodeUrl,
                 PaymentUrl = payment.PaymentUrl,
+                PaymentCode = cd,
+                Description = dsc,
+                AccountNumber = accN,
+                AccountName = accNm,
                 CreatedAt = payment.CreatedAtUtc
             };
         }
@@ -255,6 +306,8 @@ public class PaymentService : IPaymentService
         }
 
         var updated = await _unitOfWork.Payments.GetByIdAsync(payment.Id, cancellationToken) ?? payment;
+        var (accNum, accName, desc, code) = ParseAccountPayload(updated.RawPayloadRef, $"Don {checkout.CheckoutNo}", updated.ProviderTxnId);
+
         return new PaymentDetailDto
         {
             Id = updated.Id,
@@ -268,8 +321,49 @@ public class PaymentService : IPaymentService
             PaidAt = updated.PaidAt,
             QrCodeUrl = updated.QrCodeUrl,
             PaymentUrl = updated.PaymentUrl,
+            PaymentCode = code,
+            Description = desc,
+            AccountNumber = accNum,
+            AccountName = accName,
             CreatedAt = updated.CreatedAtUtc
         };
+    }
+
+    private static (string? AccountNumber, string? AccountName, string? Description, string? PaymentCode) ParseAccountPayload(
+        string? rawPayloadRef,
+        string defaultDesc,
+        string defaultCode)
+    {
+        if (string.IsNullOrWhiteSpace(rawPayloadRef) || !rawPayloadRef.StartsWith('{'))
+        {
+            return (null, null, defaultDesc, defaultCode);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(rawPayloadRef);
+            var root = doc.RootElement;
+            var accNum = root.TryGetProperty("accountNumber", out var an) ? an.GetString() : null;
+            var accName = root.TryGetProperty("accountName", out var anm) ? anm.GetString() : null;
+            var desc = root.TryGetProperty("description", out var d) ? d.GetString() : defaultDesc;
+            var code = root.TryGetProperty("paymentCode", out var c) ? c.GetString() : defaultCode;
+            return (accNum, accName, desc, code);
+        }
+        catch
+        {
+            return (null, null, defaultDesc, defaultCode);
+        }
+    }
+
+    private static string BuildAccountPayload(string? accountNumber, string? accountName, string? description, string? paymentCode)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            accountNumber,
+            accountName,
+            description,
+            paymentCode
+        });
     }
 
     private async Task<bool> ExecutePaymentSuccessSettlementAsync(

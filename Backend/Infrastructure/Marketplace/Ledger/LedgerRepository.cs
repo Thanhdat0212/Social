@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Repositories.Marketplace.Ledger;
+using Application.Interfaces.Repositories.Marketplace.Ledger;
 using Domain.Entities.Marketplace.Ledger;
 using Domain.Enums;
 using Infrastructure.Persistence;
@@ -17,14 +17,16 @@ public class LedgerRepository : ILedgerRepository
 
     public async Task<LedgerAccount?> GetAccountByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
+        var normalized = code.Trim().ToUpperInvariant();
         return await _dbContext.LedgerAccounts
-            .FirstOrDefaultAsync(a => a.Code == code.ToUpper(), cancellationToken);
+            .FirstOrDefaultAsync(a => a.Code == normalized || a.Code.ToUpper() == normalized, cancellationToken);
     }
 
     public async Task<LedgerAccount> GetOrCreateSystemAccountAsync(LedgerAccountType type, CancellationToken cancellationToken = default)
     {
         var code = LedgerAccount.GenerateAccountCode(type, null);
-        var account = await _dbContext.LedgerAccounts.FirstOrDefaultAsync(a => a.Code == code, cancellationToken);
+        var account = await _dbContext.LedgerAccounts
+            .FirstOrDefaultAsync(a => a.Code == code || a.Code.ToUpper() == code, cancellationToken);
         if (account != null) return account;
 
         var name = type switch
@@ -39,15 +41,27 @@ public class LedgerRepository : ILedgerRepository
         };
 
         account = new LedgerAccount(type, code, name, null);
-        await _dbContext.LedgerAccounts.AddAsync(account, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return account;
+        try
+        {
+            await _dbContext.LedgerAccounts.AddAsync(account, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return account;
+        }
+        catch (DbUpdateException)
+        {
+            _dbContext.Entry(account).State = EntityState.Detached;
+            var existing = await _dbContext.LedgerAccounts
+                .FirstOrDefaultAsync(a => a.Code == code || a.Code.ToUpper() == code, cancellationToken);
+            if (existing != null) return existing;
+            throw;
+        }
     }
 
     public async Task<LedgerAccount> GetOrCreateShopAccountAsync(Guid shopId, LedgerAccountType type, CancellationToken cancellationToken = default)
     {
         var code = LedgerAccount.GenerateAccountCode(type, shopId);
-        var account = await _dbContext.LedgerAccounts.FirstOrDefaultAsync(a => a.Code == code, cancellationToken);
+        var account = await _dbContext.LedgerAccounts
+            .FirstOrDefaultAsync(a => a.Code == code || a.Code.ToUpper() == code, cancellationToken);
         if (account != null) return account;
 
         var shop = await _dbContext.Shops.FirstOrDefaultAsync(s => s.Id == shopId, cancellationToken);
@@ -62,9 +76,20 @@ public class LedgerRepository : ILedgerRepository
         };
 
         account = new LedgerAccount(type, code, name, shopId);
-        await _dbContext.LedgerAccounts.AddAsync(account, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return account;
+        try
+        {
+            await _dbContext.LedgerAccounts.AddAsync(account, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return account;
+        }
+        catch (DbUpdateException)
+        {
+            _dbContext.Entry(account).State = EntityState.Detached;
+            var existing = await _dbContext.LedgerAccounts
+                .FirstOrDefaultAsync(a => a.Code == code || a.Code.ToUpper() == code, cancellationToken);
+            if (existing != null) return existing;
+            throw;
+        }
     }
 
     public async Task<bool> TransactionExistsAsync(string idempotencyKey, CancellationToken cancellationToken = default)
@@ -90,9 +115,19 @@ public class LedgerRepository : ILedgerRepository
         if (cache != null) return cache;
 
         cache = new ShopBalanceCache(shopId);
-        await _dbContext.ShopBalanceCaches.AddAsync(cache, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return cache;
+        try
+        {
+            await _dbContext.ShopBalanceCaches.AddAsync(cache, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return cache;
+        }
+        catch (DbUpdateException)
+        {
+            _dbContext.Entry(cache).State = EntityState.Detached;
+            var existing = await _dbContext.ShopBalanceCaches.FirstOrDefaultAsync(b => b.ShopId == shopId, cancellationToken);
+            if (existing != null) return existing;
+            throw;
+        }
     }
 
     public void UpdateBalanceCache(ShopBalanceCache cache)

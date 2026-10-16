@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Repositories.Marketplace.Payments;
+using Application.Interfaces.Repositories.Marketplace.Payments;
 using Domain.Entities.Marketplace.Payments;
 using Domain.Enums;
 using Infrastructure.Persistence;
@@ -26,7 +26,10 @@ public class PaymentRepository : IPaymentRepository
     {
         return await _dbContext.Payments
             .Include(p => p.Checkout)
-            .FirstOrDefaultAsync(p => p.CheckoutId == checkoutId, cancellationToken);
+            .Where(p => p.CheckoutId == checkoutId)
+            .OrderByDescending(p => p.Status == PaymentStatus.Succeeded)
+            .ThenByDescending(p => p.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<Payment?> GetByProviderTxnIdAsync(PaymentProvider provider, string providerTxnId, CancellationToken cancellationToken = default)

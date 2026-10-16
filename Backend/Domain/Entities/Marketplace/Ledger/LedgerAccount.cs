@@ -44,7 +44,7 @@ public class LedgerAccount : BaseEntity
     public static string GenerateAccountCode(LedgerAccountType type, Guid? shopId = null)
     {
         return shopId.HasValue
-            ? $"{type.ToString().ToUpperInvariant()}_{shopId.Value:N}"
+            ? $"{type.ToString().ToUpperInvariant()}_{shopId.Value.ToString("N").ToUpperInvariant()}"
             : type.ToString().ToUpperInvariant();
     }
 }

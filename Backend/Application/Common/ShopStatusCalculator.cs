@@ -10,12 +10,12 @@ namespace Application.Common;
 /// </summary>
 public static class ShopStatusCalculator
 {
-    public static ShopEffectiveStatus Compute(User user, Shop shop, bool hasActiveSanction)
+    public static ShopEffectiveStatus Compute(User? user, Shop shop, bool hasActiveSanction)
     {
         if (shop.DeletedAtUtc != null)
             return ShopEffectiveStatus.Deleted;
 
-        if (user.Status != UserStatus.Active)
+        if (user == null || user.Status != UserStatus.Active)
             return ShopEffectiveStatus.UserUnavailable;
 
         if (shop.ApprovalStatus == ApprovalStatus.Pending)
