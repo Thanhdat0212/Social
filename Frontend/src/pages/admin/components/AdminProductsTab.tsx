@@ -124,12 +124,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
     <div>
       {/* Search & Filter Bar */}
       <div
-        className="card-glass"
         style={{
+          background: '#ffffff',
           padding: '1.25rem 1.5rem',
           borderRadius: '16px',
           marginBottom: '1.5rem',
-          border: '1px solid var(--border-color)',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -148,7 +149,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
               placeholder="Tìm theo tên sản phẩm, slug..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '2.5rem' }}
+              style={{
+                paddingLeft: '2.5rem',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
+                fontWeight: 500,
+              }}
             />
             <span
               style={{
@@ -156,13 +163,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                 left: '0.85rem',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
+                color: '#64748b',
               }}
             >
               <SearchIcon size={16} />
             </span>
           </div>
-          <button type="submit" className="btn btn-secondary btn-sm">
+          <button type="submit" className="btn btn-secondary btn-sm" style={{ fontWeight: 600 }}>
             Tìm
           </button>
         </form>
@@ -172,7 +179,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
             className="form-control"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ minWidth: '150px' }}
+            style={{
+              minWidth: '150px',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              fontWeight: 500,
+            }}
           >
             <option value="">Tất cả trạng thái</option>
             <option value="1">Bản nháp (Draft)</option>
@@ -187,10 +200,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '0.85rem',
-              color: onlyTakedown ? 'var(--accent-rose)' : 'var(--text-muted)',
+              fontSize: '0.88rem',
+              color: onlyTakedown ? '#e11d48' : '#334155',
               cursor: 'pointer',
-              fontWeight: onlyTakedown ? 700 : 500,
+              fontWeight: 600,
             }}
           >
             <input
@@ -205,7 +218,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => loadProducts(page)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
           >
             <RefreshIcon size={14} /> Làm mới
           </button>
@@ -215,30 +228,30 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
       {loading && (
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto 0.5rem' }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Đang nạp danh sách sản phẩm...</p>
+          <p style={{ color: '#64748b', fontSize: '0.88rem', fontWeight: 500 }}>Đang nạp danh sách sản phẩm...</p>
         </div>
       )}
 
       {/* Products Table */}
-      <div className="card-glass" style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <div className="admin-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+          <table className="admin-table">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                <th style={{ padding: '1rem 1.25rem' }}>Sản phẩm</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Gian hàng</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Danh mục</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Khoảng giá (VNĐ)</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Biến thể</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Trạng thái</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Tình trạng Vi phạm</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>Thao tác Admin</th>
+              <tr>
+                <th>Sản phẩm</th>
+                <th>Gian hàng</th>
+                <th>Danh mục</th>
+                <th>Khoảng giá (VNĐ)</th>
+                <th style={{ textAlign: 'center' }}>Biến thể</th>
+                <th>Trạng thái</th>
+                <th>Tình trạng Vi phạm</th>
+                <th style={{ textAlign: 'right' }}>Thao tác Admin</th>
               </tr>
             </thead>
             <tbody>
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '3.5rem', color: '#64748b', fontWeight: 500 }}>
                     Không tìm thấy sản phẩm nào phù hợp với bộ lọc.
                   </td>
                 </tr>
@@ -249,8 +262,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                     <tr
                       key={p.id}
                       style={{
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        background: p.hasActiveTakedown ? 'rgba(239, 68, 68, 0.04)' : undefined,
+                        background: p.hasActiveTakedown ? '#fff1f2' : undefined,
                       }}
                     >
                       <td style={{ padding: '0.85rem 1.25rem' }}>
@@ -259,7 +271,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                             <img
                               src={p.coverImageUrl}
                               alt={p.name}
-                              style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }}
+                              style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }}
                             />
                           ) : (
                             <div
@@ -267,7 +279,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                                 width: '40px',
                                 height: '40px',
                                 borderRadius: '8px',
-                                background: 'rgba(255,255,255,0.06)',
+                                background: '#f1f5f9',
+                                border: '1px solid #e2e8f0',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -278,23 +291,23 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                             </div>
                           )}
                           <div>
-                            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                            <div className="admin-cell-title">{p.name}</div>
+                            <div className="admin-cell-subtitle" style={{ fontFamily: 'monospace' }}>
                               /{p.slug}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      <td style={{ padding: '0.85rem 1.25rem', fontWeight: 600, color: '#38bdf8' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', fontWeight: 600, color: '#0284c7' }}>
                         {p.shopName || '(Chưa xác định)'}
                       </td>
 
-                      <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-secondary)' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', color: '#334155', fontWeight: 500 }}>
                         {p.categoryName || '-'}
                       </td>
 
-                      <td style={{ padding: '0.85rem 1.25rem', fontWeight: 600 }}>
+                      <td style={{ padding: '0.85rem 1.25rem', fontWeight: 700, color: '#0f172a' }}>
                         {p.minPrice === p.maxPrice
                           ? formatCurrency(p.minPrice)
                           : `${formatCurrency(p.minPrice)} - ${formatCurrency(p.maxPrice)}`}
@@ -303,11 +316,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                       <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                         <span
                           style={{
-                            padding: '2px 8px',
+                            padding: '3px 10px',
                             borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.06)',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            color: '#0f172a',
                           }}
                         >
                           {p.variantCount}
@@ -317,10 +332,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                       <td style={{ padding: '0.85rem 1.25rem' }}>
                         <span
                           style={{
-                            fontSize: '0.75rem',
-                            padding: '2px 8px',
+                            fontSize: '0.8rem',
+                            padding: '4px 9px',
                             borderRadius: '6px',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             background: badge.bg,
                             color: badge.color,
                           }}
@@ -333,35 +348,36 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                         {p.hasActiveTakedown ? (
                           <span
                             style={{
-                              fontSize: '0.75rem',
-                              padding: '2px 8px',
+                              fontSize: '0.78rem',
+                              padding: '4px 10px',
                               borderRadius: '6px',
                               fontWeight: 700,
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              color: '#ef4444',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fca5a5',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '5px',
                             }}
                           >
-                            <AlertTriangleIcon size={12} /> BỊ TAKEDOWN
+                            <AlertTriangleIcon size={13} /> BỊ TAKEDOWN
                           </span>
                         ) : (
                           <span
                             style={{
-                              fontSize: '0.75rem',
-                              padding: '2px 8px',
+                              fontSize: '0.78rem',
+                              padding: '4px 10px',
                               borderRadius: '6px',
-                              fontWeight: 500,
-                              background: 'rgba(34, 197, 94, 0.1)',
-                              color: '#22c55e',
+                              fontWeight: 600,
+                              background: '#ecfdf5',
+                              color: '#047857',
+                              border: '1px solid #a7f3d0',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '5px',
                             }}
                           >
-                            <CheckCircleIcon size={12} /> Hợp lệ
+                            <CheckCircleIcon size={13} /> Hợp lệ
                           </span>
                         )}
                       </td>
@@ -373,7 +389,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                             target="_blank"
                             rel="noreferrer"
                             className="btn btn-secondary btn-sm"
-                            style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 600 }}
                             title="Xem chi tiết trên sàn"
                           >
                             Xem sàn ↗
@@ -383,7 +399,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                             <button
                               type="button"
                               className="btn btn-success btn-sm"
-                              style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                              style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 700 }}
                               onClick={() => setLiftModal({ isOpen: true, product: p })}
                             >
                               Dỡ khóa (Lift)
@@ -392,7 +408,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                             <button
                               type="button"
                               className="btn btn-danger btn-sm"
-                              style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                              style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 700 }}
                               onClick={() => setTakedownModal({ isOpen: true, product: p, reason: '' })}
                             >
                               Takedown
@@ -416,10 +432,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderTop: '1px solid var(--border-color)',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f8fafc',
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.88rem', color: '#475569', fontWeight: 600 }}>
               Trang {page} / {totalPages} ({totalCount} sản phẩm)
             </span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -428,6 +445,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                 className="btn btn-secondary btn-sm"
                 disabled={page <= 1}
                 onClick={() => loadProducts(page - 1)}
+                style={{ fontWeight: 600 }}
               >
                 Trước
               </button>
@@ -436,6 +454,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                 className="btn btn-secondary btn-sm"
                 disabled={page >= totalPages}
                 onClick={() => loadProducts(page + 1)}
+                style={{ fontWeight: 600 }}
               >
                 Tiếp
               </button>
@@ -446,17 +465,17 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
 
       {/* MODAL 1: TAKEDOWN PRODUCT */}
       {takedownModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card-glass" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ margin: '0 0 0.5rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+        <div className="modal-backdrop">
+          <div className="admin-modal-card" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 0.5rem', fontWeight: 800, color: '#e11d48' }}>
               Gỡ bỏ vi phạm (Takedown)
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Sản phẩm: <strong>{takedownModal.product.name}</strong> (Shop: {takedownModal.product.shopName})
+            <p style={{ fontSize: '0.9rem', color: '#334155', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Sản phẩm: <strong style={{ color: '#0f172a' }}>{takedownModal.product.name}</strong> (Shop: <span style={{ color: '#0284c7', fontWeight: 600 }}>{takedownModal.product.shopName}</span>)
             </p>
 
             <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>
                 Lý do vi phạm chính sách * (sẽ ghi vào hồ sơ kiểm duyệt và thông báo tới Shop)
               </label>
               <textarea
@@ -466,14 +485,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
                 value={takedownModal.reason}
                 onChange={(e) => setTakedownModal({ ...takedownModal, reason: e.target.value })}
                 autoFocus
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
+                  fontWeight: 500,
+                }}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setTakedownModal(null)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setTakedownModal(null)} style={{ fontWeight: 600 }}>
                 Hủy
               </button>
-              <button type="button" className="btn btn-danger" onClick={handleConfirmTakedown}>
+              <button type="button" className="btn btn-danger" onClick={handleConfirmTakedown} style={{ fontWeight: 700 }}>
                 Xác nhận gỡ bỏ
               </button>
             </div>
@@ -483,21 +508,21 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({ showFlash })
 
       {/* MODAL 2: LIFT TAKEDOWN */}
       {liftModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card-glass" style={{ width: '90%', maxWidth: '460px', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ margin: '0 0 0.5rem', fontWeight: 700, color: '#22c55e' }}>
+        <div className="modal-backdrop">
+          <div className="admin-modal-card" style={{ width: '90%', maxWidth: '460px', padding: '2rem', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 0.5rem', fontWeight: 800, color: '#059669' }}>
               Dỡ bỏ lệnh khóa (Lift Takedown)
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Bạn có chắc chắn muốn dỡ bỏ lệnh khóa đối với sản phẩm <strong>&quot;{liftModal.product.name}&quot;</strong>?
+            <p style={{ fontSize: '0.9rem', color: '#334155', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Bạn có chắc chắn muốn dỡ bỏ lệnh khóa đối với sản phẩm <strong style={{ color: '#0f172a' }}>&quot;{liftModal.product.name}&quot;</strong>?
               Sản phẩm sẽ được khôi phục trạng thái hiển thị bình thường trên chợ nếu gian hàng đang mở cửa.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setLiftModal(null)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setLiftModal(null)} style={{ fontWeight: 600 }}>
                 Hủy
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleConfirmLiftTakedown}>
+              <button type="button" className="btn btn-primary" onClick={handleConfirmLiftTakedown} style={{ fontWeight: 700 }}>
                 Dỡ bỏ lệnh khóa
               </button>
             </div>

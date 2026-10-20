@@ -193,7 +193,9 @@ public class AdminShopService : IAdminShopService
                 Slug = p.Slug,
                 Price = p.MinPriceCache,
                 Status = p.Status.ToString(),
-                SoldCount = 0,
+                SoldCount = _dbContext.OrderItems
+                    .Where(oi => oi.ProductId == p.Id && oi.ShopOrder != null && oi.ShopOrder.Status != OrderStatus.Cancelled)
+                    .Sum(oi => (int?)oi.Quantity) ?? 0,
                 CreatedAtUtc = p.CreatedAtUtc
             })
             .ToListAsync(cancellationToken);

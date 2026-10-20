@@ -2,7 +2,7 @@ using Application.DTOs.Recommendation;
 using Application.Interfaces.Recommendation;
 using Domain.Enums;
 using Microsoft.Extensions.Logging;
-
+    
 namespace Infrastructure.Recommendation.CandidateGenerators;
 
 public class CollaborativeCandidateGenerator : ICandidateGenerator

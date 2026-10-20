@@ -58,7 +58,7 @@ export const CheckoutPage: React.FC = () => {
           setIsSuccess(true);
         }
       } catch (err: any) {
-        const msg = err.response?.data?.message || '';
+        const msg = err.response?.data?.detail || err.response?.data?.message || '';
         if (msg.includes('Paid')) {
           setIsSuccess(true);
         } else {

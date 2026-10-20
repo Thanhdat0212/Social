@@ -1,9 +1,11 @@
 using System.Text.Json;
 using Application.DTOs.Marketplace.Ledger;
 using Application.DTOs.Marketplace.Payments;
+using Application.DTOs.Marketplace.Recommendations;
 using Application.Interfaces.Marketplace.Ledger;
 using Application.Interfaces.Marketplace.Orders;
 using Application.Interfaces.Marketplace.Payments;
+using Application.Interfaces.Marketplace.Recommendations;
 using Application.Interfaces.Repositories;
 using Domain.Entities.Marketplace.Payments;
 using Domain.Enums;
@@ -20,6 +22,7 @@ public class PaymentService : IPaymentService
     private readonly ILedgerService _ledgerService;
     private readonly IEnumerable<IPaymentGateway> _gateways;
     private readonly IHubContext<SocialHub> _hubContext;
+    private readonly IProductEventChannel? _productEventChannel;
     private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(
@@ -28,7 +31,8 @@ public class PaymentService : IPaymentService
         ILedgerService ledgerService,
         IEnumerable<IPaymentGateway> gateways,
         IHubContext<SocialHub> hubContext,
-        ILogger<PaymentService> logger)
+        ILogger<PaymentService> logger,
+        IProductEventChannel? productEventChannel = null)
     {
         _unitOfWork = unitOfWork;
         _checkoutService = checkoutService;
@@ -36,6 +40,7 @@ public class PaymentService : IPaymentService
         _gateways = gateways;
         _hubContext = hubContext;
         _logger = logger;
+        _productEventChannel = productEventChannel;
     }
 
     public async Task<PaymentLinkDto> InitiatePaymentAsync(
@@ -427,6 +432,33 @@ public class PaymentService : IPaymentService
             }
 
             await _ledgerService.SettleCheckoutPaymentAsync(payment.CheckoutId, payment, cancellationToken);
+
+            // Bắn ProductEventType.Purchase vào In-Memory Channel cho từng sản phẩm trong Checkout (Non-blocking)
+            if (_productEventChannel != null)
+            {
+                try
+                {
+                    var checkoutEntity = await _unitOfWork.Checkouts.GetByIdAsync(payment.CheckoutId, cancellationToken);
+                    if (checkoutEntity?.Items != null)
+                    {
+                        foreach (var item in checkoutEntity.Items)
+                        {
+                            await _productEventChannel.EnqueueEventAsync(new ProductEventMessage
+                            {
+                                UserId = checkoutEntity.BuyerUserId,
+                                ProductId = item.ProductId,
+                                EventType = ProductEventType.Purchase,
+                                DwellTimeSeconds = null,
+                                CreatedAtUtc = DateTime.UtcNow
+                            }, cancellationToken);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Lỗi khi bắn sự kiện Purchase vào Recommendation Channel cho Checkout {CheckoutId}", payment.CheckoutId);
+                }
+            }
 
             // Bắn tín hiệu WebSocket Realtime tới màn hình Checkout đang mở của khách hàng
             try

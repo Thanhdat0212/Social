@@ -78,6 +78,17 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
+    /// Cập nhật giá bán nhanh cho một biến thể sản phẩm (Dành riêng cho Seller sở hữu shop)
+    /// </summary>
+    [HttpPatch("{id:guid}/variants/{variantId:guid}/price")]
+    [ProducesResponseType(typeof(ProductDetailDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateVariantPrice(Guid id, Guid variantId, [FromBody] UpdateVariantPriceRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _productService.UpdateVariantPriceAsync(CurrentUserId, id, variantId, request, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Cập nhật các trục tùy chọn (Options) và ma trận biến thể (Variants)
     /// </summary>
     [HttpPut("{id:guid}/variants")]

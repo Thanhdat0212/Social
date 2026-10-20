@@ -144,64 +144,54 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
       const isRoot = depth === 0;
       return (
         <React.Fragment key={node.id}>
-          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <td style={{ padding: '0.85rem 1.25rem', paddingLeft: `${depth * 1.5 + 1.25}rem` }}>
+          <tr>
+            <td style={{ padding: '0.95rem 1.25rem', paddingLeft: `${depth * 1.5 + 1.25}rem` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: isRoot ? '#c084fc' : 'var(--text-dim)', fontWeight: isRoot ? 800 : 600 }}>
+                <span style={{ color: isRoot ? '#0f172a' : '#334155', fontWeight: isRoot ? 800 : 600, fontSize: isRoot ? '0.95rem' : '0.88rem' }}>
                   {isRoot ? '📁' : '↳'} {node.name}
                 </span>
                 {node.children && node.children.length > 0 && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
                     ({node.children.length})
                   </span>
                 )}
               </div>
             </td>
-            <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+            <td style={{ padding: '0.95rem 1.25rem', color: '#64748b', fontSize: '0.85rem', fontFamily: 'monospace' }}>
               /{node.slug}
             </td>
-            <td style={{ padding: '0.85rem 1.25rem' }}>
+            <td style={{ padding: '0.95rem 1.25rem' }}>
               <span
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  background: (node.productType === 'Digital' || (node.productType as any) === 1) ? 'rgba(56, 189, 248, 0.1)' : 'rgba(244, 63, 94, 0.1)',
-                  color: (node.productType === 'Digital' || (node.productType as any) === 1) ? '#38bdf8' : '#f43f5e',
-                }}
+                className={`admin-pill-badge ${(node.productType === 'Digital' || (node.productType as any) === 1) ? 'admin-pill-blue' : 'admin-pill-purple'}`}
               >
                 {node.productType === 'Digital' || (node.productType as any) === 1 ? 'Hàng số' : 'Dịch vụ'}
               </span>
             </td>
-            <td style={{ padding: '0.85rem 1.25rem' }}>
+            <td style={{ padding: '0.95rem 1.25rem' }}>
               <span
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  background: (node.moderationPolicy === 'DirectListing' || (node.moderationPolicy as any) === 1) ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                  color: (node.moderationPolicy === 'DirectListing' || (node.moderationPolicy as any) === 1) ? '#22c55e' : '#f59e0b',
-                }}
+                className={`admin-pill-badge ${(node.moderationPolicy === 'DirectListing' || (node.moderationPolicy as any) === 1) ? 'admin-pill-green' : 'admin-pill-amber'}`}
               >
                 {node.moderationPolicy === 'DirectListing' || (node.moderationPolicy as any) === 1 ? 'Tự động' : 'Duyệt trước'}
               </span>
             </td>
-            <td style={{ padding: '0.85rem 1.25rem', fontWeight: 600 }}>
+            <td style={{ padding: '0.95rem 1.25rem', fontWeight: 700, color: '#0f172a' }}>
               {node.commissionRateBp ? `${node.commissionRateBp / 100}%` : '5% (Mặc định)'}
             </td>
-            <td style={{ padding: '0.85rem 1.25rem' }}>
-              <span className={`badge ${node.isActive ? 'badge-success' : 'badge-danger'}`}>
-                {node.isActive ? 'Bật' : 'Tắt'}
+            <td style={{ padding: '0.95rem 1.25rem' }}>
+              <span
+                className={`admin-pill-badge ${node.isActive ? 'admin-pill-green' : 'admin-pill-red'}`}
+              >
+                {node.isActive ? 'Đang bật' : 'Tắt'}
               </span>
             </td>
-            <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
+            <td style={{ padding: '0.95rem 1.25rem', textAlign: 'right' }}>
               <div style={{ display: 'inline-flex', gap: '6px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   title="Thêm danh mục con"
                   onClick={() => handleOpenCreateCategory(node.id)}
-                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                  style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 600 }}
                 >
                   + Con
                 </button>
@@ -213,7 +203,7 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                     setAssignAttributeModal({ isOpen: true, category: node });
                     setAssignForm({ attributeId: '', requirement: 3, isFilterable: true, isVariantAxis: false });
                   }}
-                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                  style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 600 }}
                 >
                   ⚙️ Thuộc tính
                 </button>
@@ -222,7 +212,7 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                   className="btn btn-secondary btn-sm"
                   title="Chỉnh sửa danh mục"
                   onClick={() => handleOpenEditCategory(node)}
-                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                  style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 600 }}
                 >
                   Sửa
                 </button>
@@ -231,9 +221,9 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                   className="btn btn-danger btn-sm"
                   title="Xóa danh mục"
                   onClick={() => handleDeleteCategory(node.id, node.name)}
-                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                  style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 700 }}
                 >
-                  <TrashIcon size={12} />
+                  <TrashIcon size={13} />
                 </button>
               </div>
             </td>
@@ -251,30 +241,30 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
           type="button"
           className="btn btn-primary btn-sm"
           onClick={() => handleOpenCreateCategory()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
         >
           + Thêm danh mục gốc
         </button>
       </div>
 
-      <div className="card-glass" style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <div className="admin-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+          <table className="admin-table">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                <th style={{ padding: '1rem 1.25rem' }}>Tên danh mục & Phân cấp</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Slug & Đường dẫn</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Loại hàng</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Kiểm duyệt</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Hoa hồng</th>
-                <th style={{ padding: '1rem 1.25rem' }}>Trạng thái</th>
-                <th style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>Thao tác</th>
+              <tr>
+                <th>Tên danh mục & Phân cấp</th>
+                <th>Slug & Đường dẫn</th>
+                <th>Loại hàng</th>
+                <th>Kiểm duyệt</th>
+                <th>Hoa hồng</th>
+                <th>Trạng thái</th>
+                <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {categoryTree.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '3.5rem', color: '#64748b', fontWeight: 500 }}>
                     Chưa có danh mục nào. Hãy tạo danh mục đầu tiên!
                   </td>
                 </tr>
@@ -288,15 +278,15 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
 
       {/* MODAL: CREATE / EDIT CATEGORY */}
       {createCategoryModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card-glass" style={{ width: '90%', maxWidth: '540px', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 1.25rem', fontWeight: 700 }}>
+        <div className="modal-backdrop">
+          <div className="admin-modal-card" style={{ width: '90%', maxWidth: '540px', padding: '2rem', borderRadius: '16px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ margin: '0 0 1.25rem', fontWeight: 800, color: '#0f172a' }}>
               {editingCategory ? `Chỉnh sửa: ${editingCategory.name}` : 'Tạo danh mục mới'}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                   Tên danh mục *
                 </label>
                 <input
@@ -305,11 +295,12 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                   placeholder="Ví dụ: Tài khoản Netflix, Bản quyền Windows"
                   value={categoryForm.name}
                   onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                   Slug (Đường dẫn tĩnh) - Tùy chọn
                 </label>
                 <input
@@ -318,17 +309,19 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                   placeholder="tai-khoan-netflix (bỏ trống tự tạo)"
                   value={categoryForm.slug}
                   onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                   Danh mục cha (Parent Category)
                 </label>
                 <select
                   className="form-control"
                   value={categoryForm.parentId}
                   onChange={(e) => setCategoryForm({ ...categoryForm, parentId: e.target.value })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                 >
                   <option value="">-- Là danh mục gốc (Level 1) --</option>
                   {allFlatCategories
@@ -343,13 +336,14 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                     Loại sản phẩm
                   </label>
                   <select
                     className="form-control"
                     value={categoryForm.productType}
                     onChange={(e) => setCategoryForm({ ...categoryForm, productType: Number(e.target.value) })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                   >
                     <option value={1}>Hàng số (Digital)</option>
                     <option value={2}>Dịch vụ (Service)</option>
@@ -357,13 +351,14 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                     Chính sách kiểm duyệt
                   </label>
                   <select
                     className="form-control"
                     value={categoryForm.moderationPolicy}
                     onChange={(e) => setCategoryForm({ ...categoryForm, moderationPolicy: Number(e.target.value) })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                   >
                     <option value={1}>Đăng trực tiếp (Direct)</option>
                     <option value={2}>Admin duyệt trước (Review)</option>
@@ -373,8 +368,8 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
-                    Tỷ lệ hoa hồng sàn (Basis Points)
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
+                    Hoa hồng sàn (Basis Points)
                   </label>
                   <input
                     type="number"
@@ -382,12 +377,13 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                     placeholder="500 = 5%"
                     value={categoryForm.commissionRateBp}
                     onChange={(e) => setCategoryForm({ ...categoryForm, commissionRateBp: Number(e.target.value) })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                   />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>500 = 5%, 800 = 8%</span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>500 = 5%, 800 = 8%</span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                     Thứ tự hiển thị
                   </label>
                   <input
@@ -395,12 +391,13 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                     className="form-control"
                     value={categoryForm.displayOrder}
                     onChange={(e) => setCategoryForm({ ...categoryForm, displayOrder: Number(e.target.value) })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                   />
                 </div>
               </div>
 
               <div style={{ marginTop: '0.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#334155', fontWeight: 600, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={categoryForm.isActive}
@@ -412,10 +409,10 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setCreateCategoryModal(false)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setCreateCategoryModal(false)} style={{ fontWeight: 600 }}>
                 Hủy
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleSaveCategory}>
+              <button type="button" className="btn btn-primary" onClick={handleSaveCategory} style={{ fontWeight: 700 }}>
                 {editingCategory ? 'Lưu cập nhật' : 'Tạo danh mục'}
               </button>
             </div>
@@ -425,21 +422,22 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
 
       {/* MODAL: ASSIGN ATTRIBUTE TO CATEGORY */}
       {assignAttributeModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card-glass" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ margin: '0 0 1rem', fontWeight: 700 }}>
+        <div className="modal-backdrop">
+          <div className="admin-modal-card" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, color: '#0f172a' }}>
               Gán thuộc tính cho: {assignAttributeModal.category.name}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                   Chọn thuộc tính định nghĩa *
                 </label>
                 <select
                   className="form-control"
                   value={assignForm.attributeId}
                   onChange={(e) => setAssignForm({ ...assignForm, attributeId: e.target.value })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                 >
                   <option value="">-- Chọn thuộc tính --</option>
                   {attributes.map((a) => (
@@ -451,13 +449,14 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#334155', fontWeight: 600 }}>
                   Mức độ bắt buộc
                 </label>
                 <select
                   className="form-control"
                   value={assignForm.requirement}
                   onChange={(e) => setAssignForm({ ...assignForm, requirement: Number(e.target.value) })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 500 }}
                 >
                   <option value={1}>Bắt buộc điền (Required)</option>
                   <option value={2}>Khuyến nghị điền (Recommended)</option>
@@ -466,7 +465,7 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#334155', fontWeight: 600, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={assignForm.isFilterable}
@@ -474,7 +473,7 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
                   />
                   Cho phép người mua lọc sản phẩm theo thuộc tính này (IsFilterable)
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#334155', fontWeight: 600, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={assignForm.isVariantAxis}
@@ -486,10 +485,10 @@ export const CategoryTreeSubTab: React.FC<CategoryTreeSubTabProps> = ({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setAssignAttributeModal(null)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setAssignAttributeModal(null)} style={{ fontWeight: 600 }}>
                 Đóng
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleAssignAttribute}>
+              <button type="button" className="btn btn-primary" onClick={handleAssignAttribute} style={{ fontWeight: 700 }}>
                 Gán thuộc tính
               </button>
             </div>

@@ -34,12 +34,40 @@ public class PayoutAuditDto
     public int ActivePayoutCount { get; set; }
 }
 
+public class DiscrepantShopDto
+{
+    public Guid ShopId { get; set; }
+    public string ShopName { get; set; } = string.Empty;
+    public long CachedAvailable { get; set; }
+    public long ComputedAvailable { get; set; }
+    public long Difference { get; set; }
+}
+
 public class ReconciliationSummaryDto
 {
     public DateTime AuditedAtUtc { get; set; }
+    public DateTime RunAtUtc => AuditedAtUtc;
     public bool IsSystemHealthy { get; set; }
     public LedgerIntegrityReportDto LedgerIntegrity { get; set; } = new();
     public PayoutAuditDto PayoutAudit { get; set; } = new();
     public List<ShopBalanceAuditDto> MismatchedShops { get; set; } = new();
     public int TotalShopsAudited { get; set; }
+
+    // Backward-compatible properties matching Frontend expectations
+    public bool IsBalanced => LedgerIntegrity.IsBalanced;
+    public long TotalDebit => LedgerIntegrity.TotalDebit;
+    public long TotalCredit => LedgerIntegrity.TotalCredit;
+    public long Discrepancy => LedgerIntegrity.Discrepancy;
+    public long ActivePayoutsTotal => PayoutAudit.ActivePayoutsTotal;
+    public long PayoutPendingBalance => PayoutAudit.LedgerPayoutPendingTotal;
+    public bool PayoutsMatch => PayoutAudit.IsMatched;
+    public int DiscrepantShopCount => MismatchedShops.Count;
+    public List<DiscrepantShopDto> DiscrepantShops => MismatchedShops.Select(s => new DiscrepantShopDto
+    {
+        ShopId = s.ShopId,
+        ShopName = s.ShopName,
+        CachedAvailable = s.CacheAvailable,
+        ComputedAvailable = s.RealAvailable,
+        Difference = Math.Abs(s.CacheAvailable - s.RealAvailable)
+    }).ToList();
 }

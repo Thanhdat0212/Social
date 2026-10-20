@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import type { SellerOrderDto } from '@/types/marketplace';
 import { Button, Badge, Spinner, StoreIcon } from '@/components/common';
+import { ImportOrdersExcelModal } from '../components/ImportOrdersExcelModal';
+import { CreateManualOrderModal } from '../components/CreateManualOrderModal';
 
 export const OrdersTab: React.FC = () => {
   const [shopOrders, setShopOrders] = useState<SellerOrderDto[]>([]);
@@ -9,6 +11,10 @@ export const OrdersTab: React.FC = () => {
   const [ordersFilterStatus, setOrdersFilterStatus] = useState<string>('all');
   const [ordersPage, setOrdersPage] = useState(1);
   const [ordersTotalCount, setOrdersTotalCount] = useState(0);
+
+  // Modals
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
 
   const loadOrders = async (status: string, page: number) => {
     setOrdersLoading(true);
@@ -51,24 +57,48 @@ export const OrdersTab: React.FC = () => {
           </p>
         </div>
 
-        {/* Bộ lọc trạng thái đơn hàng */}
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          {[
-            { key: 'all', label: 'Tất cả' },
-            { key: 'Delivered', label: 'Đã giao mã' },
-            { key: 'Completed', label: 'Hoàn tất' },
-            { key: 'Cancelled', label: 'Đã hủy' },
-          ].map((st) => (
-            <Button
-              key={st.key}
-              type="button"
-              variant={ordersFilterStatus === st.key ? 'primary' : 'secondary'}
-              size="xs"
-              onClick={() => handleFilterChange(st.key)}
-            >
-              {st.label}
-            </Button>
-          ))}
+        {/* Cụm chức năng nhập đơn & bộ lọc */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Nút hành động cho Seller */}
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            onClick={() => setIsExcelModalOpen(true)}
+            style={{ fontWeight: 700 }}
+          >
+            📥 Nhập đơn Excel
+          </Button>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="xs"
+            onClick={() => setIsManualModalOpen(true)}
+            style={{ fontWeight: 700 }}
+          >
+            + Tạo đơn mới
+          </Button>
+
+          {/* Bộ lọc trạng thái đơn hàng */}
+          <div style={{ display: 'flex', gap: '0.35rem', marginLeft: '0.25rem' }}>
+            {[
+              { key: 'all', label: 'Tất cả' },
+              { key: 'Delivered', label: 'Đã giao mã' },
+              { key: 'Completed', label: 'Hoàn tất' },
+              { key: 'Cancelled', label: 'Đã hủy' },
+            ].map((st) => (
+              <Button
+                key={st.key}
+                type="button"
+                variant={ordersFilterStatus === st.key ? 'primary' : 'ghost'}
+                size="xs"
+                onClick={() => handleFilterChange(st.key)}
+              >
+                {st.label}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -82,7 +112,7 @@ export const OrdersTab: React.FC = () => {
           <StoreIcon size={40} style={{ color: 'var(--text-dim)', marginBottom: '0.75rem' }} />
           <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>Chưa có đơn hàng nào phù hợp</div>
           <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
-            Khi khách hàng đặt mua các sản phẩm từ gian hàng của bạn, đơn hàng sẽ hiển thị tại đây.
+            Khi khách hàng đặt mua các sản phẩm hoặc bạn tự nhập đơn ngoài, đơn hàng sẽ hiển thị tại đây.
           </div>
         </div>
       ) : (
@@ -91,6 +121,7 @@ export const OrdersTab: React.FC = () => {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-dim)' }}>
                 <th style={{ padding: '0.65rem 0.5rem' }}>Mã đơn</th>
+                <th style={{ padding: '0.65rem 0.5rem' }}>Nguồn đơn</th>
                 <th style={{ padding: '0.65rem 0.5rem' }}>Thời gian</th>
                 <th style={{ padding: '0.65rem 0.5rem' }}>Mặt hàng & Biến thể</th>
                 <th style={{ padding: '0.65rem 0.5rem' }}>Tổng thu</th>
@@ -105,6 +136,21 @@ export const OrdersTab: React.FC = () => {
                   <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
                     #{ord.orderNo || ord.id.slice(0, 8)}
                   </td>
+                  <td style={{ padding: '0.65rem 0.5rem' }}>
+                    {ord.source === 'ExcelImport' ? (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+                        Nhập Excel
+                      </span>
+                    ) : ord.source === 'ManualEntry' ? (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                        Bán tại quầy
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', background: 'rgba(100, 116, 139, 0.15)', color: '#94a3b8' }}>
+                        Sàn PayOS
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: '0.65rem 0.5rem', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>
                     {new Date(ord.createdAtUtc).toLocaleString('vi-VN')}
                   </td>
@@ -115,6 +161,11 @@ export const OrdersTab: React.FC = () => {
                         <span style={{ color: 'var(--text-dim)' }}> ({it.variantLabel}) x{it.quantity}</span>
                       </div>
                     ))}
+                    {ord.externalCustomerInfo && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                        Khách: {ord.externalCustomerInfo}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: '0.65rem 0.5rem', fontWeight: 600 }}>
                     {ord.total.toLocaleString('vi-VN')} đ
@@ -166,6 +217,21 @@ export const OrdersTab: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Modal Nhập đơn hàng bằng Excel */}
+      <ImportOrdersExcelModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        onSuccess={() => loadOrders(ordersFilterStatus, 1)}
+      />
+
+      {/* Modal Tạo đơn bán lẻ thủ công */}
+      <CreateManualOrderModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onSuccess={() => loadOrders(ordersFilterStatus, 1)}
+      />
     </div>
   );
 };
+

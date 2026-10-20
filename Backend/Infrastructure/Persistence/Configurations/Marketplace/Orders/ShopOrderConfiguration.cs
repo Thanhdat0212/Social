@@ -1,4 +1,4 @@
-﻿using Domain.Entities.Marketplace.Orders;
+using Domain.Entities.Marketplace.Orders;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -42,6 +42,20 @@ public class ShopOrderConfiguration : IEntityTypeConfiguration<ShopOrder>
             .HasDefaultValue(OrderStatus.Delivered);
 
         builder.HasIndex(o => o.Status);
+
+        builder.Property(o => o.Source)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .IsRequired()
+            .HasDefaultValue(OrderSource.Marketplace);
+
+        builder.Property(o => o.ExternalCustomerInfo)
+            .HasMaxLength(255)
+            .IsRequired(false);
+
+        builder.Property(o => o.Note)
+            .HasMaxLength(1000)
+            .IsRequired(false);
 
         builder.Property(o => o.Total)
             .IsRequired();

@@ -27,6 +27,10 @@ public class ShopOrder : BaseEntity
     public DateTime? ComplaintWindowEndsAtUtc { get; private set; }
     public DateTime? CompletedAtUtc { get; private set; }
 
+    public OrderSource Source { get; private set; } = OrderSource.Marketplace;
+    public string? ExternalCustomerInfo { get; private set; }
+    public string? Note { get; private set; }
+
     // Navigation
     public Checkout? Checkout { get; private set; }
     public Shop? Shop { get; private set; }
@@ -82,6 +86,14 @@ public class ShopOrder : BaseEntity
     public void MarkCancelled()
     {
         Status = OrderStatus.Cancelled;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void SetSourceInfo(OrderSource source, string? customerInfo = null, string? note = null)
+    {
+        Source = source;
+        ExternalCustomerInfo = customerInfo?.Trim();
+        Note = note?.Trim();
         UpdatedAtUtc = DateTime.UtcNow;
     }
 }

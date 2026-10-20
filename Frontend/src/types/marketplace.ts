@@ -300,6 +300,9 @@ export interface SellerOrderDto {
   orderNo: string;
   buyerUserId: string;
   status: string;
+  source?: 'Marketplace' | 'ManualEntry' | 'ExcelImport' | string;
+  externalCustomerInfo?: string;
+  note?: string;
   total: number;
   shopGross: number;
   commissionTotal: number;
@@ -307,6 +310,73 @@ export interface SellerOrderDto {
   deliveredAtUtc?: string;
   createdAtUtc: string;
   items: SellerOrderItemDto[];
+}
+
+// Bổ sung: Nhập đơn hàng bằng Excel & Tạo đơn thủ công
+export interface ExcelOrderPreviewRowDto {
+  rowIndex: number;
+  rawOrderCode?: string;
+  rawSkuOrProduct?: string;
+  quantity: number;
+  unitPrice: number;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerName?: string;
+  note?: string;
+  isValid: boolean;
+  errorMessage?: string;
+  matchedVariantId?: string;
+  matchedProductId?: string;
+  matchedProductName?: string;
+  matchedVariantLabel?: string;
+  matchedSku?: string;
+  availableStock: number;
+  matchConfidence: number;
+}
+
+export interface ExcelOrderGroupPreviewDto {
+  orderGroupKey: string;
+  orderNo?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerName?: string;
+  note?: string;
+  totalAmount: number;
+  canBeCreated: boolean;
+  blockingErrors: string[];
+  items: ExcelOrderPreviewRowDto[];
+}
+
+export interface ExcelOrderImportPreviewResultDto {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  totalOrderCount: number;
+  readyToCreateOrderCount: number;
+  orders: ExcelOrderGroupPreviewDto[];
+  allRows: ExcelOrderPreviewRowDto[];
+}
+
+export interface ExecuteExcelImportRequestDto {
+  skipInvalidOrders: boolean;
+  orders: ExcelOrderGroupPreviewDto[];
+}
+
+export interface ExecuteExcelImportResultDto {
+  successCount: number;
+  failedCount: number;
+  createdOrderNos: string[];
+  errors: string[];
+}
+
+export interface CreateManualOrderRequest {
+  variantId: string;
+  quantity: number;
+  customUnitPrice?: number;
+  customerEmail: string;
+  customerName?: string;
+  customerPhone?: string;
+  note?: string;
 }
 
 // Bổ sung: Quản lý mã kho số chi tiết
@@ -388,6 +458,13 @@ export interface UpdateProductDetailsRequest {
   name: string;
   categoryId?: string | null;
   description?: string;
+  price?: number;
+  compareAtPrice?: number | null;
+}
+
+export interface UpdateVariantPriceRequest {
+  price: number;
+  compareAtPrice?: number | null;
 }
 
 export interface UpdateProductVariantsRequest {
@@ -434,6 +511,70 @@ export interface CreateProductReviewRequest {
 
 export interface SellerReplyReviewRequest {
   reply: string;
+}
+
+// Bổ sung: Nhập sản phẩm bằng Excel (Excel Product Import)
+export interface ExcelProductPreviewRowDto {
+  rowIndex: number;
+  rawProductName?: string;
+  rawCategoryName?: string;
+  rawVariantName?: string;
+  rawSku?: string;
+  rawPrice?: string;
+  rawCompareAtPrice?: string;
+  rawDescription?: string;
+  rawImageUrl?: string;
+  rawInitialCodes?: string;
+  rawPublish?: string;
+  productName?: string;
+  categoryName?: string;
+  matchedCategoryId?: string | null;
+  matchedCategoryName?: string | null;
+  variantName?: string;
+  sku?: string | null;
+  price: number;
+  compareAtPrice?: number | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  initialCodes: string[];
+  publishImmediate: boolean;
+  isValid: boolean;
+  errorMessage?: string | null;
+}
+
+export interface ExcelProductGroupPreviewDto {
+  groupKey: string;
+  productName: string;
+  matchedCategoryId?: string | null;
+  matchedCategoryName?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  publishImmediate: boolean;
+  canBeCreated: boolean;
+  blockingErrors: string[];
+  variants: ExcelProductPreviewRowDto[];
+}
+
+export interface ExcelProductImportPreviewResultDto {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  totalProductCount: number;
+  readyToCreateProductCount: number;
+  products: ExcelProductGroupPreviewDto[];
+  allRows: ExcelProductPreviewRowDto[];
+}
+
+export interface ExecuteProductImportRequestDto {
+  skipInvalidProducts: boolean;
+  products: ExcelProductGroupPreviewDto[];
+}
+
+export interface ExecuteProductImportResultDto {
+  successCount: number;
+  failedCount: number;
+  createdProductNames: string[];
+  errors: string[];
 }
 
 

@@ -67,57 +67,58 @@ export const AdminReportsTab: React.FC<AdminReportsTabProps> = ({ showFlash }) =
         </p>
       </div>
 
-      <div className="card-glass" style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <div className="admin-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <table className="admin-table">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '1rem' }}>Sản phẩm bị tố cáo</th>
-                <th style={{ padding: '1rem' }}>Lý do vi phạm</th>
-                <th style={{ padding: '1rem' }}>Mô tả vi phạm</th>
-                <th style={{ padding: '1rem' }}>Bằng chứng</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Thao tác</th>
+              <tr>
+                <th>Sản phẩm bị tố cáo</th>
+                <th>Lý do vi phạm</th>
+                <th>Mô tả vi phạm</th>
+                <th>Bằng chứng</th>
+                <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {reports.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                     Không có báo cáo vi phạm nào đang chờ xử lý.
                   </td>
                 </tr>
               ) : (
                 reports.map((r) => (
-                  <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ fontWeight: 700 }}>{r.productName || r.productId.slice(0, 8)}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mã SP: {r.productId.slice(0, 8)}</div>
+                  <tr key={r.id}>
+                    <td>
+                      <div className="admin-cell-title">{r.productName || r.productId.slice(0, 8)}</div>
+                      <div className="admin-cell-subtitle">Mã SP: {r.productId.slice(0, 8)}</div>
                     </td>
-                    <td style={{ padding: '1rem', color: 'var(--accent-rose)', fontWeight: 600 }}>
+                    <td style={{ color: '#be123c', fontWeight: 700 }}>
                       {r.reasonText || `Mã lý do: ${r.reason}`}
                     </td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)', maxWidth: '300px' }}>
+                    <td style={{ color: '#334155', maxWidth: '300px', lineHeight: 1.5 }}>
                       {r.description}
                     </td>
-                    <td style={{ padding: '1rem' }}>
+                    <td>
                       {r.evidenceUrl ? (
                         <a
                           href={r.evidenceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ color: 'var(--accent-cyan)', fontSize: '0.85rem' }}
+                          className="admin-cell-link"
                         >
                           Xem URL bằng chứng
                         </a>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>(Không có)</span>
+                        <span style={{ color: '#94a3b8' }}>(Không có)</span>
                       )}
                     </td>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
                         <button
                           type="button"
                           className="btn btn-danger btn-sm"
+                          style={{ fontWeight: 700 }}
                           onClick={() =>
                             setResolveReportModal({
                               isOpen: true,
@@ -132,6 +133,7 @@ export const AdminReportsTab: React.FC<AdminReportsTabProps> = ({ showFlash }) =
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
+                          style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
                           onClick={() =>
                             setResolveReportModal({
                               isOpen: true,
@@ -155,25 +157,27 @@ export const AdminReportsTab: React.FC<AdminReportsTabProps> = ({ showFlash }) =
 
       {/* Modal Resolve Report */}
       {resolveReportModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card-glass" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ margin: '0 0 1rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+        <div className="modal-backdrop">
+          <div className="admin-modal-card" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, color: resolveReportModal.action === 'Takedown' ? '#be123c' : '#0f172a' }}>
               Xử lý Tố cáo: {resolveReportModal.action === 'Takedown' ? 'Hạ gỡ sản phẩm' : 'Bác bỏ'}
             </h3>
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>Ghi chú quyết định</label>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>Ghi chú quyết định</label>
               <textarea
                 className="form-control"
                 rows={3}
                 value={resolveReportModal.resolutionNote}
                 onChange={(e) => setResolveReportModal({ ...resolveReportModal, resolutionNote: e.target.value })}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setResolveReportModal(null)}>Hủy</button>
+              <button type="button" className="btn btn-secondary" style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} onClick={() => setResolveReportModal(null)}>Hủy</button>
               <button
                 type="button"
                 className="btn btn-danger"
+                style={{ fontWeight: 700 }}
                 onClick={handleConfirmResolve}
               >
                 Xác nhận

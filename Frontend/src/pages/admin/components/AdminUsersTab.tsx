@@ -76,61 +76,83 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ showFlash }) => {
               placeholder="Tìm theo email hoặc tên..."
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
-              style={{ paddingLeft: '36px', height: '38px', borderRadius: '10px' }}
+              style={{
+                paddingLeft: '36px',
+                height: '38px',
+                borderRadius: '10px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
+              }}
             />
           </div>
-          <button type="submit" className="btn btn-secondary btn-sm">Tìm</button>
+          <button
+            type="submit"
+            className="btn btn-secondary btn-sm"
+            style={{
+              height: '38px',
+              padding: '0 1rem',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              fontWeight: 600,
+              borderRadius: '10px',
+            }}
+          >
+            Tìm
+          </button>
         </form>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          Hiển thị {users.length} tài khoản
+        <span style={{ color: '#475569', fontSize: '0.88rem', fontWeight: 600 }}>
+          Hiển thị <strong style={{ color: '#0f172a' }}>{users.length}</strong> tài khoản
         </span>
       </div>
 
-      <div className="card-glass" style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <div className="admin-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <table className="admin-table">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '1rem' }}>Người dùng</th>
-                <th style={{ padding: '1rem' }}>Email</th>
-                <th style={{ padding: '1rem' }}>Vai trò</th>
-                <th style={{ padding: '1rem' }}>Trạng thái</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Thao tác</th>
+              <tr>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                     Đang tải danh sách người dùng...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                     Không tìm thấy người dùng nào phù hợp.
                   </td>
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '1rem', fontWeight: 600 }}>{u.displayName}</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{u.email}</td>
-                    <td style={{ padding: '1rem' }}>
-                      <span className={`badge ${u.role === 'Admin' ? 'badge-primary' : 'badge-secondary'}`}>
+                  <tr key={u.id}>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{u.displayName}</td>
+                    <td style={{ color: '#334155', fontWeight: 500 }}>{u.email}</td>
+                    <td>
+                      <span className={`badge ${u.role === 'Admin' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontWeight: 700 }}>
                         {u.role}
                       </span>
                     </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span className={`badge ${u.status === 'Active' ? 'badge-success' : 'badge-danger'}`}>
+                    <td>
+                      <span className={`badge ${u.status === 'Active' ? 'badge-success' : 'badge-danger'}`} style={{ fontWeight: 700 }}>
                         {u.status === 'Active' ? 'Hoạt động' : 'Đã khóa'}
                       </span>
                     </td>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
                         <button
                           type="button"
                           className={`btn btn-sm ${u.status === 'Active' ? 'btn-danger' : 'btn-success'}`}
+                          style={{ fontWeight: 700 }}
                           onClick={() => handleToggleUserStatus(u)}
                         >
                           {u.status === 'Active' ? 'Khóa' : 'Mở khóa'}
@@ -138,6 +160,7 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ showFlash }) => {
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
+                          style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
                           onClick={() => handleToggleUserRole(u)}
                         >
                           {u.role === 'Admin' ? 'Bỏ quyền Admin' : 'Cấp Admin'}

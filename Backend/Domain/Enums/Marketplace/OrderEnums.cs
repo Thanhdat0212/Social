@@ -72,3 +72,25 @@ public enum FulfillmentStatus
     Fulfilled = 1,
     Failed = 2
 }
+
+/// <summary>
+/// Nguồn gốc phát sinh đơn hàng
+/// </summary>
+public enum OrderSource
+{
+    /// <summary>
+    /// Đơn hàng trực tuyến từ sàn thương mại điện tử (PayOS VietQR / Checkout tự động)
+    /// </summary>
+    Marketplace = 1,
+
+    /// <summary>
+    /// Đơn hàng tạo thủ công tại quầy / bán trực tiếp (Seller Manual Order)
+    /// </summary>
+    ManualEntry = 2,
+
+    /// <summary>
+    /// Đơn hàng nhập hàng loạt từ tệp tin Excel / CSV (Batch Excel Import)
+    /// </summary>
+    ExcelImport = 3
+}
+

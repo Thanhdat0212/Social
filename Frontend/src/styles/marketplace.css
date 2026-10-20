@@ -220,6 +220,37 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
+.product-recommendation-badge {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  background: rgba(124, 58, 237, 0.92);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+  max-width: 90%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-rating-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f59e0b;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 .product-card-body {
   padding: 1rem 1.15rem;
   display: flex;

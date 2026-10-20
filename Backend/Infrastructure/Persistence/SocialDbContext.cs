@@ -78,6 +78,11 @@ public class SocialDbContext : DbContext
     // Social Commerce
     public DbSet<Domain.Entities.Marketplace.PostProduct> PostProducts => Set<Domain.Entities.Marketplace.PostProduct>();
 
+    // Marketplace Recommendations
+    public DbSet<Domain.Entities.Marketplace.Recommendations.UserProductEvent> UserProductEvents => Set<Domain.Entities.Marketplace.Recommendations.UserProductEvent>();
+    public DbSet<Domain.Entities.Marketplace.Recommendations.SearchHistory> SearchHistories => Set<Domain.Entities.Marketplace.Recommendations.SearchHistory>();
+    public DbSet<Domain.Entities.Marketplace.Recommendations.ProductCoOccurrence> ProductCoOccurrences => Set<Domain.Entities.Marketplace.Recommendations.ProductCoOccurrence>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

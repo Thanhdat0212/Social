@@ -20,6 +20,7 @@ public static class MarketplaceModule
         services.AddScoped<Application.Interfaces.Marketplace.Categories.IAdminCategoryService, Infrastructure.Marketplace.Categories.AdminCategoryService>();
         services.AddScoped<Application.Interfaces.Marketplace.Categories.ISellerCategoryService, Infrastructure.Marketplace.Categories.SellerCategoryService>();
         services.AddScoped<Application.Interfaces.Marketplace.Products.IProductService, Infrastructure.Marketplace.Products.ProductService>();
+        services.AddScoped<Application.Interfaces.Marketplace.Products.IExcelProductImportService, Infrastructure.Marketplace.Products.ExcelProductImportService>();
         services.AddScoped<Application.Interfaces.Marketplace.Products.ICatalogService, Infrastructure.Marketplace.Products.CatalogService>();
         services.AddScoped<Application.Interfaces.Marketplace.Products.IAdminProductService, Infrastructure.Marketplace.Products.AdminProductService>();
         services.AddScoped<Application.Interfaces.Marketplace.Products.IProductReviewService, Infrastructure.Marketplace.Products.ProductReviewService>();
@@ -27,6 +28,7 @@ public static class MarketplaceModule
         services.AddScoped<Application.Interfaces.Marketplace.Orders.ICartService, Infrastructure.Marketplace.Orders.CartService>();
         services.AddScoped<Application.Interfaces.Marketplace.Orders.ICheckoutService, Infrastructure.Marketplace.Orders.CheckoutService>();
         services.AddScoped<Application.Interfaces.Marketplace.Orders.IOrderService, Infrastructure.Marketplace.Orders.OrderService>();
+        services.AddScoped<Application.Interfaces.Marketplace.Orders.IExcelOrderImportService, Infrastructure.Marketplace.Orders.ExcelOrderImportService>();
         services.AddHostedService<Infrastructure.Marketplace.Orders.CheckoutExpirationWorker>();
         services.AddHostedService<Infrastructure.Marketplace.Orders.FundReleaseWorker>();
         services.AddScoped<Application.Interfaces.Repositories.Marketplace.Payments.IPaymentRepository, Infrastructure.Marketplace.Payments.PaymentRepository>();
@@ -46,6 +48,18 @@ public static class MarketplaceModule
         services.AddScoped<Application.Interfaces.Marketplace.Audit.IReconciliationService, Infrastructure.Marketplace.Audit.ReconciliationService>();
         services.AddHostedService<Infrastructure.Marketplace.Audit.DailyReconciliationWorker>();
         services.AddScoped<Application.Interfaces.Marketplace.Reports.IAbuseProtectionService, Infrastructure.Marketplace.Reports.AbuseProtectionService>();
+
+        // Marketplace Recommendations (Ingestion Channel & Background Workers)
+        services.AddSingleton<Application.Interfaces.Marketplace.Recommendations.IProductEventChannel, Infrastructure.Marketplace.Recommendations.Events.ProductEventChannel>();
+        services.AddHostedService<Infrastructure.Marketplace.Recommendations.Events.ProductEventConsumerWorker>();
+        services.AddHostedService<Infrastructure.Marketplace.Recommendations.Jobs.ProductCoOccurrenceWorker>();
+
+        // Marketplace Recommendations Engine & Generators
+        services.AddScoped<Infrastructure.Marketplace.Recommendations.Generators.SocialAffinityCandidateGenerator>();
+        services.AddScoped<Infrastructure.Marketplace.Recommendations.Generators.RecentIntentCandidateGenerator>();
+        services.AddScoped<Infrastructure.Marketplace.Recommendations.Generators.ContentSimilarityCandidateGenerator>();
+        services.AddScoped<Infrastructure.Marketplace.Recommendations.Generators.TrendingCandidateGenerator>();
+        services.AddScoped<Application.Interfaces.Marketplace.Recommendations.IMarketplaceRecommendationService, Infrastructure.Marketplace.Recommendations.MarketplaceRecommendationService>();
 
         return services;
     }

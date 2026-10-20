@@ -7,6 +7,7 @@ public interface IProductService
 {
     Task<ProductDetailDto> CreateDraftAsync(Guid userId, CreateProductRequest request, CancellationToken cancellationToken = default);
     Task<ProductDetailDto> UpdateDetailsAsync(Guid userId, Guid productId, UpdateProductDetailsRequest request, CancellationToken cancellationToken = default);
+    Task<ProductDetailDto> UpdateVariantPriceAsync(Guid userId, Guid productId, Guid variantId, UpdateVariantPriceRequest request, CancellationToken cancellationToken = default);
     Task<ProductDetailDto> UpdateVariantsAsync(Guid userId, Guid productId, UpdateProductVariantsRequest request, CancellationToken cancellationToken = default);
     Task<ProductDetailDto> SaveAttributesAsync(Guid userId, Guid productId, SaveProductAttributeValuesRequest request, CancellationToken cancellationToken = default);
     Task<ProductImageDto> AddImageAsync(Guid userId, Guid productId, UploadProductImageRequest request, CancellationToken cancellationToken = default);

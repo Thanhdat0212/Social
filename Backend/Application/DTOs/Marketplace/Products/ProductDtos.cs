@@ -45,6 +45,20 @@ public class UpdateProductDetailsRequest
 
     [MaxLength(10000, ErrorMessage = "Mô tả sản phẩm tối đa 10,000 ký tự")]
     public string? Description { get; set; }
+
+    [Range(1, long.MaxValue, ErrorMessage = "Giá bán phải lớn hơn 0")]
+    public long? Price { get; set; }
+
+    public long? CompareAtPrice { get; set; }
+}
+
+public class UpdateVariantPriceRequest
+{
+    [Required(ErrorMessage = "Giá bán không được để trống")]
+    [Range(1, long.MaxValue, ErrorMessage = "Giá bán phải lớn hơn 0")]
+    public long Price { get; set; }
+
+    public long? CompareAtPrice { get; set; }
 }
 
 public class CreateProductOptionInput

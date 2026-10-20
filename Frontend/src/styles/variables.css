@@ -22,8 +22,10 @@
 
   /* Typography Colors (High Contrast WCAG AAA Pure Black & Meta Secondary) */
   --text-main: #050505;
-  --text-muted: #65676b;
-  --text-dim: #8a8d91;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
 
   /* Brand & Accent Colors (Facebook Pure Meta Blue) */
   --accent-primary: #1877f2;

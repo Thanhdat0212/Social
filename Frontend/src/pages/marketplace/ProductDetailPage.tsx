@@ -23,6 +23,11 @@ import {
   CheckCheckIcon,
   ShareIcon,
 } from '@/components/common';
+import { useProductDwellTracker } from '@/hooks';
+import {
+  BoughtTogetherSection,
+  RelatedProductsSection,
+} from '@/components/marketplace/recommendations';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -48,6 +53,9 @@ export const ProductDetailPage: React.FC = () => {
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewTotalPages, setReviewTotalPages] = useState(1);
   const [isReviewsLoading, setIsReviewsLoading] = useState(false);
+
+  // Hook theo dõi thời gian dừng xem (Dwell Time >= 3s) và tracking tương tác
+  const { trackAction } = useProductDwellTracker(product?.id);
 
   const handleShareProduct = () => {
     if (navigator.clipboard) {
@@ -158,6 +166,7 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
+    trackAction('AddToCart');
     const success = await addItem(selectedVariant.id, quantity);
     if (success) {
       setMessage(`Đã thêm ${quantity}x "${getVariantLabel(selectedVariant)}" vào giỏ hàng thành công!`);
@@ -167,6 +176,7 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!selectedVariant) return;
+    trackAction('AddToCart');
     const success = await addItem(selectedVariant.id, quantity);
     if (success) {
       navigate(ROUTES.MARKETPLACE.CART);
@@ -763,6 +773,14 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Đề xuất sản phẩm mua kèm và sản phẩm tương tự */}
+      {product && (
+        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <BoughtTogetherSection productId={product.id} />
+          <RelatedProductsSection productId={product.id} />
+        </div>
+      )}
 
       {/* Modal Báo cáo vi phạm */}
       {showReportModal && (

@@ -7,11 +7,16 @@ import {
   Spinner,
   PackageIcon,
   EditIcon,
+  CheckIcon,
+  FormField,
+  Input,
+  FileTextIcon,
 } from '@/components/common';
 import { EditProductModal } from '../components/EditProductModal';
 import { CreateProductModal } from '../components/CreateProductModal';
 import { InspectCodesModal } from '../components/InspectCodesModal';
 import { BulkImportCodesModal } from '../components/BulkImportCodesModal';
+import { ImportProductsExcelModal } from '../components/ImportProductsExcelModal';
 
 interface ProductsTabProps {
   onProductCountChange?: (count: number) => void;
@@ -26,10 +31,53 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   // Chỉnh sửa sản phẩm
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<{ id: string; initialTab?: 'details' | 'variants' } | null>(null);
+
+  // Sửa giá nhanh
+  const [quickPriceTarget, setQuickPriceTarget] = useState<{
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantName: string;
+    price: number;
+    compareAtPrice: number | null;
+  } | null>(null);
+  const [isSavingQuickPrice, setIsSavingQuickPrice] = useState(false);
+  const [quickPriceError, setQuickPriceError] = useState<string | null>(null);
+
+  const handleSaveQuickPrice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickPriceTarget) return;
+
+    if (quickPriceTarget.price <= 0) {
+      setQuickPriceError('Giá bán phải lớn hơn 0 đ.');
+      return;
+    }
+
+    if (quickPriceTarget.compareAtPrice && quickPriceTarget.compareAtPrice < quickPriceTarget.price) {
+      setQuickPriceError('Giá gốc (so sánh) không được nhỏ hơn giá bán.');
+      return;
+    }
+
+    setIsSavingQuickPrice(true);
+    setQuickPriceError(null);
+    try {
+      await marketplaceApi.updateVariantPrice(quickPriceTarget.productId, quickPriceTarget.variantId, {
+        price: Number(quickPriceTarget.price),
+        compareAtPrice: quickPriceTarget.compareAtPrice ? Number(quickPriceTarget.compareAtPrice) : null,
+      });
+      setQuickPriceTarget(null);
+      await loadProductsData();
+    } catch (err: any) {
+      setQuickPriceError(err.response?.data?.message || 'Không thể cập nhật giá bán.');
+    } finally {
+      setIsSavingQuickPrice(false);
+    }
+  };
 
   // Tạo sản phẩm mới
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportExcelOpen, setIsImportExcelOpen] = useState(false);
 
   // Xem chi tiết kho mã
   const [inspectVariant, setInspectVariant] = useState<{ id: string; name: string } | null>(null);
@@ -108,14 +156,32 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
             Tạo sản phẩm, nạp mã số tự động và thiết lập trạng thái kinh doanh.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          + Thêm sản phẩm số mới
-        </Button>
+        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsImportExcelOpen(true)}
+            style={{
+              borderColor: 'rgba(16, 185, 129, 0.4)',
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            <FileTextIcon size={16} />
+            <span>Nhập từ Excel</span>
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            + Thêm sản phẩm số mới
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -132,9 +198,26 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto 1.25rem', lineHeight: '1.5' }}>
             Bắt đầu bán tài khoản phần mềm, key bản quyền hoặc khóa học số trên Chợ số để tiếp cận hàng nghìn khách hàng.
           </p>
-          <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
-            + Tạo sản phẩm đầu tiên
-          </Button>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsImportExcelOpen(true)}
+              style={{
+                borderColor: 'rgba(16, 185, 129, 0.4)',
+                color: '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <FileTextIcon size={16} />
+              <span>Nhập từ Excel</span>
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+              + Tạo sản phẩm đầu tiên
+            </Button>
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -173,7 +256,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
                     variant="secondary"
                     size="xs"
                     icon={<EditIcon size={13} />}
-                    onClick={() => setEditingProductId(p.id)}
+                    onClick={() => setEditingProduct({ id: p.id, initialTab: 'details' })}
                   >
                     Chỉnh sửa
                   </Button>
@@ -220,6 +303,26 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
                     <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
                       {v.price ? Number(v.price).toLocaleString('vi-VN') + ' đ' : ''}
                     </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => {
+                        setQuickPriceError(null);
+                        setQuickPriceTarget({
+                          productId: p.id,
+                          variantId: v.id,
+                          productName: p.name,
+                          variantName: v.name || 'Mặc định',
+                          price: Number(v.price) || 0,
+                          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+                        });
+                      }}
+                      style={{ color: 'var(--accent-primary)', padding: '2px 6px', fontSize: '0.78rem' }}
+                      title="Chỉnh sửa giá nhanh"
+                    >
+                      ✏️ Sửa giá
+                    </Button>
                     <Badge variant={v.availableStock > 0 ? 'success' : 'danger'} size="sm">
                       Kho: {v.availableStock || 0}
                     </Badge>
@@ -247,6 +350,13 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
         </div>
       )}
 
+      {/* MODAL NHẬP SẢN PHẨM BẰNG EXCEL */}
+      <ImportProductsExcelModal
+        isOpen={isImportExcelOpen}
+        onClose={() => setIsImportExcelOpen(false)}
+        onSuccess={loadProductsData}
+      />
+
       {/* MODAL TẠO SẢN PHẨM MỚI 4 BƯỚC */}
       <CreateProductModal
         isOpen={isCreateModalOpen}
@@ -269,15 +379,150 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
         onSuccess={loadProductsData}
       />
 
+      {/* MODAL SỬA GIÁ NHANH */}
+      {quickPriceTarget && (
+        <div
+          className="modal-overlay"
+          onClick={() => !isSavingQuickPrice && setQuickPriceTarget(null)}
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '460px',
+              padding: '1.5rem',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  💰 Chỉnh sửa giá bán
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
+                  {quickPriceTarget.variantName} • {quickPriceTarget.productName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSavingQuickPrice && setQuickPriceTarget(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                  padding: '2px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {quickPriceError && (
+              <div
+                style={{
+                  padding: '0.65rem 0.85rem',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  color: '#ef4444',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {quickPriceError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveQuickPrice} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <FormField id="qp-price" label="Giá bán mới (VND) *" required hint="Số tiền khách hàng thanh toán">
+                <Input
+                  id="qp-price"
+                  type="number"
+                  min={1000}
+                  step={1000}
+                  placeholder="50000"
+                  value={quickPriceTarget.price || ''}
+                  onChange={(e) =>
+                    setQuickPriceTarget((prev) => (prev ? { ...prev, price: Number(e.target.value) } : null))
+                  }
+                  required
+                  autoFocus
+                />
+              </FormField>
+
+              <FormField id="qp-compare" label="Giá gốc / So sánh (VND)" hint="Hiển thị gạch ngang (nếu có giảm giá)">
+                <Input
+                  id="qp-compare"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  placeholder="100000"
+                  value={quickPriceTarget.compareAtPrice || ''}
+                  onChange={(e) =>
+                    setQuickPriceTarget((prev) =>
+                      prev ? { ...prev, compareAtPrice: e.target.value ? Number(e.target.value) : null } : null
+                    )
+                  }
+                />
+              </FormField>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setQuickPriceTarget(null)}
+                  disabled={isSavingQuickPrice}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={isSavingQuickPrice}
+                  icon={<CheckIcon size={16} />}
+                >
+                  Cập nhật giá
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL CHỈNH SỬA SẢN PHẨM */}
-      {editingProductId && (
+      {editingProduct && (
         <EditProductModal
-          productId={editingProductId}
+          productId={editingProduct.id}
+          initialTab={editingProduct.initialTab}
           categories={categories}
-          isOpen={Boolean(editingProductId)}
-          onClose={() => setEditingProductId(null)}
+          isOpen={Boolean(editingProduct)}
+          onClose={() => setEditingProduct(null)}
           onOpenAddStock={(vId) => {
-            setEditingProductId(null);
+            setEditingProduct(null);
             setSelectedVariantId(vId);
           }}
           onProductUpdated={loadProductsData}

@@ -87,137 +87,146 @@ export const AdminAuditTab: React.FC<AdminAuditTabProps> = ({ showFlash }) => {
         </button>
       </div>
 
-      {reconciliation && (
-        <div>
-          {/* Metric Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-            {/* 1. Sổ cái Balance */}
-            <div
-              className="card-glass"
-              style={{
-                padding: '1.5rem',
-                borderRadius: '16px',
-                border: `1px solid ${reconciliation.isBalanced ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.5)'}`,
-                background: reconciliation.isBalanced
-                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%)'
-                  : 'linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, transparent 100%)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Cân bằng Nợ / Có Sổ cái</span>
-                {reconciliation.isBalanced ? (
-                  <CheckCircleIcon size={20} className="text-success" />
-                ) : (
-                  <AlertTriangleIcon size={20} className="text-danger" />
-                )}
+      {reconciliation && (() => {
+        const isBalanced = reconciliation.isBalanced ?? reconciliation.ledgerIntegrity?.isBalanced ?? true;
+        const totalDebit = Number(reconciliation.totalDebit ?? reconciliation.ledgerIntegrity?.totalDebit ?? 0);
+        const totalCredit = Number(reconciliation.totalCredit ?? reconciliation.ledgerIntegrity?.totalCredit ?? 0);
+        const discrepancy = Number(reconciliation.discrepancy ?? reconciliation.ledgerIntegrity?.discrepancy ?? 0);
+        const payoutsMatch = reconciliation.payoutsMatch ?? reconciliation.payoutAudit?.isMatched ?? true;
+        const payoutPendingBalance = Number(reconciliation.payoutPendingBalance ?? reconciliation.payoutAudit?.ledgerPayoutPendingTotal ?? 0);
+        const activePayoutsTotal = Number(reconciliation.activePayoutsTotal ?? reconciliation.payoutAudit?.activePayoutsTotal ?? 0);
+        const totalShopsAudited = Number(reconciliation.totalShopsAudited ?? 0);
+        const discrepantShops = reconciliation.discrepantShops || reconciliation.mismatchedShops || [];
+        const discrepantShopCount = reconciliation.discrepantShopCount ?? discrepantShops.length;
+
+        return (
+          <div>
+            {/* Metric Cards Grid */}
+            <div className="admin-stats-grid">
+              {/* 1. Sổ cái Balance */}
+              <div
+                className="admin-stat-card"
+                style={{
+                  borderTop: `3px solid ${isBalanced ? '#059669' : '#dc2626'}`,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="admin-stat-label">Cân bằng Nợ / Có Sổ cái</span>
+                  <span className={`admin-stat-icon ${isBalanced ? 'icon-green' : 'icon-amber'}`}>
+                    {isBalanced ? (
+                      <CheckCircleIcon size={20} />
+                    ) : (
+                      <AlertTriangleIcon size={20} />
+                    )}
+                  </span>
+                </div>
+                <div className={`admin-stat-value ${isBalanced ? 'val-green' : 'val-amber'}`} style={{ fontSize: '1.4rem' }}>
+                  {isBalanced ? 'CÂN BẰNG 100%' : `LỆCH ${discrepancy.toLocaleString('vi-VN')} đ`}
+                </div>
+                <div className="admin-stat-sub">
+                  Nợ: <strong style={{ color: '#0f172a' }}>{totalDebit.toLocaleString('vi-VN')} đ</strong> • Có: <strong style={{ color: '#0f172a' }}>{totalCredit.toLocaleString('vi-VN')} đ</strong>
+                </div>
               </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: reconciliation.isBalanced ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
-                {reconciliation.isBalanced ? 'CÂN BẰNG 100%' : `LỆCH ${reconciliation.discrepancy.toLocaleString('vi-VN')} đ`}
+
+              {/* 2. Quỹ Payouts */}
+              <div
+                className="admin-stat-card stat-blue"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="admin-stat-label">Quỹ Lệnh Rút PayoutPending</span>
+                  <span className="admin-stat-icon icon-blue">
+                    {payoutsMatch ? (
+                      <CheckCircleIcon size={20} />
+                    ) : (
+                      <AlertTriangleIcon size={20} />
+                    )}
+                  </span>
+                </div>
+                <div className="admin-stat-value val-blue" style={{ fontSize: '1.4rem' }}>
+                  {payoutPendingBalance.toLocaleString('vi-VN')} đ
+                </div>
+                <div className="admin-stat-sub">
+                  {payoutsMatch ? '✓ Khớp 100%' : '⚠ Lệch'} với tổng các lệnh rút đang mở ({activePayoutsTotal.toLocaleString('vi-VN')} đ)
+                </div>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Nợ: {reconciliation.totalDebit.toLocaleString('vi-VN')} đ • Có: {reconciliation.totalCredit.toLocaleString('vi-VN')} đ
+
+              {/* 3. Gian hàng Audited */}
+              <div
+                className="admin-stat-card stat-purple"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="admin-stat-label">Kiểm tra Ví Gian hàng</span>
+                  <span className="admin-stat-icon icon-purple">
+                    <StoreIcon size={20} />
+                  </span>
+                </div>
+                <div className="admin-stat-value val-purple" style={{ fontSize: '1.4rem' }}>
+                  {totalShopsAudited} gian hàng
+                </div>
+                <div className="admin-stat-sub">
+                  {discrepantShopCount === 0 ? (
+                    <span style={{ color: '#059669', fontWeight: 600 }}>✓ Toàn bộ cache số dư khớp hoàn hảo</span>
+                  ) : (
+                    <span style={{ color: '#dc2626', fontWeight: 600 }}>⚠ {discrepantShopCount} gian hàng bị lệch cache</span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* 2. Quỹ Payouts */}
-            <div
-              className="card-glass"
-              style={{
-                padding: '1.5rem',
-                borderRadius: '16px',
-                border: `1px solid ${reconciliation.payoutsMatch ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.5)'}`,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Quỹ Lệnh Rút PayoutPending</span>
-                {reconciliation.payoutsMatch ? (
-                  <CheckCircleIcon size={20} className="text-success" />
-                ) : (
-                  <AlertTriangleIcon size={20} className="text-danger" />
-                )}
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff' }}>
-                {reconciliation.payoutPendingBalance.toLocaleString('vi-VN')} đ
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Khớp 100% với tổng các lệnh rút đang mở ({reconciliation.activePayoutsTotal.toLocaleString('vi-VN')} đ)
-              </div>
-            </div>
-
-            {/* 3. Gian hàng Audited */}
-            <div
-              className="card-glass"
-              style={{
-                padding: '1.5rem',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Kiểm tra Ví Gian hàng</span>
-                <StoreIcon size={20} style={{ color: 'var(--accent-cyan)' }} />
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff' }}>
-                {reconciliation.totalShopsAudited} gian hàng
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                {reconciliation.discrepantShopCount === 0 ? (
-                  <span style={{ color: 'var(--accent-emerald)' }}>Toàn bộ cache số dư khớp hoàn hảo</span>
-                ) : (
-                  <span style={{ color: 'var(--accent-rose)' }}>{reconciliation.discrepantShopCount} gian hàng bị lệch cache</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Discrepant Shops Table & Self-Healing Action */}
-          {reconciliation.discrepantShops && reconciliation.discrepantShops.length > 0 && (
-            <div
-              className="card-glass"
-              style={{
-                borderRadius: '16px',
-                padding: '1.5rem',
-                border: '1px solid rgba(244, 63, 94, 0.4)',
-                background: 'rgba(244, 63, 94, 0.04)',
-              }}
-            >
-              <h4 style={{ color: 'var(--accent-rose)', margin: '0 0 1rem', fontWeight: 700 }}>
-                Phát hiện sai lệch Cache ({reconciliation.discrepantShops.length} gian hàng)
-              </h4>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '0.75rem' }}>Gian hàng</th>
-                    <th style={{ padding: '0.75rem' }}>Số dư Cache</th>
-                    <th style={{ padding: '0.75rem' }}>Thực tính từ Sổ cái</th>
-                    <th style={{ padding: '0.75rem' }}>Chênh lệch</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>Khắc phục</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reconciliation.discrepantShops.map((ds) => (
-                    <tr key={ds.shopId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '0.75rem' }}>{ds.shopName}</td>
-                      <td style={{ padding: '0.75rem' }}>{ds.cachedAvailable.toLocaleString('vi-VN')} đ</td>
-                      <td style={{ padding: '0.75rem', fontWeight: 700 }}>{ds.computedAvailable.toLocaleString('vi-VN')} đ</td>
-                      <td style={{ padding: '0.75rem', color: 'var(--accent-rose)' }}>{ds.difference.toLocaleString('vi-VN')} đ</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleFixBalance(ds.shopId)}
-                        >
-                          Sửa lệch (Self-healing)
-                        </button>
-                      </td>
+            {/* Discrepant Shops Table & Self-Healing Action */}
+            {discrepantShops.length > 0 && (
+              <div
+                className="admin-table-card"
+                style={{
+                  padding: '1.5rem',
+                  border: '1px solid #fecdd3',
+                  marginBottom: '2rem',
+                }}
+              >
+                <h4 style={{ color: '#be123c', margin: '0 0 1rem', fontWeight: 800 }}>
+                  Phát hiện sai lệch Cache ({discrepantShops.length} gian hàng)
+                </h4>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Gian hàng</th>
+                      <th>Số dư Cache</th>
+                      <th>Thực tính từ Sổ cái</th>
+                      <th>Chênh lệch</th>
+                      <th style={{ textAlign: 'right' }}>Khắc phục</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {discrepantShops.map((ds) => {
+                      const cached = Number(ds.cachedAvailable ?? ds.cacheAvailable ?? 0);
+                      const computed = Number(ds.computedAvailable ?? ds.realAvailable ?? 0);
+                      const diff = Number(ds.difference ?? Math.abs(cached - computed));
+                      return (
+                        <tr key={ds.shopId}>
+                          <td style={{ fontWeight: 700, color: '#0f172a' }}>{ds.shopName}</td>
+                          <td style={{ color: '#334155' }}>{cached.toLocaleString('vi-VN')} đ</td>
+                          <td style={{ fontWeight: 700, color: '#0f172a' }}>{computed.toLocaleString('vi-VN')} đ</td>
+                          <td style={{ color: '#dc2626', fontWeight: 700 }}>{diff.toLocaleString('vi-VN')} đ</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              style={{ fontWeight: 700 }}
+                              onClick={() => handleFixBalance(ds.shopId)}
+                            >
+                              Sửa lệch (Self-healing)
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };

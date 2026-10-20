@@ -17,6 +17,7 @@ import type {
   SellerProductDetailDto,
   UpdateProductDetailsRequest,
   UpdateProductVariantsRequest,
+  UpdateVariantPriceRequest,
   ProductReviewDto,
   ProductReviewSummaryDto,
   CreateProductReviewRequest,
@@ -338,6 +339,15 @@ export const marketplaceApi = {
     return res.data;
   },
 
+  updateVariantPrice: async (
+    productId: string,
+    variantId: string,
+    data: UpdateVariantPriceRequest
+  ): Promise<SellerProductDetailDto> => {
+    const res = await apiClient.patch(`/shop/products/${productId}/variants/${variantId}/price`, data);
+    return res.data;
+  },
+
   updateShopProductVariants: async (
     productId: string,
     data: UpdateProductVariantsRequest
@@ -395,4 +405,68 @@ export const marketplaceApi = {
     const res = await apiClient.get(`/orders/items/${orderItemId}/download-url`);
     return res.data;
   },
+
+  // 9. Nhập đơn hàng bằng Excel & Tạo đơn bán lẻ thủ công (Seller Manual & Excel Orders)
+  previewExcelOrders: async (file: File): Promise<import('@/types/marketplace').ExcelOrderImportPreviewResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post('/shop/orders/import-excel/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  executeExcelImport: async (data: import('@/types/marketplace').ExecuteExcelImportRequestDto): Promise<import('@/types/marketplace').ExecuteExcelImportResultDto> => {
+    const res = await apiClient.post('/shop/orders/import-excel/execute', data);
+    return res.data;
+  },
+
+  exportExcelErrors: async (errorRows: import('@/types/marketplace').ExcelOrderPreviewRowDto[]): Promise<Blob> => {
+    const res = await apiClient.post('/shop/orders/import-excel/export-errors', errorRows, {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  downloadExcelTemplate: async (): Promise<Blob> => {
+    const res = await apiClient.get('/shop/orders/import-excel/template', {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  createManualOrder: async (data: import('@/types/marketplace').CreateManualOrderRequest): Promise<import('@/types/marketplace').SellerOrderDto> => {
+    const res = await apiClient.post('/shop/orders/manual', data);
+    return res.data;
+  },
+
+  // 10. Nhập sản phẩm bằng Excel (Excel Product Import)
+  previewExcelProducts: async (file: File): Promise<import('@/types/marketplace').ExcelProductImportPreviewResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post('/shop/products/import-excel/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  executeExcelProductsImport: async (data: import('@/types/marketplace').ExecuteProductImportRequestDto): Promise<import('@/types/marketplace').ExecuteProductImportResultDto> => {
+    const res = await apiClient.post('/shop/products/import-excel/execute', data);
+    return res.data;
+  },
+
+  exportExcelProductErrors: async (errorRows: import('@/types/marketplace').ExcelProductPreviewRowDto[]): Promise<Blob> => {
+    const res = await apiClient.post('/shop/products/import-excel/export-errors', errorRows, {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  downloadProductExcelTemplate: async (): Promise<Blob> => {
+    const res = await apiClient.get('/shop/products/import-excel/template', {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
 };
+

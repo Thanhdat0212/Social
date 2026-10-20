@@ -31,6 +31,7 @@ interface EditProductModalProps {
   productId: string;
   categories: Category[];
   isOpen: boolean;
+  initialTab?: EditTab;
   onClose: () => void;
   onProductUpdated: () => void;
   onOpenAddStock?: (variantId: string) => void;
@@ -60,20 +61,23 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
   productId,
   categories,
   isOpen,
+  initialTab = 'details',
   onClose,
   onProductUpdated,
   onOpenAddStock,
 }) => {
-  const [activeTab, setActiveTab] = useState<EditTab>('details');
+  const [activeTab, setActiveTab] = useState<EditTab>(initialTab);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [product, setProduct] = useState<SellerProductDetailDto | null>(null);
 
-  // Tab 1: Thông tin cơ bản
+  // Tab 1: Thông tin cơ bản & Giá bán sản phẩm đơn
   const [detailsForm, setDetailsForm] = useState({
     name: '',
     categoryId: '',
     description: '',
+    price: 0,
+    compareAtPrice: null as number | null,
   });
   const [isSavingDetails, setIsSavingDetails] = useState(false);
 
@@ -117,10 +121,13 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
     try {
       const data = await marketplaceApi.getShopProductById(productId);
       setProduct(data);
+      const firstVar = data.variants?.[0];
       setDetailsForm({
         name: data.name || '',
         categoryId: data.categoryId || '',
         description: data.description || '',
+        price: firstVar ? Number(firstVar.price) : 0,
+        compareAtPrice: firstVar?.compareAtPrice ? Number(firstVar.compareAtPrice) : null,
       });
       setVariantList(
         data.variants.map((v: SellerProductVariantDto, idx: number) => {
@@ -149,9 +156,9 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
   useEffect(() => {
     if (isOpen && productId) {
       loadProductDetail();
-      setActiveTab('details');
+      setActiveTab(initialTab);
     }
-  }, [isOpen, productId]);
+  }, [isOpen, productId, initialTab]);
 
   const showFeedback = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });
@@ -160,12 +167,23 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
     }, 4500);
   };
 
-  // 1. Lưu thông tin cơ bản
+  // 1. Lưu thông tin cơ bản & Giá bán
   const handleSaveDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!detailsForm.name.trim()) {
       showFeedback('error', 'Tên sản phẩm không được để trống.');
       return;
+    }
+
+    if (variantList.length <= 1) {
+      if (detailsForm.price <= 0) {
+        showFeedback('error', 'Giá bán sản phẩm phải lớn hơn 0 đ.');
+        return;
+      }
+      if (detailsForm.compareAtPrice && detailsForm.compareAtPrice < detailsForm.price) {
+        showFeedback('error', 'Giá gốc (so sánh) không được nhỏ hơn giá bán.');
+        return;
+      }
     }
 
     setIsSavingDetails(true);
@@ -175,9 +193,24 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
         name: detailsForm.name.trim(),
         categoryId: detailsForm.categoryId ? detailsForm.categoryId : null,
         description: detailsForm.description.trim() || undefined,
+        price: variantList.length <= 1 ? Number(detailsForm.price) : undefined,
+        compareAtPrice: variantList.length <= 1 ? (detailsForm.compareAtPrice ? Number(detailsForm.compareAtPrice) : null) : undefined,
       });
       setProduct(updated);
-      showFeedback('success', 'Đã cập nhật thông tin sản phẩm thành công!');
+      if (updated.variants && updated.variants.length > 0) {
+        setVariantList((prev) => {
+          if (prev.length <= 1 && updated.variants[0]) {
+            return [{
+              ...prev[0],
+              id: updated.variants[0].id,
+              price: Number(updated.variants[0].price),
+              compareAtPrice: updated.variants[0].compareAtPrice ? Number(updated.variants[0].compareAtPrice) : null,
+            }];
+          }
+          return prev;
+        });
+      }
+      showFeedback('success', 'Đã cập nhật thông tin sản phẩm và giá bán thành công!');
       onProductUpdated();
     } catch (err: any) {
       showFeedback('error', err.response?.data?.message || 'Lưu thông tin thất bại.');
@@ -248,22 +281,28 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
       });
 
       setProduct(updated);
-      setVariantList(
-        updated.variants.map((v: SellerProductVariantDto, idx: number) => {
-          const vName = v.name || (v.optionValues && v.optionValues.length > 0 ? v.optionValues.join(' - ') : `Gói ${idx + 1}`);
-          return {
-            id: v.id,
-            sku: v.sku || '',
-            name: vName,
-            price: Number(v.price) || 0,
-            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-            deliveryType: v.deliveryType || 1,
-            trackInventory: v.trackInventory ?? true,
-            optionValues: [vName],
-            availableStock: v.availableStock || 0,
-          };
-        })
-      );
+      const mappedVariants = updated.variants.map((v: SellerProductVariantDto, idx: number) => {
+        const vName = v.name || (v.optionValues && v.optionValues.length > 0 ? v.optionValues.join(' - ') : `Gói ${idx + 1}`);
+        return {
+          id: v.id,
+          sku: v.sku || '',
+          name: vName,
+          price: Number(v.price) || 0,
+          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          deliveryType: v.deliveryType || 1,
+          trackInventory: v.trackInventory ?? true,
+          optionValues: [vName],
+          availableStock: v.availableStock || 0,
+        };
+      });
+      setVariantList(mappedVariants);
+      if (mappedVariants[0]) {
+        setDetailsForm((prev) => ({
+          ...prev,
+          price: mappedVariants[0].price,
+          compareAtPrice: mappedVariants[0].compareAtPrice || null,
+        }));
+      }
       showFeedback('success', 'Đã cập nhật bảng giá và các biến thể thành công!');
       onProductUpdated();
     } catch (err: any) {
@@ -678,6 +717,104 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
                     </Select>
                   </FormField>
 
+                  {/* GIÁ BÁN SẢN PHẨM: Cho sản phẩm đơn hoặc banner điều hướng sang Tab Biến thể */}
+                  {variantList.length <= 1 ? (
+                    <div
+                      style={{
+                        padding: '1.25rem',
+                        background: 'rgba(56, 189, 248, 0.05)',
+                        border: '1px solid rgba(56, 189, 248, 0.2)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.9rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          💰 Giá bán sản phẩm
+                        </span>
+                        <Badge variant="neutral" size="sm">Gói tiêu chuẩn</Badge>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        <FormField id="edit-prod-price" label="Giá bán (VND) *" required hint="Số tiền khách hàng thanh toán">
+                          <Input
+                            id="edit-prod-price"
+                            type="number"
+                            min={1000}
+                            step={1000}
+                            placeholder="50000"
+                            value={detailsForm.price || ''}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setDetailsForm((prev) => ({ ...prev, price: val }));
+                              setVariantList((prev) => {
+                                if (prev.length === 0) return prev;
+                                const copy = [...prev];
+                                copy[0] = { ...copy[0], price: val };
+                                return copy;
+                              });
+                            }}
+                            required
+                          />
+                        </FormField>
+
+                        <FormField id="edit-prod-compare-price" label="Giá gốc / So sánh (VND)" hint="Hiển thị gạch ngang (nếu có giảm giá)">
+                          <Input
+                            id="edit-prod-compare-price"
+                            type="number"
+                            min={0}
+                            step={1000}
+                            placeholder="100000"
+                            value={detailsForm.compareAtPrice || ''}
+                            onChange={(e) => {
+                              const val = e.target.value ? Number(e.target.value) : null;
+                              setDetailsForm((prev) => ({ ...prev, compareAtPrice: val }));
+                              setVariantList((prev) => {
+                                if (prev.length === 0) return prev;
+                                const copy = [...prev];
+                                copy[0] = { ...copy[0], compareAtPrice: val };
+                                return copy;
+                              });
+                            }}
+                          />
+                        </FormField>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        padding: '1rem 1.25rem',
+                        background: 'rgba(99, 102, 241, 0.08)',
+                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)' }}>
+                          💎 Sản phẩm có {variantList.length} gói biến thể khác nhau
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                          Khoảng giá hiện tại: {Math.min(...variantList.map((v) => v.price)).toLocaleString('vi-VN')} đ ~ {Math.max(...variantList.map((v) => v.price)).toLocaleString('vi-VN')} đ
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setActiveTab('variants')}
+                      >
+                        Chỉnh sửa giá từng gói ➔
+                      </Button>
+                    </div>
+                  )}
+
                   <FormField
                     id="edit-prod-desc"
                     label="Mô tả sản phẩm"
@@ -697,7 +834,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
                       Đóng
                     </Button>
                     <Button type="submit" variant="primary" loading={isSavingDetails} icon={<CheckIcon size={16} />}>
-                      Lưu thông tin cơ bản
+                      Lưu thông tin & Giá bán
                     </Button>
                   </div>
                 </form>

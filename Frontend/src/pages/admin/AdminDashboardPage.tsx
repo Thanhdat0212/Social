@@ -58,44 +58,17 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <div className="marketplace-container" style={{ paddingBottom: '4rem' }}>
       {/* Top Banner Header */}
-      <div
-        className="card-glass"
-        style={{
-          padding: '2rem 2.5rem',
-          borderRadius: '20px',
-          marginBottom: '2rem',
-          border: '1px solid rgba(168, 85, 247, 0.35)',
-          background: 'linear-gradient(135deg, #1a0f30 0%, #111827 50%, #0b1329 100%)',
-          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.35), 0 8px 10px -6px rgba(15, 23, 42, 0.2)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1.5rem',
-        }}
-      >
+      <div className="admin-banner">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <span
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                background: 'rgba(168, 85, 247, 0.25)',
-                color: '#d8b4fe',
-                border: '1px solid rgba(168, 85, 247, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ShieldIcon size={22} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.65rem' }}>
+            <span className="admin-banner-icon-wrap">
+              <ShieldIcon size={24} />
             </span>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#ffffff' }}>
+            <h1 className="admin-banner-title">
               Trung Tâm Quản Trị Toàn Sàn
             </h1>
           </div>
-          <p style={{ color: '#e2e8f0', margin: 0, fontSize: '0.95rem', maxWidth: '700px', lineHeight: 1.6 }}>
+          <p className="admin-banner-desc">
             Giám sát vận hành sàn hàng số, phân xử tranh chấp, kiểm toán sổ cái kép bất biến và quản lý quyền truy cập.
           </p>
         </div>
@@ -105,9 +78,19 @@ export const AdminDashboardPage: React.FC = () => {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={handleRefresh}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#ffffff',
+              color: '#0f172a',
+              fontWeight: 700,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+              border: 'none',
+              padding: '0.55rem 1rem',
+            }}
           >
-            <RefreshIcon size={14} /> Làm mới
+            <RefreshIcon size={15} /> Làm mới
           </button>
         </div>
       </div>
@@ -123,175 +106,27 @@ export const AdminDashboardPage: React.FC = () => {
       )}
 
       {/* Navigation Tabs Bar */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          borderBottom: '1px solid var(--border-color)',
-          marginBottom: '2rem',
-          overflowX: 'auto',
-          paddingBottom: '4px',
-        }}
-      >
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'shops' ? 'active' : ''}`}
-          onClick={() => handleTabChange('shops')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'shops' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'shops' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <StoreIcon size={17} /> Gian hàng & Chế tài
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'payouts' ? 'active' : ''}`}
-          onClick={() => handleTabChange('payouts')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'payouts' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'payouts' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <ClockIcon size={17} /> Hàng đợi Rút tiền
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'complaints' ? 'active' : ''}`}
-          onClick={() => handleTabChange('complaints')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'complaints' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'complaints' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <ScaleIcon size={17} /> Phán quyết Khiếu nại
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
-          onClick={() => handleTabChange('reports')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'reports' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'reports' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <AlertTriangleIcon size={17} /> Báo cáo Vi phạm
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
-          onClick={() => handleTabChange('audit')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'audit' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'audit' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <FileTextIcon size={17} /> Kiểm toán Sổ cái kép
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => handleTabChange('users')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'users' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'users' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <UsersIcon size={17} /> Người dùng & Phân quyền
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
-          onClick={() => handleTabChange('categories')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'categories' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'categories' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <TagIcon size={17} /> Danh mục & Thuộc tính
-        </button>
-
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
-          onClick={() => handleTabChange('products')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'products' ? '3px solid #c084fc' : '3px solid transparent',
-            color: activeTab === 'products' ? '#c084fc' : 'var(--text-muted)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <PackageIcon size={17} /> Sản phẩm & Kiểm duyệt
-        </button>
+      <div className="admin-tabs-nav">
+        {[
+          { key: 'shops' as const, label: 'Gian hàng & Chế tài', icon: <StoreIcon size={18} /> },
+          { key: 'payouts' as const, label: 'Hàng đợi Rút tiền', icon: <ClockIcon size={18} /> },
+          { key: 'complaints' as const, label: 'Phán quyết Khiếu nại', icon: <ScaleIcon size={18} /> },
+          { key: 'reports' as const, label: 'Báo cáo Vi phạm', icon: <AlertTriangleIcon size={18} /> },
+          { key: 'audit' as const, label: 'Kiểm toán Sổ cái kép', icon: <FileTextIcon size={18} /> },
+          { key: 'users' as const, label: 'Người dùng & Phân quyền', icon: <UsersIcon size={18} /> },
+          { key: 'categories' as const, label: 'Danh mục & Thuộc tính', icon: <TagIcon size={18} /> },
+          { key: 'products' as const, label: 'Sản phẩm & Kiểm duyệt', icon: <PackageIcon size={18} /> },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={`admin-tab-btn ${activeTab === tab.key ? 'active' : ''}`}
+            onClick={() => handleTabChange(tab.key)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Active Tab Component */}

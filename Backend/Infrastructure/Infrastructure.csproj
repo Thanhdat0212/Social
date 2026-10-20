@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
     <PackageReference Include="CloudinaryDotNet" Version="1.26.2" />
+    <PackageReference Include="MiniExcel" Version="1.46.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
     <PackageReference Include="StackExchange.Redis" Version="3.4.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />

@@ -1547,6 +1547,14 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeliveredAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ExternalCustomerInfo")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("OrderNo")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1560,6 +1568,13 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<long>("ShopNet")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Marketplace");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1841,6 +1856,24 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("ShopBankAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.PostProduct", b =>
+                {
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PostId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("PostProducts", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Marketplace.Products.Product", b =>
@@ -2249,6 +2282,114 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("OptionValueId");
 
                     b.ToTable("VariantOptionValues", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.Recommendations.ProductCoOccurrence", b =>
+                {
+                    b.Property<Guid>("ProductAId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductBId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CoOccurrenceCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<double>("Score")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("double precision")
+                        .HasDefaultValue(0.0);
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ProductAId", "ProductBId");
+
+                    b.HasIndex("ProductBId");
+
+                    b.HasIndex("ProductAId", "Score");
+
+                    b.ToTable("ProductCoOccurrences", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.Recommendations.SearchHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedQuery")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("QueryText")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("ResultCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedQuery");
+
+                    b.HasIndex("UserId", "CreatedAtUtc");
+
+                    b.ToTable("SearchHistory", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.Recommendations.UserProductEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DwellTimeSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "CreatedAtUtc");
+
+                    b.HasIndex("UserId", "CreatedAtUtc");
+
+                    b.HasIndex("ProductId", "EventType", "CreatedAtUtc");
+
+                    b.ToTable("UserProductEvents", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Marketplace.Reports.ProductReport", b =>
@@ -3415,6 +3556,25 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Shop");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Marketplace.PostProduct", b =>
+                {
+                    b.HasOne("Domain.Entities.Post", "Post")
+                        .WithMany("PostProducts")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Marketplace.Products.Product", "Product")
+                        .WithMany("PostProducts")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("Domain.Entities.Marketplace.Products.Product", b =>
                 {
                     b.HasOne("Domain.Entities.Marketplace.Categories.Category", "Category")
@@ -3597,6 +3757,53 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("OptionValue");
 
                     b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.Recommendations.ProductCoOccurrence", b =>
+                {
+                    b.HasOne("Domain.Entities.Marketplace.Products.Product", "ProductA")
+                        .WithMany()
+                        .HasForeignKey("ProductAId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Marketplace.Products.Product", "ProductB")
+                        .WithMany()
+                        .HasForeignKey("ProductBId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductA");
+
+                    b.Navigation("ProductB");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.Recommendations.SearchHistory", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Marketplace.Recommendations.UserProductEvent", b =>
+                {
+                    b.HasOne("Domain.Entities.Marketplace.Products.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.Marketplace.Reports.ProductReport", b =>
@@ -3914,6 +4121,8 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Navigation("Options");
 
+                    b.Navigation("PostProducts");
+
                     b.Navigation("Takedowns");
 
                     b.Navigation("Variants");
@@ -3952,6 +4161,8 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Likes");
 
                     b.Navigation("PostInterests");
+
+                    b.Navigation("PostProducts");
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>

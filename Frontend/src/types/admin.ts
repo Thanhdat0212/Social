@@ -149,24 +149,50 @@ export interface AdminReportItem {
   createdAtUtc: string;
 }
 
+export interface DiscrepantShopItem {
+  shopId: string;
+  shopName: string;
+  cachedAvailable?: number;
+  computedAvailable?: number;
+  difference?: number;
+  cacheAvailable?: number;
+  realAvailable?: number;
+  cachePending?: number;
+  realPending?: number;
+  cachePayoutPending?: number;
+  realPayoutPending?: number;
+  isMatched?: boolean;
+}
+
 export interface ReconciliationSummary {
-  runAtUtc: string;
-  isBalanced: boolean;
-  totalDebit: number;
-  totalCredit: number;
-  discrepancy: number;
-  activePayoutsTotal: number;
-  payoutPendingBalance: number;
-  payoutsMatch: boolean;
-  totalShopsAudited: number;
-  discrepantShopCount: number;
-  discrepantShops: Array<{
-    shopId: string;
-    shopName: string;
-    cachedAvailable: number;
-    computedAvailable: number;
-    difference: number;
-  }>;
+  runAtUtc?: string;
+  auditedAtUtc?: string;
+  isSystemHealthy?: boolean;
+  isBalanced?: boolean;
+  totalDebit?: number;
+  totalCredit?: number;
+  discrepancy?: number;
+  activePayoutsTotal?: number;
+  payoutPendingBalance?: number;
+  payoutsMatch?: boolean;
+  totalShopsAudited?: number;
+  discrepantShopCount?: number;
+  discrepantShops?: DiscrepantShopItem[];
+  mismatchedShops?: DiscrepantShopItem[];
+  ledgerIntegrity?: {
+    totalDebit: number;
+    totalCredit: number;
+    isBalanced: boolean;
+    discrepancy: number;
+    totalTransactions: number;
+    totalEntries: number;
+  };
+  payoutAudit?: {
+    ledgerPayoutPendingTotal: number;
+    activePayoutsTotal: number;
+    isMatched: boolean;
+    activePayoutCount: number;
+  };
 }
 
 export interface AdminUserItem {

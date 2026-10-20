@@ -101,24 +101,24 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ showFlas
           gap: '1rem',
         }}
       >
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '12px' }}>
+        <div className="admin-subtabs-nav">
           <button
             type="button"
-            className={`btn btn-sm ${subTab === 'tree' ? 'btn-primary' : 'btn-ghost'}`}
+            className={`admin-subtab-btn ${subTab === 'tree' ? 'active' : ''}`}
             onClick={() => setSubTab('tree')}
           >
             🌳 Cây danh mục ({allFlatCategories.length})
           </button>
           <button
             type="button"
-            className={`btn btn-sm ${subTab === 'attributes' ? 'btn-primary' : 'btn-ghost'}`}
+            className={`admin-subtab-btn ${subTab === 'attributes' ? 'active' : ''}`}
             onClick={() => setSubTab('attributes')}
           >
             ⚙️ Từ điển thuộc tính ({attributes.length})
           </button>
           <button
             type="button"
-            className={`btn btn-sm ${subTab === 'requests' ? 'btn-primary' : 'btn-ghost'}`}
+            className={`admin-subtab-btn ${subTab === 'requests' ? 'active' : ''}`}
             onClick={() => setSubTab('requests')}
           >
             📬 Yêu cầu từ Shop
@@ -129,7 +129,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ showFlas
       {loading && (
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto 0.5rem' }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Đang nạp dữ liệu danh mục & thuộc tính...</p>
+          <p style={{ color: '#64748b', fontSize: '0.88rem', fontWeight: 500 }}>Đang nạp dữ liệu danh mục & thuộc tính...</p>
         </div>
       )}
 

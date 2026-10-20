@@ -18,6 +18,7 @@ import {
   ChevronRightIcon,
 } from '@/components/common';
 import { ProductCard } from '@/components/marketplace/ProductCard';
+import { marketplaceRecommendationApi } from '@/api/marketplaceRecommendationApi';
 
 type PricePreset = 'all' | 'under50k' | '50k-200k' | '200k-500k' | 'over500k' | 'custom';
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'name';
@@ -40,7 +41,7 @@ export const MarketplacePage: React.FC = () => {
   // Sắp xếp & Phân trang
   const [sort, setSort] = useState<SortOption>('newest');
   const [page, setPage] = useState<number>(1);
-  const pageSize = 24;
+  const [pageSize, setPageSize] = useState<number>(12);
 
   // Debounce search input
   useEffect(() => {
@@ -106,6 +107,14 @@ export const MarketplacePage: React.FC = () => {
       });
       setProducts(res.items || []);
       setTotalCount(res.totalCount || 0);
+
+      // Lưu từ khóa tìm kiếm vào hệ thống phân tích nhu cầu người dùng
+      if (debouncedSearch && page === 1) {
+        marketplaceRecommendationApi.recordSearch({
+          queryText: debouncedSearch,
+          resultCount: res.totalCount || 0,
+        });
+      }
     } catch (err: any) {
       console.error('Lỗi khi tải sản phẩm:', err);
       setError(err?.response?.data?.message || 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
@@ -549,15 +558,26 @@ export const MarketplacePage: React.FC = () => {
         />
       ) : (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', color: 'var(--text-dim)', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', color: 'var(--text-dim)', fontSize: '0.82rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              Hiển thị <strong>{products.length}</strong> / {totalCount} sản phẩm số
+              Hiển thị <strong>{products.length}</strong> / <strong>{totalCount}</strong> sản phẩm số
             </div>
-            {totalPages > 1 && (
-              <div>
-                Trang {page} / {totalPages}
-              </div>
-            )}
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Hiển thị:</span>
+              <Select
+                value={pageSize.toString()}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                aria-label="Số sản phẩm mỗi trang"
+              >
+                <option value="12">12 sản phẩm / trang</option>
+                <option value="24">24 sản phẩm / trang</option>
+                <option value="48">48 sản phẩm / trang</option>
+              </Select>
+            </div>
           </div>
 
           <div className="products-grid">
@@ -566,39 +586,99 @@ export const MarketplacePage: React.FC = () => {
             ))}
           </div>
 
-          {/* Pagination Navigation Controls */}
+          {/* Phân trang số trang chuẩn xác */}
           {totalPages > 1 && (
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '0.4rem',
                 marginTop: '2.5rem',
+                flexWrap: 'wrap',
               }}
             >
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => {
+                  setPage((prev) => Math.max(1, prev - 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 disabled={page <= 1}
                 icon={<ChevronLeftIcon size={16} />}
               >
-                Trang trước
+                Trước
               </Button>
 
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: '0 0.5rem' }}>
-                Trang <strong>{page}</strong> trên <strong>{totalPages}</strong>
-              </span>
+              {(() => {
+                const pages: (number | string)[] = [];
+                if (totalPages <= 7) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  pages.push(1);
+                  if (page > 3) pages.push('...');
+                  const start = Math.max(2, page - 1);
+                  const end = Math.min(totalPages - 1, page + 1);
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  if (page < totalPages - 2) pages.push('...');
+                  pages.push(totalPages);
+                }
+
+                return pages.map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        style={{ padding: '0 0.35rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}
+                      >
+                        …
+                      </span>
+                    );
+                  }
+
+                  const pageNum = Number(p);
+                  const isActive = pageNum === page;
+
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => {
+                        setPage(pageNum);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      style={{
+                        minWidth: '36px',
+                        height: '36px',
+                        padding: '0 0.5rem',
+                        borderRadius: '8px',
+                        fontSize: '0.85rem',
+                        fontWeight: isActive ? 700 : 500,
+                        border: isActive ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        background: isActive ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.04)',
+                        color: isActive ? '#ffffff' : 'var(--text-main)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                });
+              })()}
 
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                onClick={() => {
+                  setPage((prev) => Math.min(totalPages, prev + 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 disabled={page >= totalPages}
                 icon={<ChevronRightIcon size={16} />}
               >
-                Trang sau
+                Sau
               </Button>
             </div>
           )}

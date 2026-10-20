@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Marketplace.Products;
 using Application.Interfaces.Marketplace.Products;
 using Application.Interfaces.Repositories;
@@ -128,6 +128,18 @@ public class ProductService : IProductService
 
         var oldSlug = product.Slug;
         product.UpdateDetails(request.Name, slug, request.Description, request.CategoryId);
+
+        if (request.Price.HasValue && request.Price.Value > 0)
+        {
+            var activeVariants = product.Variants.Where(v => v.DeletedAtUtc == null).ToList();
+            if (activeVariants.Count == 1)
+            {
+                var singleVar = activeVariants[0];
+                singleVar.Update(request.Price.Value, request.CompareAtPrice, singleVar.DeliveryType, singleVar.TrackInventory);
+                product.UpdatePriceCache(singleVar.Price, singleVar.Price);
+            }
+        }
+
         _unitOfWork.Products.Update(product);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -137,6 +149,45 @@ public class ProductService : IProductService
         _cacheService.Remove(CacheKeys.ShopPublic(shop.Slug));
 
         return MapToDetailDto(product, shop.Name, shop.Slug);
+    }
+
+    public async Task<ProductDetailDto> UpdateVariantPriceAsync(Guid userId, Guid productId, Guid variantId, UpdateVariantPriceRequest request, CancellationToken cancellationToken = default)
+    {
+        var shop = await GetRequiredShopAsync(userId, cancellationToken);
+        var product = await _unitOfWork.Products.GetByIdWithDetailsAsync(productId, cancellationToken);
+
+        if (product == null || product.ShopId != shop.Id)
+        {
+            throw new KeyNotFoundException("Không tìm thấy sản phẩm hoặc bạn không có quyền chỉnh sửa.");
+        }
+
+        var variant = product.Variants.FirstOrDefault(v => v.Id == variantId && v.DeletedAtUtc == null);
+        if (variant == null)
+        {
+            throw new KeyNotFoundException("Không tìm thấy biến thể sản phẩm cần cập nhật giá.");
+        }
+
+        variant.Update(request.Price, request.CompareAtPrice, variant.DeliveryType, variant.TrackInventory);
+
+        var activeVariants = product.Variants.Where(v => v.DeletedAtUtc == null).ToList();
+        long minPrice = activeVariants.Count > 0 ? activeVariants.Min(v => v.Price) : 0;
+        long maxPrice = activeVariants.Count > 0 ? activeVariants.Max(v => v.Price) : 0;
+        product.UpdatePriceCache(minPrice, maxPrice);
+
+        _unitOfWork.Products.Update(product);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _cacheService.Remove(CacheKeys.ProductDetail(product.Slug));
+        _cacheService.Remove(CacheKeys.ShopPublic(shop.Slug));
+
+        var resultDto = MapToDetailDto(product, shop.Name, shop.Slug);
+        foreach (var vDto in resultDto.Variants)
+        {
+            var stock = await _unitOfWork.DigitalCodes.GetInventorySummaryAsync(vDto.Id, cancellationToken);
+            vDto.AvailableStock = stock.Available;
+        }
+
+        return resultDto;
     }
 
     public async Task<ProductDetailDto> UpdateVariantsAsync(Guid userId, Guid productId, UpdateProductVariantsRequest request, CancellationToken cancellationToken = default)

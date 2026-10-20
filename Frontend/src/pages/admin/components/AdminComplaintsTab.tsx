@@ -62,52 +62,53 @@ export const AdminComplaintsTab: React.FC<AdminComplaintsTabProps> = ({ showFlas
         </p>
       </div>
 
-      <div className="card-glass" style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <div className="admin-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <table className="admin-table">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '1rem' }}>Món hàng</th>
-                <th style={{ padding: '1rem' }}>Lý do khiếu nại</th>
-                <th style={{ padding: '1rem' }}>Mô tả lỗi</th>
-                <th style={{ padding: '1rem' }}>Trạng thái</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Phán quyết</th>
+              <tr>
+                <th>Món hàng</th>
+                <th>Lý do khiếu nại</th>
+                <th>Mô tả lỗi</th>
+                <th>Trạng thái</th>
+                <th style={{ textAlign: 'right' }}>Phán quyết</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                     Đang tải danh sách khiếu nại...
                   </td>
                 </tr>
               ) : complaints.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                     Hiện không có tranh chấp khiếu nại nào chờ phân xử.
                   </td>
                 </tr>
               ) : (
                 complaints.map((c) => (
-                  <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ fontWeight: 700 }}>{c.productName}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Shop: {c.shopName || c.shopId.slice(0, 8)}</div>
+                  <tr key={c.id}>
+                    <td>
+                      <div className="admin-cell-title">{c.productName}</div>
+                      <div className="admin-cell-subtitle">Shop: {c.shopName || c.shopId.slice(0, 8)}</div>
                     </td>
-                    <td style={{ padding: '1rem', color: 'var(--accent-amber)', fontWeight: 600 }}>
+                    <td style={{ color: '#b45309', fontWeight: 700 }}>
                       {c.reasonCode}
                     </td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)', maxWidth: '320px' }}>
+                    <td style={{ color: '#334155', maxWidth: '320px', lineHeight: 1.5 }}>
                       {c.description}
                     </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span className="badge badge-warning">{String(c.status)}</span>
+                    <td>
+                      <span className="badge badge-warning" style={{ fontWeight: 700 }}>{String(c.status)}</span>
                     </td>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
+                          style={{ fontWeight: 700 }}
                           onClick={() =>
                             setResolveComplaintModal({
                               isOpen: true,
@@ -123,6 +124,7 @@ export const AdminComplaintsTab: React.FC<AdminComplaintsTabProps> = ({ showFlas
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
+                          style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
                           onClick={() =>
                             setResolveComplaintModal({
                               isOpen: true,
@@ -147,18 +149,19 @@ export const AdminComplaintsTab: React.FC<AdminComplaintsTabProps> = ({ showFlas
 
       {/* Modal Resolve Complaint */}
       {resolveComplaintModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card-glass" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ margin: '0 0 1rem', fontWeight: 700 }}>
+        <div className="modal-backdrop">
+          <div className="admin-modal-card" style={{ width: '90%', maxWidth: '480px', padding: '2rem', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, color: '#0f172a' }}>
               Ban hành Phán quyết: {resolveComplaintModal.action === 'Refund' ? 'Hoàn tiền' : 'Bác bỏ'}
             </h3>
             {resolveComplaintModal.action === 'Refund' && (
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>Bên chịu chi phí hoàn trả</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>Bên chịu chi phí hoàn trả</label>
                 <select
                   className="form-control"
                   value={resolveComplaintModal.bearer}
                   onChange={(e) => setResolveComplaintModal({ ...resolveComplaintModal, bearer: e.target.value as any })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
                 >
                   <option value="Shop">Gian hàng chịu 100% chi phí</option>
                   <option value="Platform">Sàn hỗ trợ bồi thường (Lỗi kỹ thuật hệ thống)</option>
@@ -167,19 +170,21 @@ export const AdminComplaintsTab: React.FC<AdminComplaintsTabProps> = ({ showFlas
               </div>
             )}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>Lý lẽ phán quyết</label>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>Lý lẽ phán quyết</label>
               <textarea
                 className="form-control"
                 rows={3}
                 value={resolveComplaintModal.decisionNote}
                 onChange={(e) => setResolveComplaintModal({ ...resolveComplaintModal, decisionNote: e.target.value })}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setResolveComplaintModal(null)}>Hủy</button>
+              <button type="button" className="btn btn-secondary" style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} onClick={() => setResolveComplaintModal(null)}>Hủy</button>
               <button
                 type="button"
                 className="btn btn-primary"
+                style={{ fontWeight: 700 }}
                 onClick={handleConfirmResolve}
               >
                 Ban hành

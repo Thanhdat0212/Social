@@ -163,118 +163,70 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
   return (
     <div>
       {/* 1. TOP METRIC STATS CARDS */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.75rem',
-        }}
-      >
-        <div
-          className="card-glass"
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(14, 165, 233, 0.25)',
-            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng Gian Hàng</span>
-            <span style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', padding: '6px', borderRadius: '8px' }}>
+      <div className="admin-stats-grid">
+        <div className="admin-stat-card stat-blue">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="admin-stat-label">Tổng Gian Hàng</span>
+            <span className="admin-stat-icon icon-blue">
               <StoreIcon size={18} />
             </span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff' }}>
+          <div className="admin-stat-value val-blue">
             {stats ? stats.totalShops : shops.length}
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Đang hoạt động: <strong style={{ color: '#34d399' }}>{stats?.approvedShops ?? 0}</strong> | Chờ duyệt: <strong style={{ color: '#fbbf24' }}>{stats?.pendingShops ?? 0}</strong>
+          <div className="admin-stat-sub">
+            Đang hoạt động: <strong style={{ color: '#059669', fontWeight: 700 }}>{stats?.approvedShops ?? 0}</strong> | Chờ duyệt: <strong style={{ color: '#d97706', fontWeight: 700 }}>{stats?.pendingShops ?? 0}</strong>
           </div>
         </div>
 
-        <div
-          className="card-glass"
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(52, 211, 153, 0.25)',
-            background: 'linear-gradient(135deg, rgba(52, 211, 153, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng Số Đơn Đã Bán Ra</span>
-            <span style={{ color: '#34d399', background: 'rgba(52, 211, 153, 0.15)', padding: '6px', borderRadius: '8px' }}>
+        <div className="admin-stat-card stat-green">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="admin-stat-label">Tổng Số Đơn Đã Bán Ra</span>
+            <span className="admin-stat-icon icon-green">
               <CartIcon size={18} />
             </span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399' }}>
-            {stats ? stats.totalOrdersSold.toLocaleString('vi-VN') : 0} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>đơn</span>
+          <div className="admin-stat-value val-green">
+            {stats ? stats.totalOrdersSold.toLocaleString('vi-VN') : 0} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>đơn</span>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Đơn hàng số hoàn tất giao dịch
+          <div className="admin-stat-sub">
+            Đơn hàng số hoàn tất giao dịch toàn sàn
           </div>
         </div>
 
-        <div
-          className="card-glass"
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(168, 85, 247, 0.25)',
-            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng Doanh Số Toàn Sàn</span>
-            <span style={{ color: '#c084fc', background: 'rgba(192, 132, 252, 0.15)', padding: '6px', borderRadius: '8px' }}>
+        <div className="admin-stat-card stat-purple">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="admin-stat-label">Tổng Doanh Số Toàn Sàn</span>
+            <span className="admin-stat-icon icon-purple">
               <PackageIcon size={18} />
             </span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#c084fc' }}>
-            {stats ? Number(stats.totalRevenue).toLocaleString('vi-VN') : 0} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>đ</span>
+          <div className="admin-stat-value val-purple">
+            {stats ? Number(stats.totalRevenue).toLocaleString('vi-VN') : 0} <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b' }}>đ</span>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <div className="admin-stat-sub">
             Tổng giá trị GMV thanh toán qua sàn
           </div>
         </div>
 
-        <div
-          className="card-glass"
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(251, 191, 36, 0.25)',
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Chờ Admin Duyệt</span>
-            <span style={{ color: '#fbbf24', background: 'rgba(251, 191, 36, 0.15)', padding: '6px', borderRadius: '8px' }}>
+        <div className="admin-stat-card stat-amber">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="admin-stat-label">Chờ Admin Duyệt</span>
+            <span className="admin-stat-icon icon-amber">
               <AlertTriangleIcon size={18} />
             </span>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fbbf24' }}>
-            {stats ? stats.pendingShops : 0} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>shop</span>
+          <div className="admin-stat-value val-amber">
+            {stats ? stats.pendingShops : 0} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#64748b' }}>shop</span>
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {stats && stats.pendingShops > 0 ? 'Cần xem xét phê duyệt' : 'Đã duyệt hết hồ sơ'}
+          <div className="admin-stat-sub" style={{ color: stats && stats.pendingShops > 0 ? '#b45309' : '#059669', fontWeight: 600 }}>
+            {stats && stats.pendingShops > 0 ? '● Cần xem xét phê duyệt ngay' : '✓ Đã duyệt hết toàn bộ hồ sơ'}
           </div>
         </div>
       </div>
 
       {/* 2. FILTER TABS & SEARCH BAR */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.25rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
+      <div className="admin-filter-bar">
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {[
             { key: '', label: 'Tất cả', count: stats?.totalShops },
@@ -285,20 +237,12 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
             <button
               key={tab.key}
               type="button"
-              className={`btn btn-sm ${shopFilter === tab.key ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.45rem 0.9rem' }}
+              className={`admin-filter-btn ${shopFilter === tab.key ? 'active' : ''}`}
               onClick={() => setShopFilter(tab.key)}
             >
               <span>{tab.label}</span>
               {typeof tab.count === 'number' && (
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    padding: '1px 6px',
-                    borderRadius: '999px',
-                    background: shopFilter === tab.key ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                  }}
-                >
+                <span className="admin-filter-badge">
                   {tab.count}
                 </span>
               )}
@@ -309,8 +253,8 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
         {/* Search Input */}
         <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
-              <SearchIcon size={14} />
+            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>
+              <SearchIcon size={15} />
             </span>
             <input
               type="text"
@@ -318,10 +262,31 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               placeholder="Tìm theo tên shop, @slug..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '32px', height: '36px', fontSize: '0.85rem', width: '220px' }}
+              style={{
+                paddingLeft: '34px',
+                height: '38px',
+                fontSize: '0.88rem',
+                width: '240px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
+                borderRadius: '10px',
+              }}
             />
           </div>
-          <button type="submit" className="btn btn-secondary btn-sm" style={{ height: '36px' }}>
+          <button
+            type="submit"
+            className="btn btn-secondary btn-sm"
+            style={{
+              height: '38px',
+              padding: '0 1rem',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              fontWeight: 600,
+              borderRadius: '10px',
+            }}
+          >
             Tìm kiếm
           </button>
           <button
@@ -332,26 +297,37 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               setSearchTerm('');
               loadShops(shopFilter, '');
             }}
-            style={{ height: '36px' }}
+            style={{
+              height: '38px',
+              width: '38px',
+              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              borderRadius: '10px',
+            }}
           >
-            <RefreshIcon size={14} />
+            <RefreshIcon size={15} />
           </button>
         </form>
       </div>
 
       {/* 3. SHOPS DATA TABLE */}
-      <div className="card-glass" style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <div className="admin-table-card">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+          <table className="admin-table">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '1rem 1.25rem' }}>Gian hàng</th>
-                <th style={{ padding: '1rem' }}>Chủ sở hữu & Liên hệ</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Đơn đã bán</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Sản phẩm</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Doanh số & Số dư</th>
-                <th style={{ padding: '1rem' }}>Trạng thái</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Thao tác</th>
+              <tr>
+                <th>Gian hàng</th>
+                <th>Chủ sở hữu & Liên hệ</th>
+                <th style={{ textAlign: 'center' }}>Đơn đã bán</th>
+                <th style={{ textAlign: 'center' }}>Sản phẩm</th>
+                <th style={{ textAlign: 'right' }}>Doanh số & Số dư</th>
+                <th>Trạng thái</th>
+                <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -383,48 +359,41 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 </tr>
               ) : (
                 shops.map((s) => (
-                  <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
+                  <tr key={s.id}>
                     {/* Gian hàng Logo & Tên */}
-                    <td style={{ padding: '1rem 1.25rem' }}>
+                    <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         {s.logoUrl ? (
                           <img
                             src={s.logoUrl}
                             alt={s.name}
-                            style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                            style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0' }}
                           />
                         ) : (
                           <div
                             style={{
-                              width: '40px',
-                              height: '40px',
+                              width: '42px',
+                              height: '42px',
                               borderRadius: '10px',
                               background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontWeight: 700,
-                              color: '#fff',
-                              fontSize: '1rem',
+                              fontWeight: 800,
+                              color: '#ffffff',
+                              fontSize: '1.05rem',
                             }}
                           >
                             {s.name.slice(0, 1).toUpperCase()}
                           </div>
                         )}
                         <div>
-                          <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>{s.name}</div>
+                          <div className="admin-cell-title">{s.name}</div>
                           <a
                             href={`/marketplace/shops/${s.slug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{
-                              fontSize: '0.78rem',
-                              color: '#38bdf8',
-                              textDecoration: 'none',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                            }}
+                            className="admin-cell-link"
                           >
                             @{s.slug}
                             <ExternalLinkIcon size={12} />
@@ -434,44 +403,35 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                     </td>
 
                     {/* Chủ sở hữu */}
-                    <td style={{ padding: '1rem' }}>
-                      <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{s.ownerDisplayName || 'Chủ gian hàng'}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.ownerEmail || s.contactEmail}</div>
+                    <td>
+                      <div style={{ color: '#0f172a', fontWeight: 600 }}>{s.ownerDisplayName || 'Chủ gian hàng'}</div>
+                      <div className="admin-cell-subtitle">{s.ownerEmail || s.contactEmail}</div>
                     </td>
 
                     {/* Tổng số đơn đã bán ra */}
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      <div
-                        style={{
-                          display: 'inline-block',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          background: (s.totalOrders || 0) > 0 ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.05)',
-                          color: (s.totalOrders || 0) > 0 ? '#38bdf8' : 'var(--text-muted)',
-                          fontWeight: 700,
-                        }}
-                      >
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="admin-pill-badge admin-pill-blue">
                         {(s.totalOrders || 0).toLocaleString()} đơn
-                      </div>
+                      </span>
                     </td>
 
                     {/* Số lượng sản phẩm */}
-                    <td style={{ padding: '1rem', textAlign: 'center', color: '#cbd5e1' }}>
+                    <td style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>
                       {(s.totalProducts || 0).toLocaleString()} SP
                     </td>
 
                     {/* Doanh số & Số dư */}
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, color: '#34d399' }}>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.95rem' }}>
                         {Number(s.totalRevenue || 0).toLocaleString('vi-VN')} đ
                       </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        Khả dụng: {Number(s.availableBalance || 0).toLocaleString('vi-VN')} đ
+                      <div className="admin-cell-subtitle">
+                        Khả dụng: <strong style={{ color: '#0f172a' }}>{Number(s.availableBalance || 0).toLocaleString('vi-VN')} đ</strong>
                       </div>
                     </td>
 
                     {/* Trạng thái */}
-                    <td style={{ padding: '1rem' }}>
+                    <td>
                       <span
                         className={`badge ${
                           s.approvalStatus === 'Approved' || s.approvalStatus === 1
@@ -480,7 +440,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                             ? 'badge-danger'
                             : 'badge-warning'
                         }`}
-                        style={{ fontSize: '0.75rem', padding: '3px 8px' }}
+                        style={{ fontSize: '0.78rem', padding: '4px 10px', fontWeight: 700 }}
                       >
                         {s.approvalStatus === 'Approved' || s.approvalStatus === 1
                           ? 'Đã duyệt'
@@ -491,12 +451,21 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                     </td>
 
                     {/* Thao tác */}
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '0.45rem' }}>
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.35rem 0.65rem' }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '0.35rem 0.75rem',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            color: '#0f172a',
+                            fontWeight: 600,
+                          }}
                           onClick={() => handleViewDetail(s.id)}
                         >
                           <EyeIcon size={14} />
@@ -508,6 +477,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
+                              style={{ fontWeight: 700, padding: '0.35rem 0.75rem' }}
                               onClick={() => handleApproveShop(s.id)}
                             >
                               Duyệt
@@ -515,6 +485,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                             <button
                               type="button"
                               className="btn btn-danger btn-sm"
+                              style={{ fontWeight: 700, padding: '0.35rem 0.75rem' }}
                               onClick={() =>
                                 setRejectShopModal({
                                   isOpen: true,
@@ -532,7 +503,14 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                         {(s.approvalStatus === 'Approved' || s.approvalStatus === 1) && (
                           <button
                             type="button"
-                            className="btn btn-secondary btn-sm text-warning"
+                            className="btn btn-secondary btn-sm"
+                            style={{
+                              background: '#fffbeb',
+                              border: '1px solid #fde68a',
+                              color: '#b45309',
+                              fontWeight: 700,
+                              padding: '0.35rem 0.75rem',
+                            }}
                             onClick={() =>
                               setSanctionModal({
                                 isOpen: true,
@@ -560,33 +538,19 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
       {selectedShopDetail && (
         <div
           className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(5px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1050,
-            padding: '1rem',
-          }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedShopDetail(null);
           }}
         >
           <div
-            className="card-glass"
+            className="admin-modal-card"
             style={{
               width: '100%',
-              maxWidth: '900px',
+              maxWidth: '920px',
               maxHeight: '92vh',
               overflowY: 'auto',
               borderRadius: '20px',
-              border: '1px solid rgba(168, 85, 247, 0.4)',
-              background: 'linear-gradient(135deg, #131127 0%, #0d1222 100%)',
               padding: '2rem',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.65)',
             }}
           >
             {/* Header Modal */}
@@ -596,7 +560,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 justifyContent: 'space-between',
                 alignItems: 'flex-start',
                 marginBottom: '1.5rem',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                borderBottom: '1px solid #e2e8f0',
                 paddingBottom: '1.25rem',
                 flexWrap: 'wrap',
                 gap: '1rem',
@@ -607,7 +571,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                   <img
                     src={selectedShopDetail.logoUrl}
                     alt={selectedShopDetail.name}
-                    style={{ width: '64px', height: '64px', borderRadius: '16px', objectFit: 'cover', border: '2px solid rgba(168, 85, 247, 0.5)' }}
+                    style={{ width: '64px', height: '64px', borderRadius: '16px', objectFit: 'cover', border: '2px solid #e2e8f0' }}
                   />
                 ) : (
                   <div
@@ -615,7 +579,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                       width: '64px',
                       height: '64px',
                       borderRadius: '16px',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -628,8 +592,8 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                   </div>
                 )}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>
                       {selectedShopDetail.name}
                     </h2>
                     <span
@@ -640,22 +604,23 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                           ? 'badge-danger'
                           : 'badge-warning'
                       }`}
+                      style={{ fontWeight: 700, padding: '4px 10px' }}
                     >
                       {selectedShopDetail.approvalStatus}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '4px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '6px', fontSize: '0.88rem' }}>
                     <a
                       href={`/marketplace/shops/${selectedShopDetail.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: '#38bdf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      className="admin-cell-link"
                     >
                       /{selectedShopDetail.slug}
                       <ExternalLinkIcon size={12} />
                     </a>
-                    <span style={{ color: 'var(--text-muted)' }}>•</span>
-                    <span style={{ color: 'var(--text-muted)' }}>
+                    <span style={{ color: '#94a3b8' }}>•</span>
+                    <span style={{ color: '#64748b', fontWeight: 500 }}>
                       Ngày lập: {new Date(selectedShopDetail.createdAtUtc).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
@@ -666,6 +631,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
+                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
                   onClick={() => setSelectedShopDetail(null)}
                 >
                   Đóng
@@ -686,26 +652,26 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               <div
                 style={{
                   padding: '1rem 1.25rem',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: '#f8fafc',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
                 }}
               >
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.04em' }}>
                   Chủ Gian Hàng
                 </div>
-                <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '1rem' }}>
+                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '1.05rem' }}>
                   {selectedShopDetail.ownerDisplayName || 'Chưa cập nhật'}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  Email: {selectedShopDetail.ownerEmail || selectedShopDetail.contactEmail}
+                <div style={{ fontSize: '0.88rem', color: '#334155', marginTop: '4px' }}>
+                  Email: <strong>{selectedShopDetail.ownerEmail || selectedShopDetail.contactEmail}</strong>
                 </div>
                 {selectedShopDetail.ownerPhoneNumber && (
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    SĐT: {selectedShopDetail.ownerPhoneNumber}
+                  <div style={{ fontSize: '0.88rem', color: '#334155', marginTop: '2px' }}>
+                    SĐT: <strong>{selectedShopDetail.ownerPhoneNumber}</strong>
                   </div>
                 )}
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
                   User ID: {selectedShopDetail.ownerUserId}
                 </div>
               </div>
@@ -714,28 +680,28 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               <div
                 style={{
                   padding: '1rem 1.25rem',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: '#f8fafc',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
                 }}
               >
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.04em' }}>
                   Tài Khoản Rút Tiền
                 </div>
                 {selectedShopDetail.bankAccount ? (
                   <div>
-                    <div style={{ fontWeight: 700, color: '#38bdf8', fontSize: '0.95rem' }}>
+                    <div style={{ fontWeight: 700, color: '#0284c7', fontSize: '1rem' }}>
                       {selectedShopDetail.bankAccount.bankName} ({selectedShopDetail.bankAccount.bankCode})
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#f8fafc', marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.88rem', color: '#0f172a', marginTop: '4px' }}>
                       STK: <strong>{selectedShopDetail.bankAccount.maskedAccountNumber}</strong>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      Chủ TK: {selectedShopDetail.bankAccount.accountHolderName}
+                    <div style={{ fontSize: '0.88rem', color: '#334155', marginTop: '2px' }}>
+                      Chủ TK: <strong>{selectedShopDetail.bankAccount.accountHolderName}</strong>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                  <div style={{ color: '#64748b', fontSize: '0.88rem', fontStyle: 'italic', marginTop: '8px' }}>
                     Gian hàng chưa liên kết tài khoản ngân hàng thụ hưởng.
                   </div>
                 )}
@@ -751,30 +717,30 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 marginBottom: '1.75rem',
               }}
             >
-              <div style={{ padding: '0.9rem 1rem', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '12px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600 }}>TỔNG ĐƠN ĐÃ BÁN</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', marginTop: '2px' }}>
+              <div style={{ padding: '0.9rem 1rem', background: '#f0f9ff', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: 700 }}>TỔNG ĐƠN ĐÃ BÁN</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
                   {(selectedShopDetail.totalOrders || 0).toLocaleString()} đơn
                 </div>
               </div>
 
-              <div style={{ padding: '0.9rem 1rem', background: 'rgba(52, 211, 153, 0.08)', borderRadius: '12px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 600 }}>DOANH THU ĐÃ BÁN</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#34d399', marginTop: '2px' }}>
+              <div style={{ padding: '0.9rem 1rem', background: '#ecfdf5', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 700 }}>DOANH THU ĐÃ BÁN</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#047857', marginTop: '2px' }}>
                   {Number(selectedShopDetail.totalRevenue || 0).toLocaleString('vi-VN')} đ
                 </div>
               </div>
 
-              <div style={{ padding: '0.9rem 1rem', background: 'rgba(168, 85, 247, 0.08)', borderRadius: '12px', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#c084fc', fontWeight: 600 }}>SỐ DƯ KHẢ DỤNG</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#c084fc', marginTop: '2px' }}>
+              <div style={{ padding: '0.9rem 1rem', background: '#f5f3ff', borderRadius: '12px', border: '1px solid #ddd6fe' }}>
+                <div style={{ fontSize: '0.75rem', color: '#6d28d9', fontWeight: 700 }}>SỐ DƯ KHẢ DỤNG</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#6d28d9', marginTop: '2px' }}>
                   {Number(selectedShopDetail.availableBalance || 0).toLocaleString('vi-VN')} đ
                 </div>
               </div>
 
-              <div style={{ padding: '0.9rem 1rem', background: 'rgba(251, 191, 36, 0.08)', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 600 }}>TIỀN TẠM GIỮ (PENDING)</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fbbf24', marginTop: '2px' }}>
+              <div style={{ padding: '0.9rem 1rem', background: '#fffbeb', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                <div style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 700 }}>TIỀN TẠM GIỮ (PENDING)</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#b45309', marginTop: '2px' }}>
                   {Number(selectedShopDetail.pendingBalance || 0).toLocaleString('vi-VN')} đ
                 </div>
               </div>
@@ -782,21 +748,21 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
 
             {/* Mô tả shop */}
             {selectedShopDetail.description && (
-              <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mô tả kinh doanh:</span>
-                <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              <div style={{ marginBottom: '1.5rem', padding: '0.85rem 1.15rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Mô tả kinh doanh:</span>
+                <p style={{ margin: '4px 0 0', color: '#1e293b', fontSize: '0.92rem', lineHeight: 1.6 }}>
                   {selectedShopDetail.description}
                 </p>
               </div>
             )}
 
             {/* Sub-Tabs: Đơn bán gần đây / Sản phẩm / Chế tài / Xét duyệt */}
-            <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e2e8f0', marginBottom: '1.25rem', overflowX: 'auto' }}>
               <button
                 type="button"
                 className={`btn btn-sm ${detailTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setDetailTab('orders')}
-                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}
+                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none', fontWeight: 700 }}
               >
                 Đơn Hàng Gần Đây ({selectedShopDetail.recentOrders?.length || 0})
               </button>
@@ -804,7 +770,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 type="button"
                 className={`btn btn-sm ${detailTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setDetailTab('products')}
-                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}
+                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none', fontWeight: 700 }}
               >
                 Sản Phẩm ({selectedShopDetail.recentProducts?.length || 0})
               </button>
@@ -812,7 +778,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 type="button"
                 className={`btn btn-sm ${detailTab === 'sanctions' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setDetailTab('sanctions')}
-                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}
+                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none', fontWeight: 700 }}
               >
                 Chế Tài & Xử Phạt ({selectedShopDetail.sanctions?.length || 0})
               </button>
@@ -820,7 +786,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 type="button"
                 className={`btn btn-sm ${detailTab === 'reviews' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setDetailTab('reviews')}
-                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}
+                style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none', fontWeight: 700 }}
               >
                 Lịch Sử Duyệt ({selectedShopDetail.reviews?.length || 0})
               </button>
@@ -830,36 +796,36 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
             {detailTab === 'orders' && (
               <div>
                 {!selectedShopDetail.recentOrders || selectedShopDetail.recentOrders.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                  <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem 0', fontWeight: 500 }}>
                     Gian hàng này chưa phát sinh đơn hàng nào.
                   </p>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                    <table className="admin-table">
                       <thead>
-                        <tr style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
-                          <th style={{ padding: '8px 12px' }}>Mã đơn</th>
-                          <th style={{ padding: '8px 12px' }}>Người mua</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Tổng thanh toán</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Shop thực nhận</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'center' }}>Trạng thái</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Thời gian</th>
+                        <tr>
+                          <th>Mã đơn</th>
+                          <th>Người mua</th>
+                          <th style={{ textAlign: 'right' }}>Tổng thanh toán</th>
+                          <th style={{ textAlign: 'right' }}>Shop thực nhận</th>
+                          <th style={{ textAlign: 'center' }}>Trạng thái</th>
+                          <th style={{ textAlign: 'right' }}>Thời gian</th>
                         </tr>
                       </thead>
                       <tbody>
                         {selectedShopDetail.recentOrders.map((ord) => (
-                          <tr key={ord.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#38bdf8' }}>
+                          <tr key={ord.id}>
+                            <td style={{ fontWeight: 700, color: '#0284c7' }}>
                               #{ord.orderNo}
                             </td>
-                            <td style={{ padding: '8px 12px', color: '#e2e8f0' }}>{ord.buyerName}</td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>
+                            <td style={{ color: '#0f172a', fontWeight: 600 }}>{ord.buyerName}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
                               {Number(ord.total).toLocaleString('vi-VN')} đ
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', color: '#34d399', fontWeight: 600 }}>
+                            <td style={{ textAlign: 'right', color: '#059669', fontWeight: 700 }}>
                               {Number(ord.shopNet).toLocaleString('vi-VN')} đ
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <td style={{ textAlign: 'center' }}>
                               <span
                                 className={`badge ${
                                   ord.status === 'Completed'
@@ -868,12 +834,12 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                                     ? 'badge-primary'
                                     : 'badge-danger'
                                 }`}
-                                style={{ fontSize: '0.72rem' }}
+                                style={{ fontSize: '0.75rem', fontWeight: 700 }}
                               >
                                 {ord.status}
                               </span>
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                            <td style={{ textAlign: 'right', color: '#64748b', fontSize: '0.82rem' }}>
                               {new Date(ord.createdAtUtc).toLocaleString('vi-VN')}
                             </td>
                           </tr>
@@ -889,7 +855,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
             {detailTab === 'products' && (
               <div>
                 {!selectedShopDetail.recentProducts || selectedShopDetail.recentProducts.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                  <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem 0', fontWeight: 500 }}>
                     Gian hàng chưa đăng sản phẩm nào.
                   </p>
                 ) : (
@@ -898,18 +864,18 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                       <div
                         key={p.id}
                         style={{
-                          padding: '0.75rem 1rem',
-                          background: 'rgba(255,255,255,0.03)',
-                          borderRadius: '10px',
-                          border: '1px solid rgba(255,255,255,0.06)',
+                          padding: '0.85rem 1rem',
+                          background: '#f8fafc',
+                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
                         }}
                       >
-                        <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>{p.name}</div>
+                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem' }}>{p.name}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                          <span style={{ color: '#34d399', fontWeight: 700, fontSize: '0.95rem' }}>
+                          <span style={{ color: '#059669', fontWeight: 800, fontSize: '0.95rem' }}>
                             {Number(p.price).toLocaleString('vi-VN')} đ
                           </span>
-                          <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
+                          <span className="badge badge-secondary" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
                             {p.status}
                           </span>
                         </div>
@@ -924,7 +890,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
             {detailTab === 'sanctions' && (
               <div>
                 {!selectedShopDetail.sanctions || selectedShopDetail.sanctions.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                  <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem 0', fontWeight: 500 }}>
                     Gian hàng này chưa từng bị áp dụng chế tài xử phạt nào.
                   </p>
                 ) : (
@@ -933,10 +899,10 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                       <div
                         key={sc.id}
                         style={{
-                          padding: '0.9rem 1.25rem',
-                          background: 'rgba(244, 63, 94, 0.08)',
+                          padding: '0.95rem 1.25rem',
+                          background: '#fff1f2',
                           borderRadius: '12px',
-                          border: '1px solid rgba(244, 63, 94, 0.25)',
+                          border: '1px solid #fecdd3',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
@@ -945,18 +911,19 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 700, color: 'var(--accent-rose)' }}>{sc.type}</div>
-                          <div style={{ color: '#f1f5f9', marginTop: '2px', fontSize: '0.9rem' }}>{sc.reason}</div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          <div style={{ fontWeight: 800, color: '#be123c' }}>{sc.type}</div>
+                          <div style={{ color: '#1e293b', marginTop: '2px', fontSize: '0.92rem', fontWeight: 500 }}>{sc.reason}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
                             Hiệu lực từ {new Date(sc.startAtUtc).toLocaleDateString('vi-VN')}
                             {sc.endAtUtc ? ` đến ${new Date(sc.endAtUtc).toLocaleDateString('vi-VN')}` : ' (Vĩnh viễn)'}
-                            {sc.liftedAtUtc && <span style={{ color: '#34d399', marginLeft: '8px' }}>[Đã dỡ phạt]</span>}
+                            {sc.liftedAtUtc && <span style={{ color: '#059669', fontWeight: 700, marginLeft: '8px' }}>[Đã dỡ phạt]</span>}
                           </div>
                         </div>
                         {!sc.liftedAtUtc && (
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
+                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
                             onClick={() => handleLiftSanction(selectedShopDetail.id, sc.id)}
                           >
                             Gỡ phạt
@@ -973,7 +940,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
             {detailTab === 'reviews' && (
               <div>
                 {!selectedShopDetail.reviews || selectedShopDetail.reviews.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                  <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem 0', fontWeight: 500 }}>
                     Chưa có lịch sử phê duyệt trước đây.
                   </p>
                 ) : (
@@ -982,14 +949,14 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                       <div
                         key={rev.id}
                         style={{
-                          padding: '0.75rem 1rem',
-                          background: 'rgba(255,255,255,0.03)',
-                          borderRadius: '10px',
-                          border: '1px solid rgba(255,255,255,0.06)',
+                          padding: '0.85rem 1.15rem',
+                          background: '#f8fafc',
+                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 600 }}>Lần nộp #{rev.submissionNo}</span>
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>Lần nộp #{rev.submissionNo}</span>
                           <span
                             className={`badge ${
                               rev.decision === 'Approved'
@@ -998,12 +965,13 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                                 ? 'badge-danger'
                                 : 'badge-warning'
                             }`}
+                            style={{ fontWeight: 700 }}
                           >
                             {rev.decision}
                           </span>
                         </div>
                         {rev.reasonNote && (
-                          <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#f87171' }}>
+                          <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: '#dc2626', fontWeight: 500 }}>
                             Lý do: {rev.reasonNote}
                           </p>
                         )}
@@ -1021,7 +989,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 justifyContent: 'flex-end',
                 gap: '0.75rem',
                 marginTop: '2rem',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
+                borderTop: '1px solid #e2e8f0',
                 paddingTop: '1.25rem',
               }}
             >
@@ -1030,6 +998,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                   <button
                     type="button"
                     className="btn btn-primary"
+                    style={{ fontWeight: 700 }}
                     onClick={() => handleApproveShop(selectedShopDetail.id)}
                   >
                     Duyệt Mở Gian Hàng
@@ -1037,6 +1006,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                   <button
                     type="button"
                     className="btn btn-danger"
+                    style={{ fontWeight: 700 }}
                     onClick={() =>
                       setRejectShopModal({
                         isOpen: true,
@@ -1054,7 +1024,13 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               {(selectedShopDetail.approvalStatus === 'Approved' || selectedShopDetail.approvalStatus === '1') && (
                 <button
                   type="button"
-                  className="btn btn-secondary text-warning"
+                  className="btn btn-secondary"
+                  style={{
+                    background: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    color: '#b45309',
+                    fontWeight: 700,
+                  }}
                   onClick={() =>
                     setSanctionModal({
                       isOpen: true,
@@ -1072,6 +1048,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               <button
                 type="button"
                 className="btn btn-secondary"
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
                 onClick={() => setSelectedShopDetail(null)}
               >
                 Đóng
@@ -1083,37 +1060,26 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
 
       {/* Modal Từ chối Shop */}
       {rejectShopModal && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-          }}
-        >
+        <div className="modal-backdrop">
           <div
-            className="card-glass"
+            className="admin-modal-card"
             style={{
               width: '90%',
               maxWidth: '480px',
               padding: '2rem',
               borderRadius: '16px',
-              border: '1px solid var(--border-color)',
             }}
           >
-            <h3 style={{ margin: '0 0 1rem', fontWeight: 700 }}>Từ chối phê duyệt gian hàng</h3>
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, color: '#0f172a' }}>Từ chối phê duyệt gian hàng</h3>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>
                 Mã lý do từ chối
               </label>
               <select
                 className="form-control"
                 value={rejectShopModal.reasonCode}
                 onChange={(e) => setRejectShopModal({ ...rejectShopModal, reasonCode: e.target.value })}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
               >
                 <option value="INSUFFICIENT_INFO">Thông tin cung cấp chưa đầy đủ</option>
                 <option value="INVALID_BRAND">Thương hiệu không chính chủ hoặc vi phạm bản quyền</option>
@@ -1122,7 +1088,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
               </select>
             </div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>
                 Ghi chú giải trình chi tiết
               </label>
               <textarea
@@ -1131,13 +1097,19 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 placeholder="Nhập hướng dẫn để người bán bổ sung nộp lại hồ sơ..."
                 value={rejectShopModal.reasonNote}
                 onChange={(e) => setRejectShopModal({ ...rejectShopModal, reasonNote: e.target.value })}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setRejectShopModal(null)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
+                onClick={() => setRejectShopModal(null)}
+              >
                 Hủy
               </button>
-              <button type="button" className="btn btn-danger" onClick={handleConfirmRejectShop}>
+              <button type="button" className="btn btn-danger" style={{ fontWeight: 700 }} onClick={handleConfirmRejectShop}>
                 Xác nhận Từ chối
               </button>
             </div>
@@ -1147,37 +1119,26 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
 
       {/* Modal Chế tài Sanction */}
       {sanctionModal && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-          }}
-        >
+        <div className="modal-backdrop">
           <div
-            className="card-glass"
+            className="admin-modal-card"
             style={{
               width: '90%',
               maxWidth: '480px',
               padding: '2rem',
               borderRadius: '16px',
-              border: '1px solid var(--border-color)',
             }}
           >
-            <h3 style={{ margin: '0 0 1rem', fontWeight: 700, color: 'var(--accent-rose)' }}>Ban hành Chế tài Xử phạt</h3>
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, color: '#dc2626' }}>Ban hành Chế tài Xử phạt</h3>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>
                 Loại hình chế tài
               </label>
               <select
                 className="form-control"
                 value={sanctionModal.type}
                 onChange={(e) => setSanctionModal({ ...sanctionModal, type: Number(e.target.value) })}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
               >
                 <option value={2}>Cảnh cáo chính thức (Warning)</option>
                 <option value={0}>Tạm đình chỉ hoạt động có thời hạn (TemporarySuspension)</option>
@@ -1186,7 +1147,7 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
             </div>
             {sanctionModal.type === 0 && (
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>
                   Thời hạn phạt (ngày)
                 </label>
                 <input
@@ -1194,11 +1155,12 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                   className="form-control"
                   value={sanctionModal.days || 7}
                   onChange={(e) => setSanctionModal({ ...sanctionModal, days: Number(e.target.value) })}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
                 />
               </div>
             )}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', color: 'var(--text-muted)' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: 600 }}>
                 Căn cứ & Lý do xử phạt
               </label>
               <textarea
@@ -1207,13 +1169,19 @@ export const AdminShopsTab: React.FC<AdminShopsTabProps> = ({ showFlash }) => {
                 placeholder="Nêu rõ hành vi vi phạm hoặc mã khiếu nại liên quan..."
                 value={sanctionModal.reason}
                 onChange={(e) => setSanctionModal({ ...sanctionModal, reason: e.target.value })}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setSanctionModal(null)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
+                onClick={() => setSanctionModal(null)}
+              >
                 Hủy
               </button>
-              <button type="button" className="btn btn-danger" onClick={handleConfirmSanction}>
+              <button type="button" className="btn btn-danger" style={{ fontWeight: 700 }} onClick={handleConfirmSanction}>
                 Ban hành quyết định
               </button>
             </div>

@@ -28,27 +28,24 @@ public class PayOsPaymentGateway : IPaymentGateway
         _httpClient = httpClient;
         _logger = logger;
 
-        _clientId = _configuration["PAYOS_CLIENT_ID"]
+        _clientId = CleanConfigValue(_configuration["PAYOS_CLIENT_ID"]
             ?? _configuration["PayOS:ClientId"]
             ?? _configuration["PayOs__ClientId"]
-            ?? Environment.GetEnvironmentVariable("PAYOS_CLIENT_ID")
-            ?? string.Empty;
+            ?? Environment.GetEnvironmentVariable("PAYOS_CLIENT_ID"));
 
-        _apiKey = _configuration["PAYOS_API_KEY"]
+        _apiKey = CleanConfigValue(_configuration["PAYOS_API_KEY"]
             ?? _configuration["PayOS:ApiKey"]
             ?? _configuration["PayOs__ApiKey"]
-            ?? Environment.GetEnvironmentVariable("PAYOS_API_KEY")
-            ?? string.Empty;
+            ?? Environment.GetEnvironmentVariable("PAYOS_API_KEY"));
 
-        _checksumKey = _configuration["PAYOS_CHECKSUM_KEY"]
+        _checksumKey = CleanConfigValue(_configuration["PAYOS_CHECKSUM_KEY"]
             ?? _configuration["PayOS:ChecksumKey"]
             ?? _configuration["PayOs__ChecksumKey"]
-            ?? Environment.GetEnvironmentVariable("PAYOS_CHECKSUM_KEY")
-            ?? string.Empty;
+            ?? Environment.GetEnvironmentVariable("PAYOS_CHECKSUM_KEY"));
 
-        _frontendBaseUrl = _configuration["App:FrontendBaseUrl"]
+        _frontendBaseUrl = CleanConfigValue(_configuration["App:FrontendBaseUrl"]
             ?? _configuration["App__FrontendBaseUrl"]
-            ?? "http://localhost:5173";
+            ?? "http://localhost:5173").TrimEnd('/');
 
         if (!string.IsNullOrWhiteSpace(_clientId) && !string.IsNullOrWhiteSpace(_apiKey))
         {
@@ -58,6 +55,18 @@ public class PayOsPaymentGateway : IPaymentGateway
         {
             _logger.LogWarning("Chưa tìm thấy cấu hình Key của PayOS trong .env hoặc appsettings.");
         }
+    }
+
+    private static string CleanConfigValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var trimmed = value.Trim();
+        if ((trimmed.StartsWith('"') && trimmed.EndsWith('"')) ||
+            (trimmed.StartsWith('\'') && trimmed.EndsWith('\'')))
+        {
+            trimmed = trimmed[1..^1].Trim();
+        }
+        return trimmed;
     }
 
     public PaymentProvider Provider => PaymentProvider.PayOs;
