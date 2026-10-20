@@ -12,7 +12,7 @@ interface Props {
 export const BoughtTogetherSection: React.FC<Props> = ({
   productId,
   className = '',
-  limit = 3,
+  limit = 4,
 }) => {
   const [products, setProducts] = useState<IRecommendationProductCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -24,7 +24,7 @@ export const BoughtTogetherSection: React.FC<Props> = ({
         setLoading(true);
         const data = await marketplaceRecommendationApi.getBoughtTogetherProducts(productId, limit);
         if (isMounted) {
-          setProducts(data);
+          setProducts(data || []);
         }
       } catch (err) {
         console.error('Không thể nạp danh sách sản phẩm mua cùng:', err);
@@ -59,48 +59,94 @@ export const BoughtTogetherSection: React.FC<Props> = ({
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=60';
 
   return (
-    <section className={`marketplace-bought-together-section p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 rounded-xl ${className}`.trim()}>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">🤝</span>
+    <section className={`marketplace-bought-together-section ${className}`.trim()}>
+      <div className="bought-together-header">
+        <span style={{ fontSize: '1.25rem' }}>🤝</span>
         <div>
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="bought-together-title">
             Thường được mua cùng nhau (Frequently Bought Together)
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Khách hàng mua sản phẩm này cũng thường sở hữu thêm các dịch vụ số bên dưới
+          <p className="bought-together-subtitle">
+            Khách hàng mua sản phẩm này cũng thường chọn các dịch vụ số bên dưới
           </p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex gap-4">
-          <div className="h-24 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg" />
-          <div className="h-24 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg" />
+        <div className="bought-together-grid">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="bought-together-item animate-pulse"
+              style={{ minHeight: '68px' }}
+            >
+              <div
+                className="bought-together-thumb"
+                style={{ background: 'var(--bg-surface)' }}
+              />
+              <div className="bought-together-info">
+                <div
+                  style={{
+                    height: '12px',
+                    width: '70%',
+                    background: 'var(--bg-card)',
+                    borderRadius: '4px',
+                    marginBottom: '6px',
+                  }}
+                />
+                <div
+                  style={{
+                    height: '12px',
+                    width: '40%',
+                    background: 'var(--bg-card)',
+                    borderRadius: '4px',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bought-together-grid">
           {products.map((item) => (
             <Link
               key={item.id}
               to={`/marketplace/products/${item.slug}`}
-              className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow group"
+              className="bought-together-item"
             >
               <img
                 src={item.coverImageUrl || defaultThumb}
                 alt={item.name}
-                className="w-16 h-16 object-cover rounded-md flex-shrink-0"
+                className="bought-together-thumb"
                 loading="lazy"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.hasFallback) {
+                    target.dataset.hasFallback = 'true';
+                    target.src = defaultThumb;
+                  }
+                }}
               />
-              <div className="min-w-0 flex-1">
-                <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate group-hover:text-purple-600 dark:group-hover:text-purple-400">
+              <div className="bought-together-info">
+                <h4 className="bought-together-name" title={item.name}>
                   {item.name}
                 </h4>
-                <p className="text-xs text-purple-600 dark:text-purple-400 font-bold mt-1">
+                <div className="bought-together-price">
                   {formatPrice(item.minPrice)}
-                </p>
-                <span className="inline-block text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded mt-1">
-                  {item.recommendationReason || 'Gợi ý mua kèm'}
-                </span>
+                </div>
+                {item.recommendationReason && (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      fontSize: '0.68rem',
+                      fontWeight: 600,
+                      color: '#7c3aed',
+                      marginTop: '2px',
+                    }}
+                  >
+                    ✨ {item.recommendationReason}
+                  </span>
+                )}
               </div>
             </Link>
           ))}

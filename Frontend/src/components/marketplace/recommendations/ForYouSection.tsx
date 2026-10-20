@@ -6,20 +6,27 @@ import { RecommendationProductCard } from './RecommendationProductCard';
 interface Props {
   className?: string;
   limit?: number;
+  pageSize?: number;
 }
 
-export const ForYouSection: React.FC<Props> = ({ className = '', limit = 12 }) => {
+export const ForYouSection: React.FC<Props> = ({
+  className = '',
+  limit = 18,
+  pageSize = 12,
+}) => {
   const [products, setProducts] = useState<IRecommendationProductCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
     let isMounted = true;
     const fetchRecommendations = async () => {
       try {
         setLoading(true);
+        setCurrentPage(1);
         const data = await marketplaceRecommendationApi.getForYouProducts(limit);
         if (isMounted) {
-          setProducts(data);
+          setProducts(data || []);
         }
       } catch (err) {
         console.error('Không thể nạp danh sách đề xuất cá nhân hóa:', err);
@@ -41,41 +48,80 @@ export const ForYouSection: React.FC<Props> = ({ className = '', limit = 12 }) =
     return null;
   }
 
+  const totalPages = Math.ceil(products.length / pageSize) || 1;
+  const currentProducts = products.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <section className={`marketplace-recommendations-section ${className}`.trim()}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl" role="img" aria-label="sparkles">✨</span>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              Dành riêng cho bạn
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-sm">
-                AI Phân Tích
-              </span>
-            </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Đề xuất dựa trên sở thích mạng xã hội và nhu cầu tương tác của bạn
-            </p>
-          </div>
+      <div className="recommendations-header">
+        <div>
+          <h2 className="recommendations-header-title">
+            <span>✨</span>
+            <span>Dành riêng cho bạn</span>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                padding: '0.15rem 0.5rem',
+                borderRadius: '999px',
+                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                color: '#fff',
+                marginLeft: '0.35rem',
+              }}
+            >
+              AI Phân Tích
+            </span>
+          </h2>
+          <p className="recommendations-header-subtitle">
+            Đề xuất dựa trên sở thích và hành vi tương tác của bạn
+          </p>
         </div>
+
+        {totalPages > 1 && (
+          <div className="recommendations-controls">
+            <span className="recommendations-page-indicator">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              className="recommendations-nav-btn"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              aria-label="Trang trước"
+              title="Trang trước"
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              className="recommendations-nav-btn"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              aria-label="Trang sau"
+              title="Trang sau"
+            >
+              ▶
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="recommendations-grid">
           {Array.from({ length: 6 }).map((_, idx) => (
-            <div key={idx} className="product-card animate-pulse">
-              <div className="product-thumb-wrap bg-gray-200 dark:bg-gray-700" />
-              <div className="product-card-body space-y-2">
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+            <div key={idx} className="recommendation-skeleton-card animate-pulse">
+              <div className="recommendation-skeleton-thumb" />
+              <div className="recommendation-skeleton-body">
+                <div className="recommendation-skeleton-line" style={{ height: '10px', width: '40%' }} />
+                <div className="recommendation-skeleton-line" style={{ height: '14px', width: '80%' }} />
+                <div className="recommendation-skeleton-line" style={{ height: '14px', width: '50%', marginTop: '6px' }} />
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {products.map((prod) => (
+        <div className="recommendations-grid">
+          {currentProducts.map((prod) => (
             <RecommendationProductCard key={prod.id} product={prod} />
           ))}
         </div>

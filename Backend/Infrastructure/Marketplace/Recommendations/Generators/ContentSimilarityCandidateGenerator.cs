@@ -137,7 +137,34 @@ public class ContentSimilarityCandidateGenerator
                 related.AddRange(fallback);
             }
 
-            return related;
+            // Sắp xếp các sản phẩm tương tự:
+            // 1. Độ chênh lệch giá so với sản phẩm hiện tại nhỏ nhất lên trước (sản phẩm tương đương nhất)
+            // 2. Ưu tiên sản phẩm có đánh giá tốt hơn
+            var sorted = related
+                .OrderBy(p => Math.Abs(p.MinPrice - baseProduct.MinPriceCache))
+                .ThenByDescending(p => p.RatingAverage)
+                .ThenByDescending(p => p.ReviewCount)
+                .ToList();
+
+            if (sorted.Count > 0)
+            {
+                sorted[0].Reason = "Phù hợp nhất";
+                sorted[0].BaseScore = 1.0;
+            }
+
+            for (int i = 1; i < sorted.Count; i++)
+            {
+                if (sorted[i].Reason == "Sản phẩm tương tự cùng phân khúc")
+                {
+                    sorted[i].Reason = "Cùng phân khúc";
+                }
+                else if (sorted[i].Reason == "Cùng danh mục đang xem")
+                {
+                    sorted[i].Reason = "Cùng danh mục";
+                }
+            }
+
+            return sorted;
         }
         catch (Exception ex)
         {
