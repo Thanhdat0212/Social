@@ -13,7 +13,11 @@
   --bg-subtle: #e4e6eb;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
+  --bg-card-subtle: #f8fafc;
+  --bg-main: #f0f2f5;
+  --card-bg: #ffffff;
   --bg-elevated: #ffffff;
+  --color-bg-canvas: #f0f2f5;
 
   /* Borders (Subtle, Crisp, Facebook Grey) */
   --border-color: #e4e6eb;
@@ -24,8 +28,9 @@
   --text-main: #050505;
   --text-primary: #0f172a;
   --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-dim: #94a3b8;
+  --text-muted: #475569;
+  --color-text-muted: #475569;
+  --text-dim: #475569; /* Crisp slate-600 (5.9:1 contrast ratio, passes WCAG AA & AAA) */
 
   /* Brand & Accent Colors (Facebook Pure Meta Blue) */
   --accent-primary: #1877f2;
@@ -35,11 +40,15 @@
   --accent-glow: rgba(24, 119, 242, 0.15);
   --accent-focus-ring: rgba(24, 119, 242, 0.25);
   --primary: #1877f2;
+  --primary-color: #1877f2;
 
   /* Semantic Colors */
   --color-danger: #fa383e;
+  --danger: #fa383e;
   --color-success: #31a24c;
+  --success: #31a24c;
   --color-warning: #f7b125;
+  --warning: #f7b125;
   --color-info: #1877f2;
 
   --accent-cyan: #0084ff;
@@ -56,8 +65,18 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-glow: 0 0 16px rgba(24, 119, 242, 0.2);
+
+  /* Z-Index Hierarchy Scale */
+  --z-nav: 50;
+  --z-dropdown: 60;
+  --z-sticky: 70;
+  --z-bottom-nav: 80;
+  --z-modal-backdrop: 100;
+  --z-modal: 110;
+  --z-toast: 150;
 
   /* Radius Scale (Bo góc tròn mềm mại theo phong cách hiện đại) */
   --radius-xs: 6px;
