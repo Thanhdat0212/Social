@@ -23,9 +23,11 @@ export const MobileNav: React.FC = () => {
   const isSeller = location.pathname.startsWith('/seller');
   const isProfile = location.pathname === ROUTES.PROFILE;
 
-  const handleHomeClick = () => {
+  const handleHomeClick = (e: React.MouseEvent) => {
     if (isHome) {
+      e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.dispatchEvent(new CustomEvent('social_refresh_feed'));
     }
   };
 

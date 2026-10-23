@@ -121,28 +121,10 @@ export const Navbar: React.FC = () => {
             className={`nav-link cart-nav-btn ${isCartActive ? 'active' : ''}`}
             title="Giỏ hàng của bạn"
             aria-label={`Giỏ hàng${totalQuantity > 0 ? `, ${totalQuantity} sản phẩm` : ''}`}
-            style={{ position: 'relative', padding: '0.45rem 0.75rem' }}
           >
             <CartIcon size={20} />
             {totalQuantity > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  right: '2px',
-                  background: 'var(--accent-primary)',
-                  color: '#fff',
-                  borderRadius: '999px',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  minWidth: '18px',
-                  height: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 4px',
-                }}
-              >
+              <span className="cart-nav-badge">
                 {totalQuantity > 99 ? '99+' : totalQuantity}
               </span>
             )}
@@ -174,11 +156,11 @@ export const Navbar: React.FC = () => {
                   </button>
                 )}
               >
-                <div style={{ padding: '0.65rem 0.85rem', borderBottom: '1px solid var(--border-color)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div className="user-dropdown-header">
+                  <div className="user-dropdown-name">
                     {user?.displayName}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div className="user-dropdown-email">
                     {user?.email}
                   </div>
                   {user?.role === 'Admin' && (
