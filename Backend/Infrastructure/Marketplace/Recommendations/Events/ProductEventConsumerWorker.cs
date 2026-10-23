@@ -41,22 +41,37 @@ public class ProductEventConsumerWorker : BackgroundService
         {
             try
             {
-                // Sử dụng luồng đọc liên tục từ Channel
-                await foreach (var message in _eventChannel.ReadAllEventsAsync(stoppingToken))
+                using var delayCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                delayCts.CancelAfter(FlushInterval);
+
+                try
                 {
-                    batch.Add(new UserProductEvent
+                    await foreach (var message in _eventChannel.ReadAllEventsAsync(delayCts.Token))
                     {
-                        UserId = message.UserId,
-                        SessionId = message.SessionId,
-                        ProductId = message.ProductId,
-                        EventType = message.EventType,
-                        DwellTimeSeconds = message.DwellTimeSeconds,
-                        CreatedAtUtc = message.CreatedAtUtc
-                    });
+                        batch.Add(new UserProductEvent
+                        {
+                            UserId = message.UserId,
+                            SessionId = message.SessionId,
+                            ProductId = message.ProductId,
+                            EventType = message.EventType,
+                            DwellTimeSeconds = message.DwellTimeSeconds,
+                            CreatedAtUtc = message.CreatedAtUtc
+                        });
 
-                    var timeSinceLastFlush = DateTime.UtcNow - lastFlushTime;
+                        var timeSinceLastFlush = DateTime.UtcNow - lastFlushTime;
 
-                    if (batch.Count >= BatchSize || (batch.Count > 0 && timeSinceLastFlush >= FlushInterval))
+                        if (batch.Count >= BatchSize || (batch.Count > 0 && timeSinceLastFlush >= FlushInterval))
+                        {
+                            await FlushBatchAsync(batch, stoppingToken);
+                            lastFlushTime = DateTime.UtcNow;
+                            break;
+                        }
+                    }
+                }
+                catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested && delayCts.IsCancellationRequested)
+                {
+                    // Hết thời gian chờ FlushInterval -> xả các sự kiện đang tồn đọng trong batch
+                    if (batch.Count > 0)
                     {
                         await FlushBatchAsync(batch, stoppingToken);
                         lastFlushTime = DateTime.UtcNow;

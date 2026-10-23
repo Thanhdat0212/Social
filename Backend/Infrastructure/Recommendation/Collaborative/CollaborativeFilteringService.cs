@@ -42,11 +42,22 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
             return Array.Empty<(Guid UserId, double Similarity)>();
         }
 
-        // 2. Lấy danh sách sở thích của các người dùng khác có chung ít nhất 1 chủ đề
-        var rawOtherPreferences = await _context.UserPreferences
+        // 2. Tìm danh sách User có chung ít nhất 1 chủ đề, sau đó lấy TOÀN BỘ vector sở thích của họ để tính chuẩn normB chính xác
+        var candidateUserIds = await _context.UserPreferences
             .Where(up => up.UserId != userId && myInterestIds.Contains(up.InterestId) && up.Score > 0)
+            .Select(up => up.UserId)
+            .Distinct()
+            .Take(200)
+            .ToListAsync(cancellationToken);
+
+        if (candidateUserIds.Count == 0)
+        {
+            return Array.Empty<(Guid UserId, double Similarity)>();
+        }
+
+        var rawOtherPreferences = await _context.UserPreferences
+            .Where(up => candidateUserIds.Contains(up.UserId) && up.Score > 0)
             .Select(up => new { up.UserId, up.InterestId, up.Score })
-            .Take(2000)
             .ToListAsync(cancellationToken);
 
         var otherPreferences = rawOtherPreferences
@@ -56,7 +67,6 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
                 UserId = g.Key,
                 Preferences = g.Select(p => new { p.InterestId, p.Score }).ToList()
             })
-            .Take(200)
             .ToList();
 
         if (otherPreferences.Count == 0)

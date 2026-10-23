@@ -1,4 +1,4 @@
-﻿using Application.Interfaces;
+using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,62 +66,62 @@ public class PostAiBackgroundWorker : BackgroundService
 
         // Kiểm tra xem bài viết đã được gắn topic trước đó chưa
         var existing = await unitOfWork.PostInterests.GetByPostIdAsync(postId, cancellationToken);
-        if (existing.Count > 0)
+        if (existing.Count == 0)
         {
-            return;
-        }
-
-        // Lấy danh sách tên các chủ đề đang kích hoạt
-        var allInterests = await unitOfWork.Interests.GetAllActiveAsync(cancellationToken);
-        if (allInterests.Count == 0)
-        {
-            _logger.LogWarning("Không có chủ đề nào trong hệ thống để phân loại.");
-            return;
-        }
-
-        var candidateTopicNames = allInterests.Select(i => i.Name).ToList();
-
-        // Gọi Gemini phân tích
-        var classificationResults = await aiAnalyzer.AnalyzeContentTopicsAsync(
-            post.Content,
-            candidateTopicNames,
-            cancellationToken);
-
-        if (classificationResults.Count == 0)
-        {
-            _logger.LogInformation("Không có chủ đề nào vượt qua ngưỡng tin cậy cho bài viết {PostId}.", postId);
-            return;
-        }
-
-        var interestMap = allInterests.ToDictionary(
-            i => i.Name.Trim().ToLowerInvariant(),
-            i => i.Id);
-
-        var postInterests = new List<PostInterest>();
-        foreach (var result in classificationResults)
-        {
-            if (interestMap.TryGetValue(result.TopicName.Trim().ToLowerInvariant(), out var interestId))
+            // Lấy danh sách tên các chủ đề đang kích hoạt
+            var allInterests = await unitOfWork.Interests.GetAllActiveAsync(cancellationToken);
+            if (allInterests.Count == 0)
             {
-                postInterests.Add(new PostInterest
-                {
-                    PostId = post.Id,
-                    InterestId = interestId,
-                    Confidence = Math.Clamp(result.Confidence, 0.0, 1.0),
-                    CreatedAtUtc = DateTime.UtcNow
-                });
+                _logger.LogWarning("Không có chủ đề nào trong hệ thống để phân loại.");
             }
-        }
+            else
+            {
+                var candidateTopicNames = allInterests.Select(i => i.Name).ToList();
 
-        if (postInterests.Count > 0)
-        {
-            await unitOfWork.PostInterests.AddRangeAsync(postInterests, cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+                // Gọi Gemini phân tích
+                var classificationResults = await aiAnalyzer.AnalyzeContentTopicsAsync(
+                    post.Content,
+                    candidateTopicNames,
+                    cancellationToken);
 
-            _logger.LogInformation(
-                "Đã phân loại thành công {Count} chủ đề cho bài viết {PostId}: {Topics}",
-                postInterests.Count,
-                post.Id,
-                string.Join(", ", classificationResults.Select(r => $"{r.TopicName} ({r.Confidence:P0})")));
+                if (classificationResults.Count == 0)
+                {
+                    _logger.LogInformation("Không có chủ đề nào vượt qua ngưỡng tin cậy cho bài viết {PostId}.", postId);
+                }
+                else
+                {
+                    var interestMap = allInterests.ToDictionary(
+                        i => i.Name.Trim().ToLowerInvariant(),
+                        i => i.Id);
+
+                    var postInterests = new List<PostInterest>();
+                    foreach (var result in classificationResults)
+                    {
+                        if (interestMap.TryGetValue(result.TopicName.Trim().ToLowerInvariant(), out var interestId))
+                        {
+                            postInterests.Add(new PostInterest
+                            {
+                                PostId = post.Id,
+                                InterestId = interestId,
+                                Confidence = Math.Clamp(result.Confidence, 0.0, 1.0),
+                                CreatedAtUtc = DateTime.UtcNow
+                            });
+                        }
+                    }
+
+                    if (postInterests.Count > 0)
+                    {
+                        await unitOfWork.PostInterests.AddRangeAsync(postInterests, cancellationToken);
+                        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+                        _logger.LogInformation(
+                            "Đã phân loại thành công {Count} chủ đề cho bài viết {PostId}: {Topics}",
+                            postInterests.Count,
+                            post.Id,
+                            string.Join(", ", classificationResults.Select(r => $"{r.TopicName} ({r.Confidence:P0})")));
+                    }
+                }
+            }
         }
 
         // Tự động sinh Vector Embedding ngữ nghĩa cho bài viết

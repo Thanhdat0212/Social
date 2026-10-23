@@ -65,10 +65,14 @@ public class ProductCoOccurrenceWorker : BackgroundService
 
         var cutoffDate = DateTime.UtcNow.AddDays(-90);
 
-        // 1. Lấy danh sách các sản phẩm trong các đơn hàng đã giao hoặc hoàn tất trong 90 ngày qua
+        // 1. Lấy danh sách các sản phẩm trong các đơn hàng trên sàn đã giao hoặc hoàn tất trong 90 ngày qua (tối đa 5000 đơn gần nhất)
         var orders = await dbContext.ShopOrders
             .AsNoTracking()
-            .Where(o => (o.Status == OrderStatus.Delivered || o.Status == OrderStatus.Completed) && o.CreatedAtUtc >= cutoffDate)
+            .Where(o => o.Source == OrderSource.Marketplace &&
+                        (o.Status == OrderStatus.Delivered || o.Status == OrderStatus.Completed) &&
+                        o.CreatedAtUtc >= cutoffDate)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Take(5000)
             .Select(o => o.Items.Select(i => i.ProductId).Distinct().ToList())
             .ToListAsync(cancellationToken);
 
@@ -154,10 +158,16 @@ public class ProductCoOccurrenceWorker : BackgroundService
             coOccurrenceRecords.AddRange(topPairs);
         }
 
-        // 3. Cập nhật vào Database (Xóa dữ liệu cũ và ghi đè danh sách mới nhất)
-        await dbContext.ProductCoOccurrences.ExecuteDeleteAsync(cancellationToken);
-        await dbContext.ProductCoOccurrences.AddRangeAsync(coOccurrenceRecords, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        // 3. Cập nhật vào Database nguyên tử trong Transaction (Xóa dữ liệu cũ và ghi đè danh sách mới nhất)
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await dbContext.ProductCoOccurrences.ExecuteDeleteAsync(cancellationToken);
+            await dbContext.ProductCoOccurrences.AddRangeAsync(coOccurrenceRecords, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        });
 
         _logger.LogInformation("Đã hoàn tất tính toán và lưu thành công {Count} cặp sản phẩm mua kèm vào ProductCoOccurrences.", coOccurrenceRecords.Count);
     }
