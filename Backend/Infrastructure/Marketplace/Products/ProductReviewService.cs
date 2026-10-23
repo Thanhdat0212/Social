@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Marketplace.Products;
 using Application.Interfaces.Marketplace.Products;
 using Application.Interfaces.Repositories;
@@ -45,6 +45,11 @@ public class ProductReviewService : IProductReviewService
         if (order.BuyerUserId != buyerUserId)
         {
             throw new UnauthorizedAccessException("Bạn không có quyền đánh giá món hàng của người khác.");
+        }
+
+        if (order.Source != OrderSource.Marketplace || (order.Shop != null && order.Shop.OwnerUserId == buyerUserId))
+        {
+            throw new InvalidOperationException("Chỉ có thể đánh giá các đơn hàng mua trực tiếp qua sàn từ gian hàng khác.");
         }
 
         if (order.Status != OrderStatus.Delivered && order.Status != OrderStatus.Completed)

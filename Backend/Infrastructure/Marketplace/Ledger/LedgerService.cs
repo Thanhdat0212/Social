@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Marketplace.Ledger;
 using Application.DTOs.Marketplace.Products;
 using Application.Interfaces.Marketplace.Ledger;
@@ -76,13 +76,6 @@ public class LedgerService : ILedgerService
         Payment payment,
         CancellationToken cancellationToken = default)
     {
-        var idempotencyKey = $"settle:checkout:{checkoutId}";
-        if (await _unitOfWork.Ledgers.TransactionExistsAsync(idempotencyKey, cancellationToken))
-        {
-            _logger.LogWarning("Đơn hàng checkout {CheckoutId} đã được phân bổ sổ cái trước đó.", checkoutId);
-            return;
-        }
-
         var orders = await _unitOfWork.Orders.GetOrdersByCheckoutIdAsync(checkoutId, cancellationToken);
         if (orders.Count == 0)
         {
@@ -96,6 +89,11 @@ public class LedgerService : ILedgerService
         // Ghi nhận phân bổ doanh thu tách bạch cho từng đơn hàng (Revenue split recorded per order)
         foreach (var order in orders)
         {
+            if (order.Source != OrderSource.Marketplace)
+            {
+                continue;
+            }
+
             var orderIdempotencyKey = $"settle:order:{order.Id}";
             if (await _unitOfWork.Ledgers.TransactionExistsAsync(orderIdempotencyKey, cancellationToken))
             {
@@ -144,10 +142,11 @@ public class LedgerService : ILedgerService
                 orderPostingLines,
                 cancellationToken);
 
-            // Cập nhật số dư cache của Shop
+            // Cập nhật số dư cache của Shop và lưu xuống DB
             var balanceCache = await _unitOfWork.Ledgers.GetOrCreateBalanceCacheAsync(order.ShopId, cancellationToken);
             balanceCache.ApplyOrderSettlement(order.Total, shopCommission, shopNet);
             _unitOfWork.Ledgers.UpdateBalanceCache(balanceCache);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Invalidate Memory Cache số dư của Shop
             _cacheService.Remove($"shop:{order.ShopId}:balance");
@@ -171,8 +170,22 @@ public class LedgerService : ILedgerService
             return;
         }
 
-        var shopNet = order.Items.Sum(i => i.ShopNet);
-        if (shopNet <= 0) return;
+        // Đơn nhập ngoài (Excel / Manual) không thu tiền qua cổng sàn -> không hạch toán sổ cái
+        if (order.Source != OrderSource.Marketplace)
+        {
+            return;
+        }
+
+        var grossShopNet = order.Items.Sum(i => i.ShopNet);
+        var orderRefunds = await _unitOfWork.Refunds.GetRefundsByOrderIdAsync(shopOrderId, cancellationToken);
+        var refundedShopDeduction = orderRefunds.Sum(r => r.ShopDeductionAmount);
+        var shopNet = grossShopNet - refundedShopDeduction;
+
+        if (shopNet <= 0)
+        {
+            _logger.LogInformation("Đơn hàng {OrderNo} đã được hoàn tiền toàn bộ phần của Shop (Còn lại: {Remaining}). Bỏ qua giải phóng tiền.", order.OrderNo, shopNet);
+            return;
+        }
 
         var shopPendingAccount = await _unitOfWork.Ledgers.GetOrCreateShopAccountAsync(order.ShopId, LedgerAccountType.ShopPending, cancellationToken);
         var shopAvailableAccount = await _unitOfWork.Ledgers.GetOrCreateShopAccountAsync(order.ShopId, LedgerAccountType.ShopAvailable, cancellationToken);
@@ -257,7 +270,8 @@ public class LedgerService : ILedgerService
             var unsettledOrders = new List<Domain.Entities.Marketplace.Orders.ShopOrder>();
             foreach (var order in orders)
             {
-                if (order.Status is OrderStatus.Delivered or OrderStatus.Completed)
+                if (order.Source == OrderSource.Marketplace &&
+                    order.Status is OrderStatus.Delivered or OrderStatus.Completed)
                 {
                     var orderIdempotencyKey = $"settle:order:{order.Id}";
                     var exists = await _unitOfWork.Ledgers.TransactionExistsAsync(orderIdempotencyKey, cancellationToken);

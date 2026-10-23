@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Marketplace.Ledger;
+using Application.Interfaces.Marketplace.Ledger;
 using Application.Interfaces.Repositories;
 using Domain.Enums;
 using Infrastructure.Persistence;
@@ -93,7 +93,10 @@ public class FundReleaseWorker : BackgroundService
                 order.MarkCompleted();
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                await ledgerService.ReleaseOrderFundsAsync(order.Id, cancellationToken);
+                if (order.Source == OrderSource.Marketplace)
+                {
+                    await ledgerService.ReleaseOrderFundsAsync(order.Id, cancellationToken);
+                }
 
                 await unitOfWork.CommitTransactionAsync(cancellationToken);
 
