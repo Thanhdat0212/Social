@@ -53,8 +53,13 @@ public class PaymentRepository : IPaymentRepository
     {
         var nowUtc = DateTime.UtcNow;
 
+        var safePayloadRef = !string.IsNullOrWhiteSpace(rawPayloadRef) && rawPayloadRef.Length > 500
+            ? rawPayloadRef[..500]
+            : rawPayloadRef;
+
         // Câu UPDATE có điều kiện: nếu 2 request chạy song song, request thứ 2 sẽ chờ khóa dòng
         // rồi đánh giá lại WHERE -> 0 dòng. Nhờ vậy chỉ đúng 1 request ghi nhận tiền vào sổ cái.
+        // Giữ nguyên RawPayloadRef nếu đã chứa thông tin JSON tài khoản thanh toán ban đầu.
         var affected = await _dbContext.Payments
             .Where(p => p.Id == paymentId &&
                         (p.Status == PaymentStatus.Initiated ||
@@ -63,7 +68,7 @@ public class PaymentRepository : IPaymentRepository
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.Status, PaymentStatus.Succeeded)
                 .SetProperty(p => p.PaidAt, (DateTime?)paidAtUtc)
-                .SetProperty(p => p.RawPayloadRef, p => rawPayloadRef ?? p.RawPayloadRef)
+                .SetProperty(p => p.RawPayloadRef, p => string.IsNullOrEmpty(p.RawPayloadRef) ? safePayloadRef : p.RawPayloadRef)
                 .SetProperty(p => p.UpdatedAtUtc, nowUtc),
                 cancellationToken);
 

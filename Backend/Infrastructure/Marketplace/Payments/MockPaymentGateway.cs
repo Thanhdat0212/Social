@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Marketplace.Payments;
+using Application.Interfaces.Marketplace.Payments;
 using Domain.Enums;
 
 namespace Infrastructure.Marketplace.Payments;
@@ -33,15 +33,15 @@ public class MockPaymentGateway : IPaymentGateway
     {
         return Task.FromResult(new GatewayVerifyResult
         {
-            IsPaid = true,
-            AmountPaid = 100000,
-            Status = "PAID",
-            PaidAt = DateTime.UtcNow,
+            IsPaid = false,
+            AmountPaid = 0,
+            Status = "PENDING",
+            PaidAt = null,
             TransactionReference = providerTxnId
         });
     }
 
-    public bool VerifyWebhookSignature(string webhookBody, string signature) => true;
+    public bool VerifyWebhookSignature(string webhookBody, string signature) => false;
 
-    public string? ParseWebhookTransactionId(string webhookBody) => "MOCK-TXN";
+    public string? ParseWebhookTransactionId(string webhookBody) => null;
 }

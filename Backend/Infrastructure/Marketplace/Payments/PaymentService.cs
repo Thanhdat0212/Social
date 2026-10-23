@@ -427,7 +427,38 @@ public class PaymentService : IPaymentService
 
             if (checkoutResult.RefundRequired)
             {
-                _logger.LogWarning("Phiên Checkout {CheckoutId} thanh toán sau khi hết hạn và không còn mã, cần hoàn tiền.", payment.CheckoutId);
+                _logger.LogWarning("Phiên Checkout {CheckoutId} thanh toán sau khi hết hạn và không còn mã, chuyển sang chờ hoàn tiền (RefundPayable).", payment.CheckoutId);
+
+                await _unitOfWork.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var unallocated = await _unitOfWork.Ledgers.GetOrCreateSystemAccountAsync(LedgerAccountType.UnallocatedPayments, cancellationToken);
+                    var refundPayable = await _unitOfWork.Ledgers.GetOrCreateSystemAccountAsync(LedgerAccountType.RefundPayable, cancellationToken);
+
+                    var refundLines = new List<LedgerPostingLine>
+                    {
+                        new() { AccountId = unallocated.Id, Debit = payment.Amount, Credit = 0 },
+                        new() { AccountId = refundPayable.Id, Debit = 0, Credit = payment.Amount }
+                    };
+
+                    await _ledgerService.PostTransactionAsync(
+                        LedgerTransactionType.RefundProcessed,
+                        "Checkout",
+                        payment.CheckoutId,
+                        $"late_pay_refund:{payment.Id}",
+                        $"Chuyển tiền thanh toán muộn phiên {payment.CheckoutId} sang chờ hoàn tiền",
+                        refundLines,
+                        cancellationToken);
+
+                    await _unitOfWork.CommitTransactionAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                    _logger.LogError(ex, "Lỗi khi hạch toán RefundPayable cho thanh toán muộn Payment {PaymentId}", payment.Id);
+                    return false;
+                }
+
                 return true;
             }
 

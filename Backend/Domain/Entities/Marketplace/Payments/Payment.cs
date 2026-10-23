@@ -64,9 +64,9 @@ public class Payment : BaseEntity
         if (Status == PaymentStatus.Succeeded) return;
         Status = PaymentStatus.Succeeded;
         PaidAt = paidAt;
-        if (!string.IsNullOrWhiteSpace(rawPayloadRef))
+        if (string.IsNullOrWhiteSpace(RawPayloadRef) && !string.IsNullOrWhiteSpace(rawPayloadRef))
         {
-            RawPayloadRef = rawPayloadRef;
+            RawPayloadRef = rawPayloadRef.Length > 500 ? rawPayloadRef[..500] : rawPayloadRef;
         }
         UpdatedAtUtc = DateTime.UtcNow;
     }
