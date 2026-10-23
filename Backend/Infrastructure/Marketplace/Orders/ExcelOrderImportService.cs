@@ -434,111 +434,129 @@ public class ExcelOrderImportService : IExcelOrderImportService
 
         long total = unitPrice * request.Quantity;
 
-        // Kiểm tra tồn kho số khả dụng
-        var availableCodes = await _context.DigitalCodes
-            .Where(c => c.ShopId == shop.Id && c.VariantId == variant.Id && c.Status == DigitalCodeStatus.Available)
-            .OrderBy(c => c.CreatedAtUtc)
-            .Take(request.Quantity)
-            .ToListAsync(cancellationToken);
-
-        if (availableCodes.Count < request.Quantity)
+        SellerOrderDetailDto? resultDto = null;
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            throw new InvalidOperationException($"Kho số chỉ còn {availableCodes.Count} mã khả dụng, không đủ để tạo đơn số lượng {request.Quantity}.");
-        }
-
-        // Tạo phiên Checkout nội bộ
-        string checkoutNo = $"CK-MANUAL-{DateTime.UtcNow:yyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..4].ToUpper()}";
-        var checkout = new Checkout(checkoutNo, sellerUserId, total, 0, total, DateTime.UtcNow.AddMinutes(30));
-        checkout.MarkPaid();
-        await _context.Checkouts.AddAsync(checkout, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // Tạo ShopOrder
-        string orderNo = $"OD-MN-{DateTime.UtcNow:yyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
-        string customerInfo = $"{request.CustomerName ?? ""} - {request.CustomerEmail} - {request.CustomerPhone ?? ""}".Trim(' ', '-');
-
-        var shopOrder = new ShopOrder(
-            orderNo,
-            checkout.Id,
-            shop.Id,
-            sellerUserId,
-            total,
-            total,
-            0,
-            total,
-            DateTime.UtcNow,
-            DateTime.UtcNow.AddDays(2)
-        );
-        shopOrder.SetSourceInfo(OrderSource.ManualEntry, customerInfo, request.Note);
-        await _context.ShopOrders.AddAsync(shopOrder, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // Tạo OrderItem
-        var variantLabel = !string.IsNullOrWhiteSpace(variant.Sku) ? variant.Sku : variant.CombinationKey;
-        var orderItem = new OrderItem(
-            shopOrder.Id,
-            variant.Id,
-            variant.ProductId,
-            null,
-            variant.Product?.Name ?? "Sản phẩm",
-            variantLabel,
-            variant.Sku ?? string.Empty,
-            unitPrice,
-            request.Quantity,
-            total,
-            total,
-            0,
-            0,
-            total,
-            DeliveryType.CodePool
-        );
-        await _context.OrderItems.AddAsync(orderItem, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // Xuất giao mã số
-        var fulfillment = new Fulfillment(shopOrder.Id, FulfillmentStatus.Fulfilled);
-        await _context.Fulfillments.AddAsync(fulfillment, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        foreach (var code in availableCodes)
-        {
-            code.MarkDelivered(orderItem.Id);
-        }
-
-        var fulfillmentItem = new FulfillmentItem(fulfillment.Id, orderItem.Id, request.Quantity);
-        await _context.FulfillmentItems.AddAsync(fulfillmentItem, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return new SellerOrderDetailDto
-        {
-            Id = shopOrder.Id,
-            OrderNo = shopOrder.OrderNo,
-            BuyerUserId = sellerUserId,
-            Status = shopOrder.Status.ToString(),
-            Total = shopOrder.Total,
-            ShopGross = shopOrder.ShopGross,
-            CommissionTotal = shopOrder.CommissionTotal,
-            ShopNet = shopOrder.ShopNet,
-            DeliveredAtUtc = shopOrder.DeliveredAtUtc,
-            CreatedAtUtc = shopOrder.CreatedAtUtc,
-            Items = new List<SellerOrderItemDto>
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                new()
+                // Kiểm tra tồn kho số khả dụng trong transaction
+                var availableCodes = await _context.DigitalCodes
+                    .Where(c => c.ShopId == shop.Id && c.VariantId == variant.Id && c.Status == DigitalCodeStatus.Available)
+                    .OrderBy(c => c.CreatedAtUtc)
+                    .Take(request.Quantity)
+                    .ToListAsync(cancellationToken);
+
+                if (availableCodes.Count < request.Quantity)
                 {
-                    Id = orderItem.Id,
-                    ProductId = orderItem.ProductId,
-                    VariantId = orderItem.VariantId,
-                    ProductName = orderItem.ProductName,
-                    VariantLabel = orderItem.VariantLabel,
-                    Sku = orderItem.Sku,
-                    UnitPrice = orderItem.UnitPrice,
-                    Quantity = orderItem.Quantity,
-                    LineTotal = orderItem.LineTotal,
-                    ShopNet = orderItem.ShopNet,
-                    DeliveryType = orderItem.DeliveryType.ToString()
+                    throw new InvalidOperationException($"Kho số chỉ còn {availableCodes.Count} mã khả dụng, không đủ để tạo đơn số lượng {request.Quantity}.");
                 }
+
+                // Tạo phiên Checkout nội bộ
+                string checkoutNo = $"CK-MANUAL-{DateTime.UtcNow:yyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..4].ToUpper()}";
+                var checkout = new Checkout(checkoutNo, sellerUserId, total, 0, total, DateTime.UtcNow.AddMinutes(30));
+                checkout.MarkPaid();
+                await _context.Checkouts.AddAsync(checkout, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Tạo ShopOrder
+                string orderNo = $"OD-MN-{DateTime.UtcNow:yyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
+                string customerInfo = $"{request.CustomerName ?? ""} - {request.CustomerEmail} - {request.CustomerPhone ?? ""}".Trim(' ', '-');
+
+                var shopOrder = new ShopOrder(
+                    orderNo,
+                    checkout.Id,
+                    shop.Id,
+                    sellerUserId,
+                    total,
+                    total,
+                    0,
+                    total,
+                    DateTime.UtcNow,
+                    DateTime.UtcNow.AddDays(2)
+                );
+                shopOrder.SetSourceInfo(OrderSource.ManualEntry, customerInfo, request.Note);
+                await _context.ShopOrders.AddAsync(shopOrder, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Tạo OrderItem
+                var variantLabel = !string.IsNullOrWhiteSpace(variant.Sku) ? variant.Sku : variant.CombinationKey;
+                var orderItem = new OrderItem(
+                    shopOrder.Id,
+                    variant.Id,
+                    variant.ProductId,
+                    null,
+                    variant.Product?.Name ?? "Sản phẩm",
+                    variantLabel,
+                    variant.Sku ?? string.Empty,
+                    unitPrice,
+                    request.Quantity,
+                    total,
+                    total,
+                    0,
+                    0,
+                    total,
+                    DeliveryType.CodePool
+                );
+                await _context.OrderItems.AddAsync(orderItem, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Xuất giao mã số
+                var fulfillment = new Fulfillment(shopOrder.Id, FulfillmentStatus.Fulfilled);
+                await _context.Fulfillments.AddAsync(fulfillment, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                foreach (var code in availableCodes)
+                {
+                    code.MarkDelivered(orderItem.Id);
+                }
+
+                var fulfillmentItem = new FulfillmentItem(fulfillment.Id, orderItem.Id, request.Quantity);
+                await _context.FulfillmentItems.AddAsync(fulfillmentItem, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                resultDto = new SellerOrderDetailDto
+                {
+                    Id = shopOrder.Id,
+                    OrderNo = shopOrder.OrderNo,
+                    BuyerUserId = sellerUserId,
+                    Status = shopOrder.Status.ToString(),
+                    Total = shopOrder.Total,
+                    ShopGross = shopOrder.ShopGross,
+                    CommissionTotal = shopOrder.CommissionTotal,
+                    ShopNet = shopOrder.ShopNet,
+                    DeliveredAtUtc = shopOrder.DeliveredAtUtc,
+                    CreatedAtUtc = shopOrder.CreatedAtUtc,
+                    Items = new List<SellerOrderItemDto>
+                    {
+                        new()
+                        {
+                            Id = orderItem.Id,
+                            ProductId = orderItem.ProductId,
+                            VariantId = orderItem.VariantId,
+                            ProductName = orderItem.ProductName,
+                            VariantLabel = orderItem.VariantLabel,
+                            Sku = orderItem.Sku,
+                            UnitPrice = orderItem.UnitPrice,
+                            Quantity = orderItem.Quantity,
+                            LineTotal = orderItem.LineTotal,
+                            ShopNet = orderItem.ShopNet,
+                            DeliveryType = orderItem.DeliveryType.ToString()
+                        }
+                    }
+                };
             }
-        };
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+
+        return resultDto!;
     }
 
     #region Thuật toán Hỗ trợ (Fuzzy Mapping & Matching)

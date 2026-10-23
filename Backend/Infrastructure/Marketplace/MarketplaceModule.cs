@@ -13,6 +13,14 @@ public static class MarketplaceModule
         services.AddScoped<Application.Interfaces.Repositories.Marketplace.Categories.ICategoryRepository, Infrastructure.Marketplace.Categories.CategoryRepository>();
         services.AddScoped<Application.Interfaces.Repositories.Marketplace.Categories.IAttributeRepository, Infrastructure.Marketplace.Categories.AttributeRepository>();
         services.AddScoped<Application.Interfaces.Repositories.Marketplace.Categories.ICategoryRequestRepository, Infrastructure.Marketplace.Categories.CategoryRequestRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Products.IProductRepository, Infrastructure.Marketplace.Products.ProductRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Products.IProductVariantRepository, Infrastructure.Marketplace.Products.ProductVariantRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Products.IProductReviewRepository, Infrastructure.Marketplace.Products.ProductReviewRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Inventory.IDigitalCodeRepository, Infrastructure.Marketplace.Inventory.DigitalCodeRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Inventory.IDigitalFileRepository, Infrastructure.Marketplace.Inventory.DigitalFileRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Orders.ICartRepository, Infrastructure.Marketplace.Orders.CartRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Orders.ICheckoutRepository, Infrastructure.Marketplace.Orders.CheckoutRepository>();
+        services.AddScoped<Application.Interfaces.Repositories.Marketplace.Orders.IOrderRepository, Infrastructure.Marketplace.Orders.OrderRepository>();
 
         services.AddScoped<Application.Interfaces.Marketplace.Shops.IShopService, Infrastructure.Marketplace.Shops.ShopService>();
         services.AddScoped<Application.Interfaces.Marketplace.Shops.IAdminShopService, Infrastructure.Marketplace.Shops.AdminShopService>();

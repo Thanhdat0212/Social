@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Marketplace.Products;
 using Application.Interfaces.Marketplace.Products;
 using Application.Interfaces.Repositories;
@@ -96,7 +96,7 @@ public class CatalogService : ICatalogService
                         product.Shop.DeletedAtUtc == null &&
                         product.Shop.ApprovalStatus == ApprovalStatus.Approved &&
                         product.Shop.OperatingStatus == OperatingStatus.Open &&
-                        !product.Shop.Sanctions.Any(sn => sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)) &&
+                        !product.Shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)) &&
                         (product.Category == null || product.Category.IsActive);
 
         if (!isVisible)
@@ -194,8 +194,10 @@ public class CatalogService : ICatalogService
         var p = page > 0 ? page : 1;
         var ps = pageSize > 0 ? pageSize : 20;
 
+        var nowUtc = DateTime.UtcNow;
         var shop = await _unitOfWork.Shops.GetBySlugAsync(shopSlug, cancellationToken);
-        if (shop == null || shop.ApprovalStatus != ApprovalStatus.Approved || shop.OperatingStatus != OperatingStatus.Open)
+        if (shop == null || shop.ApprovalStatus != ApprovalStatus.Approved || shop.OperatingStatus != OperatingStatus.Open ||
+            shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
         {
             return new PagedResult<CatalogProductCardDto>
             {

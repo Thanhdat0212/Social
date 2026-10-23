@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Marketplace.Orders;
+using Application.DTOs.Marketplace.Orders;
 using Application.Interfaces.Marketplace.Orders;
 using Application.Interfaces.Repositories;
 using Domain.Entities.Marketplace.Orders;
@@ -49,14 +49,22 @@ public class CartService : ICartService
         }
 
         var product = await _unitOfWork.Products.GetByIdAsync(variant.ProductId, cancellationToken);
-        if (product == null || product.Status != ProductStatus.Listed || product.DeletedAtUtc.HasValue)
+        if (product == null || product.Status != ProductStatus.Listed || product.DeletedAtUtc.HasValue || product.HasActiveTakedown())
         {
             throw new InvalidOperationException("Sản phẩm này hiện không còn kinh doanh trên sàn.");
         }
 
-        // Chặn người bán tự mua hàng của chính gian hàng mình
+        // Chặn người bán tự mua hàng của chính gian hàng mình hoặc gian hàng đang tạm đóng / bị đình chỉ
+        var nowUtc = DateTime.UtcNow;
         var shop = await _unitOfWork.Shops.GetByIdAsync(variant.ShopId, cancellationToken);
-        if (shop != null && shop.OwnerUserId == userId)
+        if (shop == null || shop.DeletedAtUtc.HasValue ||
+            shop.ApprovalStatus != ApprovalStatus.Approved ||
+            shop.OperatingStatus != OperatingStatus.Open ||
+            shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
+        {
+            throw new InvalidOperationException("Gian hàng hiện đang tạm đóng hoặc bị xử phạt.");
+        }
+        if (shop.OwnerUserId == userId)
         {
             throw new InvalidOperationException("Bạn không thể mua sản phẩm của chính gian hàng mình.");
         }
@@ -151,7 +159,7 @@ public class CartService : ICartService
             else if (shop == null || shop.DeletedAtUtc.HasValue ||
                      shop.ApprovalStatus != ApprovalStatus.Approved ||
                      shop.OperatingStatus != OperatingStatus.Open ||
-                     shop.Sanctions.Any(sn => sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
+                     shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
             {
                 isAvailable = false;
                 reason = "Gian hàng hiện đang tạm đóng hoặc bị xử phạt";

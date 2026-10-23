@@ -398,10 +398,14 @@ public class ExcelProductImportService : IExcelProductImportService
 
                     int valPos = 0;
                     var optionValuesMap = new Dictionary<string, ProductOptionValue>(StringComparer.OrdinalIgnoreCase);
+                    var resolvedVariantNames = new List<string>(prodInput.Variants.Count);
 
-                    foreach (var vInput in prodInput.Variants)
+                    for (int idx = 0; idx < prodInput.Variants.Count; idx++)
                     {
-                        var valName = string.IsNullOrWhiteSpace(vInput.VariantName) ? $"Gói {valPos + 1}" : vInput.VariantName.Trim();
+                        var vInput = prodInput.Variants[idx];
+                        var valName = string.IsNullOrWhiteSpace(vInput.VariantName) ? $"Gói {idx + 1}" : vInput.VariantName.Trim();
+                        resolvedVariantNames.Add(valName);
+
                         if (!optionValuesMap.ContainsKey(valName))
                         {
                             var optVal = new ProductOptionValue(option.Id, valName, valPos++);
@@ -413,9 +417,10 @@ public class ExcelProductImportService : IExcelProductImportService
                     long minPrice = long.MaxValue;
                     long maxPrice = 0;
 
-                    foreach (var vInput in prodInput.Variants)
+                    for (int idx = 0; idx < prodInput.Variants.Count; idx++)
                     {
-                        var valName = string.IsNullOrWhiteSpace(vInput.VariantName) ? "Gói Tiêu Chuẩn" : vInput.VariantName.Trim();
+                        var vInput = prodInput.Variants[idx];
+                        var valName = resolvedVariantNames[idx];
                         var optVal = optionValuesMap[valName];
 
                         var sku = string.IsNullOrWhiteSpace(vInput.Sku)
@@ -450,10 +455,20 @@ public class ExcelProductImportService : IExcelProductImportService
                     product.Images.Add(image);
                 }
 
-                // 3. Đăng bán ngay nếu được yêu cầu
+                // 3. Đăng bán ngay nếu được yêu cầu (tuân thủ chính sách kiểm duyệt danh mục)
                 if (prodInput.PublishImmediate && !string.IsNullOrWhiteSpace(prodInput.ImageUrl))
                 {
-                    product.Publish(requiresReview: false);
+                    bool requiresReview = false;
+                    if (prodInput.MatchedCategoryId.HasValue)
+                    {
+                        var cat = await _context.Categories.AsNoTracking()
+                            .FirstOrDefaultAsync(c => c.Id == prodInput.MatchedCategoryId.Value, cancellationToken);
+                        if (cat != null && cat.ModerationPolicy == CategoryModerationPolicy.RequiresReview)
+                        {
+                            requiresReview = true;
+                        }
+                    }
+                    product.Publish(requiresReview);
                 }
 
                 // Lưu vào CSDL

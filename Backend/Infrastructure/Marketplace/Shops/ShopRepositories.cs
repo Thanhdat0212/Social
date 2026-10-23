@@ -1,4 +1,4 @@
-﻿using Infrastructure.Persistence;
+using Infrastructure.Persistence;
 using Application.Interfaces.Repositories.Marketplace.Shops;
 using Domain.Entities.Marketplace.Shops;
 using Domain.Enums;
@@ -173,7 +173,7 @@ public class ShopSanctionRepository : IShopSanctionRepository
     public async Task<ShopSanction?> GetActiveSanctionByShopIdAsync(Guid shopId, DateTime nowUtc, CancellationToken cancellationToken = default)
     {
         return await _context.ShopSanctions
-            .Where(s => s.ShopId == shopId && s.LiftedAtUtc == null && (s.EndAtUtc == null || s.EndAtUtc > nowUtc))
+            .Where(s => s.ShopId == shopId && s.Type != ShopSanctionType.Warning && s.LiftedAtUtc == null && (s.EndAtUtc == null || s.EndAtUtc > nowUtc))
             .OrderByDescending(s => s.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }

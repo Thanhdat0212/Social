@@ -1,4 +1,4 @@
-﻿using Infrastructure.Persistence;
+using Infrastructure.Persistence;
 using Application.Interfaces.Repositories.Marketplace.Products;
 using Domain.Entities.Marketplace.Products;
 using Domain.Enums;
@@ -19,8 +19,10 @@ public class ProductRepository : IProductRepository
     {
         return await _context.Products
             .Include(p => p.Shop)
+                .ThenInclude(s => s!.Sanctions)
             .Include(p => p.Category)
             .Include(p => p.Images)
+            .Include(p => p.Takedowns)
             .Include(p => p.Variants.Where(v => v.DeletedAtUtc == null))
             .FirstOrDefaultAsync(p => p.Id == id && p.DeletedAtUtc == null, cancellationToken);
     }
@@ -174,11 +176,11 @@ public class ProductRepository : IProductRepository
             .Include(p => p.Variants.Where(v => v.DeletedAtUtc == null))
             .Where(p => p.DeletedAtUtc == null && p.Status == ProductStatus.Listed)
             .Where(p => !p.Takedowns.Any(t => t.LiftedAtUtc == null))
-            // Shop phải Active (Open, Approved, không có Sanction còn hiệu lực)
+            // Shop phải Active (Open, Approved, không có Sanction đình chỉ còn hiệu lực)
             .Where(p => p.Shop != null && p.Shop.DeletedAtUtc == null &&
                         p.Shop.ApprovalStatus == ApprovalStatus.Approved &&
                         p.Shop.OperatingStatus == OperatingStatus.Open &&
-                        !p.Shop.Sanctions.Any(sn => sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
+                        !p.Shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
             // Danh mục phải Active
             .Where(p => p.Category == null || p.Category.IsActive);
 
@@ -190,9 +192,10 @@ public class ProductRepository : IProductRepository
             if (targetCategory != null)
             {
                 var targetPath = targetCategory.Path;
+                var targetPrefix = string.IsNullOrEmpty(targetPath) ? null : targetPath.TrimEnd('/') + "/";
                 var descendantCategoryIds = await _context.Categories.AsNoTracking()
                     .Where(c => c.Id == targetCategory.Id 
-                             || (!string.IsNullOrEmpty(targetPath) && c.Path.StartsWith(targetPath))
+                             || (targetPrefix != null && (c.Path == targetPath || c.Path.StartsWith(targetPrefix)))
                              || c.ParentId == targetCategory.Id)
                     .Select(c => c.Id)
                     .ToListAsync(cancellationToken);
@@ -250,7 +253,7 @@ public class ProductRepository : IProductRepository
             .Where(p => p.Shop != null && p.Shop.DeletedAtUtc == null &&
                         p.Shop.ApprovalStatus == ApprovalStatus.Approved &&
                         p.Shop.OperatingStatus == OperatingStatus.Open &&
-                        !p.Shop.Sanctions.Any(sn => sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
+                        !p.Shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
             .Where(p => p.Category == null || p.Category.IsActive);
 
         if (categoryId.HasValue)
@@ -261,9 +264,10 @@ public class ProductRepository : IProductRepository
             if (targetCategory != null)
             {
                 var targetPath = targetCategory.Path;
+                var targetPrefix = string.IsNullOrEmpty(targetPath) ? null : targetPath.TrimEnd('/') + "/";
                 var descendantCategoryIds = await _context.Categories.AsNoTracking()
                     .Where(c => c.Id == targetCategory.Id 
-                             || (!string.IsNullOrEmpty(targetPath) && c.Path.StartsWith(targetPath))
+                             || (targetPrefix != null && (c.Path == targetPath || c.Path.StartsWith(targetPrefix)))
                              || c.ParentId == targetCategory.Id)
                     .Select(c => c.Id)
                     .ToListAsync(cancellationToken);
@@ -351,6 +355,7 @@ public class ProductRepository : IProductRepository
         var query = _context.Products
             .Include(p => p.Shop)
             .Include(p => p.Category)
+            .Include(p => p.Images.OrderBy(i => i.Position))
             .Include(p => p.Takedowns)
             .Include(p => p.Variants.Where(v => v.DeletedAtUtc == null))
             .Where(p => p.DeletedAtUtc == null);

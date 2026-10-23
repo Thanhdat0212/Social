@@ -84,6 +84,13 @@ public class CheckoutService : ICheckoutService
             itemsToCheckout = candidateItems.Select(i => (i.VariantId, i.Quantity)).ToList();
         }
 
+        // Gộp các dòng trùng VariantId và lọc số lượng hợp lệ (> 0)
+        itemsToCheckout = itemsToCheckout
+            .Where(i => i.Quantity > 0)
+            .GroupBy(i => i.VariantId)
+            .Select(g => (VariantId: g.Key, Quantity: g.Sum(x => x.Quantity)))
+            .ToList();
+
         if (itemsToCheckout.Count == 0)
         {
             throw new InvalidOperationException("Không có sản phẩm hợp lệ nào được chọn để thanh toán.");
@@ -122,7 +129,7 @@ public class CheckoutService : ICheckoutService
                 if (shop == null || shop.DeletedAtUtc.HasValue ||
                     shop.ApprovalStatus != ApprovalStatus.Approved ||
                     shop.OperatingStatus != OperatingStatus.Open ||
-                    shop.Sanctions.Any(sn => sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
+                    shop.Sanctions.Any(sn => sn.Type != ShopSanctionType.Warning && sn.LiftedAtUtc == null && (sn.EndAtUtc == null || sn.EndAtUtc > nowUtc)))
                 {
                     throw new InvalidOperationException($"Gian hàng '{shop?.Name ?? "N/A"}' hiện đang tạm đóng hoặc bị xử phạt.");
                 }

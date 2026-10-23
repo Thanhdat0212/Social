@@ -1,4 +1,4 @@
-﻿using Infrastructure.Persistence;
+using Infrastructure.Persistence;
 using Application.Interfaces.Repositories.Marketplace.Orders;
 using Domain.Entities.Marketplace.Orders;
 using Domain.Enums;
@@ -22,6 +22,15 @@ public class CartRepository : ICartRepository
                 .ThenInclude(i => i.Variant)
                     .ThenInclude(v => v!.Product)
                         .ThenInclude(p => p!.Shop)
+                            .ThenInclude(s => s!.Sanctions)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Variant)
+                    .ThenInclude(v => v!.Product)
+                        .ThenInclude(p => p!.Images)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Variant)
+                    .ThenInclude(v => v!.Product)
+                        .ThenInclude(p => p!.Takedowns)
             .Include(c => c.Items)
                 .ThenInclude(i => i.Variant)
                     .ThenInclude(v => v!.OptionValues)
