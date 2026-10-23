@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Comments;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
@@ -159,7 +159,7 @@ public class CommentService : ICommentService
     {
         var currentUserId = GetCurrentUserId();
 
-        var comment = await _unitOfWork.Comments.GetByIdAsync(commentId, cancellationToken);
+        var comment = await _unitOfWork.Comments.GetWithDetailsByIdAsync(commentId, cancellationToken);
         if (comment == null)
         {
             throw new NotFoundException("Bình luận không tồn tại.");
@@ -170,10 +170,11 @@ public class CommentService : ICommentService
             throw new UnauthorizedAccessException("Bạn không có quyền xóa bình luận này.");
         }
 
+        var deletedCount = 1 + (comment.Replies?.Count ?? 0);
         var post = await _unitOfWork.Posts.GetByIdAsync(comment.PostId, cancellationToken);
         if (post != null)
         {
-            post.CommentCount = Math.Max(0, post.CommentCount - 1);
+            post.CommentCount = Math.Max(0, post.CommentCount - deletedCount);
         }
 
         _unitOfWork.Comments.Delete(comment);

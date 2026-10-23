@@ -1,4 +1,4 @@
-﻿using Infrastructure.Persistence.Repositories;
+using Infrastructure.Persistence.Repositories;
 using Application.Interfaces.Repositories;
 using Domain.Entities;
 using Infrastructure.Persistence;
@@ -18,10 +18,10 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
             .Include(p => p.Author)
             .Include(p => p.PostInterests)
                 .ThenInclude(pi => pi.Interest)
-            .Include(p => p.PostProducts)
+            .Include(p => p.PostProducts.Where(pp => pp.Product.DeletedAtUtc == null && pp.Product.Status == Domain.Enums.ProductStatus.Listed))
                 .ThenInclude(pp => pp.Product)
                     .ThenInclude(pr => pr.Shop)
-            .Include(p => p.PostProducts)
+            .Include(p => p.PostProducts.Where(pp => pp.Product.DeletedAtUtc == null && pp.Product.Status == Domain.Enums.ProductStatus.Listed))
                 .ThenInclude(pp => pp.Product)
                     .ThenInclude(pr => pr.Images);
     }

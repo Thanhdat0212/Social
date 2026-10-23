@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Posts;
 using Application.DTOs.Recommendation;
 using Application.Interfaces;
@@ -122,7 +122,8 @@ public class FeedService : IFeedService
         var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(currentUserId, 500, cancellationToken);
         foreach (var id in dbViewed) viewedPostIds.Add(id);
 
-        var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, 200, cancellationToken);
+        var fetchLimit = Math.Max(200, page * pageSize);
+        var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, fetchLimit, cancellationToken);
         var unseen = posts.Where(p => !viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
         var viewed = posts.Where(p => viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
 

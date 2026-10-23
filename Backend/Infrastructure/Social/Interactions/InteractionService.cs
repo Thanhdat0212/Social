@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Interactions;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
@@ -49,9 +49,17 @@ public class InteractionService : IInteractionService
         }
 
         var userId = _currentUserService.UserId.Value;
+        var viewedPostIdsInBatch = new HashSet<Guid>();
 
         foreach (var item in request.Events.Take(100))
         {
+            if (item.InteractionType == InteractionType.View && item.PostId.HasValue)
+            {
+                if (!viewedPostIdsInBatch.Add(item.PostId.Value))
+                {
+                    continue; // Bỏ qua sự kiện View trùng bài viết trong cùng 1 batch
+                }
+            }
             await ProcessSingleInteractionAsync(userId, item, cancellationToken);
         }
 

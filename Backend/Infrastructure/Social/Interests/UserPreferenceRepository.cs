@@ -1,4 +1,4 @@
-﻿using Infrastructure.Persistence.Repositories;
+using Infrastructure.Persistence.Repositories;
 using Application.Interfaces.Repositories;
 using Domain.Entities;
 using Infrastructure.Persistence;
@@ -56,8 +56,10 @@ public class UserPreferenceRepository : IUserPreferenceRepository
     public async Task UpsertPreferenceAsync(Guid userId, Guid interestId, double scoreDelta, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
-        var pref = await _context.UserPreferences
-            .FirstOrDefaultAsync(up => up.UserId == userId && up.InterestId == interestId, cancellationToken);
+        var pref = _context.UserPreferences.Local
+            .FirstOrDefault(up => up.UserId == userId && up.InterestId == interestId)
+            ?? await _context.UserPreferences
+                .FirstOrDefaultAsync(up => up.UserId == userId && up.InterestId == interestId, cancellationToken);
 
         if (pref != null)
         {
