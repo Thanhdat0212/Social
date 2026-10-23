@@ -84,26 +84,46 @@ public static class ApiServiceExtensions
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            options.AddFixedWindowLimiter("global-policy", opt =>
+            static string GetPartitionKey(HttpContext context)
             {
-                opt.Window = TimeSpan.FromMinutes(1);
-                opt.PermitLimit = 60;
-                opt.QueueLimit = 0;
-            });
+                var userId = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? context.User?.FindFirst("sub")?.Value;
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    return $"user:{userId}";
+                }
+                return $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+            }
 
-            options.AddFixedWindowLimiter("checkout-policy", opt =>
-            {
-                opt.Window = TimeSpan.FromMinutes(1);
-                opt.PermitLimit = 15;
-                opt.QueueLimit = 0;
-            });
+            options.AddPolicy("global-policy", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetPartitionKey(context),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 60,
+                        QueueLimit = 0
+                    }));
 
-            options.AddFixedWindowLimiter("report-policy", opt =>
-            {
-                opt.Window = TimeSpan.FromMinutes(1);
-                opt.PermitLimit = 10;
-                opt.QueueLimit = 0;
-            });
+            options.AddPolicy("checkout-policy", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetPartitionKey(context),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 15,
+                        QueueLimit = 0
+                    }));
+
+            options.AddPolicy("report-policy", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetPartitionKey(context),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        QueueLimit = 0
+                    }));
         });
 
         return services;

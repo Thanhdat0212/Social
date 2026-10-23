@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using Application.Common;
 using Microsoft.Extensions.Configuration;
@@ -12,6 +12,7 @@ public class SignedUrlService : ISignedUrlService
     public SignedUrlService(IConfiguration configuration)
     {
         var secret = configuration["SignedUrl:SecretKey"]
+            ?? configuration["Jwt:SigningKey"]
             ?? configuration["JwtSettings:SigningKey"]
             ?? "DefaultSecretKeyForSignedDownloadUrlGenerationPhase123456";
 

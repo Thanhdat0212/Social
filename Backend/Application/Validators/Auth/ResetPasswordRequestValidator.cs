@@ -15,11 +15,12 @@ public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequ
             .NotEmpty().WithMessage("Token không được để trống.");
 
         RuleFor(x => x.NewPassword)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Mật khẩu mới không được để trống.")
             .MinimumLength(8).WithMessage("Mật khẩu phải có ít nhất 8 ký tự.")
-            .Must(p => Regex.IsMatch(p, "[A-Z]")).WithMessage("Mật khẩu phải chứa ít nhất một chữ hoa.")
-            .Must(p => Regex.IsMatch(p, "[a-z]")).WithMessage("Mật khẩu phải chứa ít nhất một chữ thường.")
-            .Must(p => Regex.IsMatch(p, "[0-9]")).WithMessage("Mật khẩu phải chứa ít nhất một chữ số.");
+            .Must(p => !string.IsNullOrEmpty(p) && Regex.IsMatch(p, "[A-Z]")).WithMessage("Mật khẩu phải chứa ít nhất một chữ hoa.")
+            .Must(p => !string.IsNullOrEmpty(p) && Regex.IsMatch(p, "[a-z]")).WithMessage("Mật khẩu phải chứa ít nhất một chữ thường.")
+            .Must(p => !string.IsNullOrEmpty(p) && Regex.IsMatch(p, "[0-9]")).WithMessage("Mật khẩu phải chứa ít nhất một chữ số.");
 
         RuleFor(x => x.ConfirmPassword)
             .NotEmpty().WithMessage("Xác nhận mật khẩu không được để trống.")

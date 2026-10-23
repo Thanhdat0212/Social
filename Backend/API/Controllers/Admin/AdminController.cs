@@ -105,14 +105,35 @@ public class AdminController : ControllerBase
         [FromBody] UpdateUserStatusRequest request,
         CancellationToken cancellationToken = default)
     {
+        var currentAdminIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                             ?? User.FindFirst("sub")?.Value;
+        if (Guid.TryParse(currentAdminIdStr, out var currentAdminId) && currentAdminId == id && request.Status == UserStatus.Suspended)
+        {
+            throw new ValidationAppException("Status", "Quản trị viên không thể tự khóa tài khoản của chính mình.");
+        }
+
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user == null)
         {
             throw new NotFoundException("User", id);
         }
 
+        var nowUtc = DateTime.UtcNow;
         user.Status = request.Status;
-        user.UpdatedAtUtc = DateTime.UtcNow;
+        user.UpdatedAtUtc = nowUtc;
+
+        // Nếu khóa tài khoản, thu hồi toàn bộ RefreshToken đang hoạt động của người dùng đó
+        if (request.Status == UserStatus.Suspended)
+        {
+            var activeTokens = await _context.RefreshTokens
+                .Where(rt => rt.UserId == id && rt.RevokedAtUtc == null && rt.ExpiresAtUtc > nowUtc)
+                .ToListAsync(cancellationToken);
+
+            foreach (var token in activeTokens)
+            {
+                token.RevokedAtUtc = nowUtc;
+            }
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -135,6 +156,13 @@ public class AdminController : ControllerBase
         [FromBody] UpdateUserRoleRequest request,
         CancellationToken cancellationToken = default)
     {
+        var currentAdminIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                             ?? User.FindFirst("sub")?.Value;
+        if (Guid.TryParse(currentAdminIdStr, out var currentAdminId) && currentAdminId == id && request.Role != UserRole.Admin)
+        {
+            throw new ValidationAppException("Role", "Quản trị viên không thể tự hạ quyền của chính mình.");
+        }
+
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user == null)
         {

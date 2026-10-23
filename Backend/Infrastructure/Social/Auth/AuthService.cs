@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using Application.DTOs.Auth.Requests;
 using Application.DTOs.Auth.Responses;
 using Application.Interfaces;
@@ -100,8 +100,9 @@ public class AuthService : IAuthService
         // Tạo link xác minh và gửi email
         var baseUrl = GetFrontendBaseUrl();
         var verifyUrl = $"{baseUrl}/verify-email?userId={user.Id}&token={rawToken}";
+        var encodedDisplayName = System.Net.WebUtility.HtmlEncode(user.DisplayName);
         var emailBody = $@"
-            <h2>Chào mừng {user.DisplayName} đến với Social!</h2>
+            <h2>Chào mừng {encodedDisplayName} đến với Social!</h2>
             <p>Vui lòng bấm vào liên kết bên dưới để xác minh địa chỉ email của bạn:</p>
             <p><a href=""{verifyUrl}"" style=""display:inline-block;padding:10px 20px;color:#fff;background-color:#007bff;text-decoration:none;border-radius:5px;"">Xác minh Email</a></p>
             <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{verifyUrl}"" style=""word-break:break-all;color:#007bff;"">{verifyUrl}</a></p>
@@ -192,9 +193,10 @@ public class AuthService : IAuthService
 
         var baseUrl = GetFrontendBaseUrl();
         var verifyUrl = $"{baseUrl}/verify-email?userId={user.Id}&token={rawToken}";
+        var encodedDisplayName = System.Net.WebUtility.HtmlEncode(user.DisplayName);
         var emailBody = $@"
             <h2>Xác minh lại tài khoản Social</h2>
-            <p>Chào {user.DisplayName}, chúng tôi nhận được yêu cầu gửi lại email xác minh.</p>
+            <p>Chào {encodedDisplayName}, chúng tôi nhận được yêu cầu gửi lại email xác minh.</p>
             <p><a href=""{verifyUrl}"" style=""display:inline-block;padding:10px 20px;color:#fff;background-color:#007bff;text-decoration:none;border-radius:5px;"">Xác minh Email</a></p>
             <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{verifyUrl}"" style=""word-break:break-all;color:#007bff;"">{verifyUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 24 giờ.</p>";
@@ -272,9 +274,9 @@ public class AuthService : IAuthService
             throw new ValidationAppException("IdToken", "Mã xác thực Google (ID Token) không hợp lệ hoặc đã hết hạn.");
         }
 
-        if (string.IsNullOrWhiteSpace(payload.Email))
+        if (string.IsNullOrWhiteSpace(payload.Email) || !payload.EmailVerified)
         {
-            throw new ValidationAppException("Email", "Không thể lấy thông tin email từ tài khoản Google này.");
+            throw new ValidationAppException("Email", "Tài khoản Google chưa xác minh địa chỉ email hoặc không cung cấp email hợp lệ.");
         }
 
         var normalizedEmail = payload.Email.Trim().ToUpperInvariant();
@@ -309,6 +311,11 @@ public class AuthService : IAuthService
                 throw new ValidationAppException("Account", "Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ ban quản trị.");
             }
 
+            if (!string.IsNullOrEmpty(user.GoogleId) && user.GoogleId != payload.Subject)
+            {
+                throw new ValidationAppException("GoogleId", "Email này đã được liên kết với một tài khoản Google khác.");
+            }
+
             // 3. Đã có tài khoản -> Liên kết GoogleId và kích hoạt email nếu chưa
             var isUpdated = false;
 
@@ -320,7 +327,9 @@ public class AuthService : IAuthService
 
             if (!user.EmailConfirmed)
             {
+                // Nếu tài khoản trước đó chưa xác nhận email (có thể do người khác đăng ký), xóa mật khẩu cũ chưa xác nhận để tránh bị chiếm quyền ngược
                 user.EmailConfirmed = true;
+                user.PasswordHash = null;
                 isUpdated = true;
             }
 
@@ -376,9 +385,17 @@ public class AuthService : IAuthService
         var tokenHash = TokenHasher.HashToken(rawRefreshToken);
         var token = await _unitOfWork.RefreshTokens.GetByTokenHashWithUserAsync(tokenHash, cancellationToken);
 
-        if (token == null || token.IsRevoked || token.IsExpired)
+        if (token == null || token.IsRevoked || token.IsExpired || token.User == null)
         {
             throw new ValidationAppException("Token", "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
+        }
+
+        if (token.User.Status == UserStatus.Suspended)
+        {
+            token.RevokedAtUtc = DateTime.UtcNow;
+            _unitOfWork.RefreshTokens.Update(token);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            throw new ValidationAppException("Account", "Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ ban quản trị.");
         }
 
         // Token rotation: Thu hồi token cũ
@@ -469,9 +486,10 @@ public class AuthService : IAuthService
 
         var baseUrl = GetFrontendBaseUrl();
         var resetUrl = $"{baseUrl}/reset-password?userId={user.Id}&token={rawToken}";
+        var encodedDisplayName = System.Net.WebUtility.HtmlEncode(user.DisplayName);
         var emailBody = $@"
             <h2>Yêu cầu đặt lại mật khẩu</h2>
-            <p>Chào {user.DisplayName}, chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Social của bạn.</p>
+            <p>Chào {encodedDisplayName}, chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Social của bạn.</p>
             <p><a href=""{resetUrl}"" style=""display:inline-block;padding:10px 20px;color:#fff;background-color:#dc3545;text-decoration:none;border-radius:5px;"">Đặt lại mật khẩu</a></p>
             <p>Hoặc copy đường link này vào trình duyệt: <br/><a href=""{resetUrl}"" style=""word-break:break-all;color:#dc3545;"">{resetUrl}</a></p>
             <p>Liên kết này có hiệu lực trong 1 giờ. Nếu bạn không gửi yêu cầu này, hãy bỏ qua email này.</p>";
@@ -531,6 +549,7 @@ public class AuthService : IAuthService
                 _unitOfWork.RefreshTokens.Update(rt);
             }
 
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
         }
         catch

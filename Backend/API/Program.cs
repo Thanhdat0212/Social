@@ -43,14 +43,14 @@ app.UseHttpsRedirection();
 // 5. CORS
 app.UseCors();
 
-// 6. Rate Limiter (M9.3 Chống lạm dụng & Spam)
-app.UseRateLimiter();
-
-// 7. Authentication (Đọc JWT từ header hoặc query param cho WebSocket)
+// 6. Authentication (Đọc JWT từ header hoặc query param cho WebSocket)
 app.UseAuthentication();
 
-// 8. Authorization (Kiểm tra [Authorize])
+// 7. Authorization (Kiểm tra [Authorize])
 app.UseAuthorization();
+
+// 8. Rate Limiter (M9.3 Chống lạm dụng & Spam - đặt sau Auth để partition theo UserId)
+app.UseRateLimiter();
 
 // 9. Map Controllers & SignalR Hubs
 app.MapControllers();

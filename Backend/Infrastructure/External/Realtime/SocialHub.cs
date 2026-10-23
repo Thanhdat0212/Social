@@ -1,18 +1,21 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Application.Interfaces.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.External.Realtime;
 
 public class SocialHub : Hub
 {
-    // Khởi tạo & logger: 
-    private readonly ILogger<SocialHub> _logger;// theo dõi ai vào, ai ra khỏi tổng đài của mình
+    private readonly ILogger<SocialHub> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public SocialHub(ILogger<SocialHub> logger)
+    public SocialHub(ILogger<SocialHub> logger, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public override async Task OnConnectedAsync()
@@ -73,11 +76,23 @@ public class SocialHub : Hub
     /// </summary>
     public async Task JoinCheckoutGroup(string checkoutId)
     {
-        if (Guid.TryParse(checkoutId, out var parsedCheckoutId))
+        var userId = GetUserId();
+        if (!userId.HasValue || !Guid.TryParse(checkoutId, out var parsedCheckoutId))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"checkout_{parsedCheckoutId}");
-            _logger.LogDebug("Client {ConnectionId} đã tham gia group checkout_{CheckoutId}", Context.ConnectionId, parsedCheckoutId);
+            return;
         }
+
+        using var scope = _scopeFactory.CreateScope();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var checkout = await unitOfWork.Checkouts.GetByIdAsync(parsedCheckoutId);
+        if (checkout == null || checkout.BuyerUserId != userId.Value)
+        {
+            _logger.LogWarning("User {UserId} bị từ chối tham gia group checkout_{CheckoutId} do không phải chủ phiên.", userId.Value, parsedCheckoutId);
+            return;
+        }
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"checkout_{parsedCheckoutId}");
+        _logger.LogDebug("Client {ConnectionId} đã tham gia group checkout_{CheckoutId}", Context.ConnectionId, parsedCheckoutId);
     }
 
     /// <summary>
