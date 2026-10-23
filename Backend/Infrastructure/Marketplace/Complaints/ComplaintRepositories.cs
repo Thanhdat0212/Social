@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Repositories.Marketplace.Complaints;
+using Application.Interfaces.Repositories.Marketplace.Complaints;
 using Domain.Entities.Marketplace.Complaints;
 using Domain.Enums;
 using Infrastructure.Persistence;
@@ -134,6 +134,7 @@ public class ComplaintRepository : IComplaintRepository
     {
         return await _dbContext.Complaints
             .AnyAsync(c => c.OrderItemId == orderItemId &&
+                           c.Status != ComplaintStatus.ShopAccepted &&
                            c.Status != ComplaintStatus.Rejected &&
                            c.Status != ComplaintStatus.Cancelled &&
                            c.Status != ComplaintStatus.ResolvedRefund &&
@@ -145,6 +146,7 @@ public class ComplaintRepository : IComplaintRepository
     {
         return await _dbContext.Complaints
             .AnyAsync(c => c.ShopOrderId == orderId &&
+                           c.Status != ComplaintStatus.ShopAccepted &&
                            c.Status != ComplaintStatus.Rejected &&
                            c.Status != ComplaintStatus.Cancelled &&
                            c.Status != ComplaintStatus.ResolvedRefund &&

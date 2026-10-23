@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Marketplace.Complaints;
 using Application.DTOs.Marketplace.Ledger;
 using Application.DTOs.Marketplace.Products;
@@ -19,17 +19,20 @@ public class ComplaintService : IComplaintService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILedgerService _ledgerService;
     private readonly INotificationService _notificationService;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<ComplaintService> _logger;
 
     public ComplaintService(
         IUnitOfWork unitOfWork,
         ILedgerService ledgerService,
         INotificationService notificationService,
+        ICacheService cacheService,
         ILogger<ComplaintService> logger)
     {
         _unitOfWork = unitOfWork;
         _ledgerService = ledgerService;
         _notificationService = notificationService;
+        _cacheService = cacheService;
         _logger = logger;
     }
 
@@ -44,6 +47,16 @@ public class ComplaintService : IComplaintService
         if (order == null || order.BuyerUserId != buyerUserId)
         {
             throw new KeyNotFoundException("Không tìm thấy đơn hàng hợp lệ.");
+        }
+
+        if (order.Source != OrderSource.Marketplace)
+        {
+            throw new InvalidOperationException("Chỉ có thể gửi khiếu nại trên sàn đối với các đơn hàng mua trực tiếp qua hệ thống.");
+        }
+
+        if (order.Status != OrderStatus.Delivered)
+        {
+            throw new InvalidOperationException("Chỉ có thể gửi khiếu nại cho đơn hàng đang trong thời gian bảo hành sau giao hàng (Delivered).");
         }
 
         if (order.ComplaintWindowEndsAtUtc.HasValue && order.ComplaintWindowEndsAtUtc.Value < DateTime.UtcNow)
@@ -237,25 +250,35 @@ public class ComplaintService : IComplaintService
             throw new KeyNotFoundException("Không tìm thấy khiếu nại của gian hàng.");
         }
 
-        if (request.Accept)
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            if (string.Equals(request.ResolutionType, "Refund", StringComparison.OrdinalIgnoreCase))
+            if (request.Accept)
             {
-                await ProcessRefundAsync(complaint, RefundBearer.Shop, request.Note, cancellationToken);
-                complaint.ShopAccept(request.Note, "Refund");
+                if (string.Equals(request.ResolutionType, "Refund", StringComparison.OrdinalIgnoreCase))
+                {
+                    complaint.ShopAccept(request.Note, "Refund");
+                    await ProcessRefundAsync(complaint, RefundBearer.Shop, request.Note ?? string.Empty, cancellationToken);
+                }
+                else
+                {
+                    complaint.ShopAccept(request.Note, "Replacement");
+                }
             }
             else
             {
-                complaint.ShopAccept(request.Note, "Replacement");
+                complaint.ShopReject(request.Note);
             }
-        }
-        else
-        {
-            complaint.ShopReject(request.Note);
-        }
 
-        _unitOfWork.Complaints.Update(complaint);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _unitOfWork.Complaints.Update(complaint);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
 
         // Thông báo cho Buyer
         try
@@ -320,22 +343,32 @@ public class ComplaintService : IComplaintService
         var complaint = await _unitOfWork.Complaints.GetByIdAsync(complaintId, cancellationToken);
         if (complaint == null) throw new KeyNotFoundException("Không tìm thấy khiếu nại.");
 
-        if (string.Equals(request.Resolution, "Refund", StringComparison.OrdinalIgnoreCase))
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            await ProcessRefundAsync(complaint, request.Bearer, request.Note, cancellationToken);
-            complaint.AdminResolve(adminId, ComplaintStatus.ResolvedRefund, "Refund", request.Note);
-        }
-        else if (string.Equals(request.Resolution, "Replacement", StringComparison.OrdinalIgnoreCase))
-        {
-            complaint.AdminResolve(adminId, ComplaintStatus.ResolvedReplacement, "Replacement", request.Note);
-        }
-        else
-        {
-            complaint.AdminResolve(adminId, ComplaintStatus.Rejected, "Rejected", request.Note);
-        }
+            if (string.Equals(request.Resolution, "Refund", StringComparison.OrdinalIgnoreCase))
+            {
+                complaint.AdminResolve(adminId, ComplaintStatus.ResolvedRefund, "Refund", request.Note);
+                await ProcessRefundAsync(complaint, request.Bearer, request.Note, cancellationToken);
+            }
+            else if (string.Equals(request.Resolution, "Replacement", StringComparison.OrdinalIgnoreCase))
+            {
+                complaint.AdminResolve(adminId, ComplaintStatus.ResolvedReplacement, "Replacement", request.Note);
+            }
+            else
+            {
+                complaint.AdminResolve(adminId, ComplaintStatus.Rejected, "Rejected", request.Note);
+            }
 
-        _unitOfWork.Complaints.Update(complaint);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _unitOfWork.Complaints.Update(complaint);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
 
         // Thông báo phán quyết tới 2 bên
         try
@@ -410,6 +443,19 @@ public class ComplaintService : IComplaintService
             platformDeduction = refundAmount - shopDeduction;
         }
 
+        // Kiểm tra và khấu trừ số dư Shop trước để đảm bảo đủ số dư
+        long deductFromPending = 0;
+        long deductFromAvailable = 0;
+        if (shopDeduction > 0)
+        {
+            var balanceCache = await _unitOfWork.Ledgers.GetOrCreateBalanceCacheAsync(order.ShopId, cancellationToken);
+            deductFromPending = Math.Min(balanceCache.PendingBalance, shopDeduction);
+            deductFromAvailable = shopDeduction - deductFromPending;
+
+            balanceCache.DeductRefund(shopDeduction);
+            _unitOfWork.Ledgers.UpdateBalanceCache(balanceCache);
+        }
+
         var refund = new Refund(
             payment.Id,
             order.Id,
@@ -422,24 +468,31 @@ public class ComplaintService : IComplaintService
             complaint.Reason.ToString());
 
         await _unitOfWork.Refunds.AddAsync(refund, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Ghi sổ cái kép khi hoàn tiền (M7.3)
-        var shopPending = await _unitOfWork.Ledgers.GetOrCreateShopAccountAsync(order.ShopId, LedgerAccountType.ShopPending, cancellationToken);
+        // Ghi sổ cái kép khi hoàn tiền (M7.3) - Đồng bộ chính xác giữa Pending và Available
         var platformRevenue = await _unitOfWork.Ledgers.GetOrCreateSystemAccountAsync(LedgerAccountType.PlatformRevenue, cancellationToken);
         var refundPayable = await _unitOfWork.Ledgers.GetOrCreateSystemAccountAsync(LedgerAccountType.RefundPayable, cancellationToken);
 
         var lines = new List<LedgerPostingLine>();
 
-        if (shopDeduction > 0)
+        if (deductFromPending > 0)
         {
-            lines.Add(new LedgerPostingLine { AccountId = shopPending.Id, Debit = shopDeduction, Credit = 0 });
+            var shopPending = await _unitOfWork.Ledgers.GetOrCreateShopAccountAsync(order.ShopId, LedgerAccountType.ShopPending, cancellationToken);
+            lines.Add(new LedgerPostingLine { AccountId = shopPending.Id, Debit = deductFromPending, Credit = 0 });
+        }
+        if (deductFromAvailable > 0)
+        {
+            var shopAvailable = await _unitOfWork.Ledgers.GetOrCreateShopAccountAsync(order.ShopId, LedgerAccountType.ShopAvailable, cancellationToken);
+            lines.Add(new LedgerPostingLine { AccountId = shopAvailable.Id, Debit = deductFromAvailable, Credit = 0 });
         }
         if (platformDeduction > 0)
         {
             lines.Add(new LedgerPostingLine { AccountId = platformRevenue.Id, Debit = platformDeduction, Credit = 0 });
         }
         lines.Add(new LedgerPostingLine { AccountId = refundPayable.Id, Debit = 0, Credit = refundAmount });
+
+        // Cập nhật số lượng đã hoàn trên OrderItem
+        orderItem.AddRefundedQty(complaint.FaultyQuantity);
 
         await _ledgerService.PostTransactionAsync(
             LedgerTransactionType.RefundProcessed,
@@ -450,18 +503,7 @@ public class ComplaintService : IComplaintService
             lines,
             cancellationToken);
 
-        // Khấu trừ số dư Shop
-        if (shopDeduction > 0)
-        {
-            var balanceCache = await _unitOfWork.Ledgers.GetOrCreateBalanceCacheAsync(order.ShopId, cancellationToken);
-            balanceCache.DeductRefund(shopDeduction);
-            _unitOfWork.Ledgers.UpdateBalanceCache(balanceCache);
-        }
-
-        // Cập nhật số lượng đã hoàn trên OrderItem
-        typeof(Domain.Entities.Marketplace.Orders.OrderItem)
-            .GetProperty(nameof(Domain.Entities.Marketplace.Orders.OrderItem.RefundedQty))?
-            .SetValue(orderItem, orderItem.RefundedQty + complaint.FaultyQuantity);
+        _cacheService.Remove($"shop:{order.ShopId}:balance");
     }
 
     private static ComplaintDetailDto MapToDetailDto(

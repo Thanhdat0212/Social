@@ -107,8 +107,8 @@ public class Payout : BaseEntity
 
     public void MarkSucceeded(string bankTransactionRef, Guid? actorId = null, string? note = null)
     {
-        if (Status != PayoutStatus.Processing && Status != PayoutStatus.Approved)
-            throw new InvalidOperationException($"Chỉ có thể hoàn thành lệnh rút từ Approved hoặc Processing (Hiện tại: {Status}).");
+        if (Status != PayoutStatus.Processing && Status != PayoutStatus.Approved && Status != PayoutStatus.Unknown)
+            throw new InvalidOperationException($"Chỉ có thể hoàn thành lệnh rút từ Approved, Processing hoặc Unknown (Hiện tại: {Status}).");
 
         var prev = Status;
         Status = PayoutStatus.Succeeded;
@@ -146,6 +146,9 @@ public class Payout : BaseEntity
 
     public void MarkUnknown(string reason, Guid? actorId = null)
     {
+        if (Status != PayoutStatus.Approved && Status != PayoutStatus.Processing)
+            throw new InvalidOperationException($"Chỉ có thể đánh dấu Unknown từ trạng thái Approved hoặc Processing (Hiện tại: {Status}).");
+
         var prev = Status;
         Status = PayoutStatus.Unknown;
         FailureReason = reason;
@@ -162,8 +165,8 @@ public class Payout : BaseEntity
 
     public void Reject(Guid adminId, string reason)
     {
-        if (Status != PayoutStatus.Requested && Status != PayoutStatus.Approved)
-            throw new InvalidOperationException($"Chỉ có thể từ chối lệnh rút ở trạng thái Requested hoặc Approved (Hiện tại: {Status}).");
+        if (Status != PayoutStatus.Requested && Status != PayoutStatus.Approved && Status != PayoutStatus.Unknown)
+            throw new InvalidOperationException($"Chỉ có thể từ chối lệnh rút ở trạng thái Requested, Approved hoặc Unknown (Hiện tại: {Status}).");
 
         var prev = Status;
         Status = PayoutStatus.Rejected;

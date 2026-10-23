@@ -129,8 +129,13 @@ public class Complaint : BaseEntity
     /// <summary>
     /// Admin đưa ra phán quyết cuối cùng
     /// </summary>
-    public void AdminResolve(Guid adminId, ComplaintStatus finalStatus, string resolutionType, string note)
+    public void AdminResolve(Guid adminId, ComplaintStatus finalStatus, string resolutionType, string? note)
     {
+        if (Status is ComplaintStatus.ResolvedRefund or ComplaintStatus.ResolvedReplacement or ComplaintStatus.Rejected or ComplaintStatus.Cancelled or ComplaintStatus.ShopAccepted)
+        {
+            throw new InvalidOperationException($"Khiếu nại đã được giải quyết hoặc đã hủy trước đó (Trạng thái hiện tại: {Status}).");
+        }
+
         if (finalStatus != ComplaintStatus.ResolvedRefund &&
             finalStatus != ComplaintStatus.ResolvedReplacement &&
             finalStatus != ComplaintStatus.Rejected)
@@ -140,8 +145,8 @@ public class Complaint : BaseEntity
 
         ResolvedByAdminId = adminId;
         Status = finalStatus;
-        ResolutionType = resolutionType;
-        AdminResolutionNote = note.Trim();
+        ResolutionType = resolutionType?.Trim() ?? string.Empty;
+        AdminResolutionNote = note?.Trim() ?? string.Empty;
         ResolvedAtUtc = DateTime.UtcNow;
         UpdatedAtUtc = DateTime.UtcNow;
     }
