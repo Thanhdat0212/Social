@@ -8,7 +8,7 @@ import { postApi } from '@/api/postApi';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import { interestApi } from '@/api/interestApi';
 import type { PostDto, PostLikeEvent, CommentAddedEvent } from '@/types';
-import type { ProductListItem } from '@/types/marketplace';
+import type { Category, ProductListItem } from '@/types/marketplace';
 import type { InterestDto } from '@/types/interest';
 import { CreatePostBox, PostList, NewPostAlertPill } from '@/components/posts';
 import {
@@ -18,8 +18,14 @@ import {
   ClockIcon,
   Button,
   PageContainer,
-  Badge,
   MarketplaceIcon,
+  StoreIcon,
+  ShieldIcon,
+  CheckCircleIcon,
+  ZapIcon,
+  CloseIcon,
+  TagIcon,
+  ChevronRightIcon,
 } from '@/components/common';
 import { getApiErrorMessage } from '@/utils/error';
 import { seenPostsService } from '@/utils/seenPosts';
@@ -28,6 +34,8 @@ import { ROUTES } from '@/constants/routes';
 import { ENV } from '@/config';
 
 const PAGE_SIZE = 20;
+const SIDEBAR_PRODUCT_FALLBACK_THUMB =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='42' viewBox='0 0 42 42'%3E%3Crect width='42' height='42' fill='%23e2e8f0'/%3E%3Cpath d='M14 26l6-7 4 5 6-8 8 10H8z' fill='%2394a3b8'/%3E%3C/svg%3E";
 
 export const HomePage: React.FC = () => {
   useTitle('Trang chủ — Bảng tin gợi ý AI');
@@ -51,6 +59,7 @@ export const HomePage: React.FC = () => {
   const hasMore = currentTabState.hasMore;
 
   const [loading, setLoading] = useState(posts.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,50 +69,86 @@ export const HomePage: React.FC = () => {
 
   // Dữ liệu sidebar thực tế
   const [featuredProducts, setFeaturedProducts] = useState<ProductListItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [topInterests, setTopInterests] = useState<InterestDto[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onFilterTopic = (e: Event) => {
+      const topic = (e as CustomEvent<string>).detail?.trim();
+      if (!topic) return;
+      setSelectedTopic((prev) => (prev?.toLowerCase() === topic.toLowerCase() ? null : topic));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    window.addEventListener('social_filter_topic', onFilterTopic);
+    return () => window.removeEventListener('social_filter_topic', onFilterTopic);
+  }, []);
 
   useEffect(() => {
     marketplaceApi
-      .getProducts({ page: 1, pageSize: 3 })
+      .getProducts({ page: 1, pageSize: 5 })
       .then((res) => setFeaturedProducts(res.items || []))
+      .catch(() => {});
+
+    marketplaceApi
+      .getCategoriesTree()
+      .then((res) => setCategories((res || []).slice(0, 6)))
       .catch(() => {});
 
     interestApi
       .getAllInterests()
-      .then((res) => setTopInterests(res.slice(0, 6)))
+      .then((res) => setTopInterests(res.slice(0, 8)))
       .catch(() => {});
   }, []);
 
   // Tải danh sách bài viết trang đầu tiên
   const fetchPosts = useCallback(
     async (forceRefresh = false) => {
+      const hasExistingPosts = tabStates[activeTab].posts.length > 0;
+
       // Nếu tab này đã có bài và không phải lệnh refresh chủ động, giữ nguyên bài đang đọc
-      if (!forceRefresh && tabStates[activeTab].posts.length > 0) {
+      if (!forceRefresh && hasExistingPosts) {
         setLoading(false);
         return;
       }
 
-      setLoading(true);
+      if (forceRefresh) {
+        setRefreshing(true);
+        if (!hasExistingPosts) {
+          setLoading(true);
+        }
+      } else {
+        setLoading(true);
+      }
+
       setError(null);
       setPendingPosts([]);
       setBottomPendingPosts([]);
 
+      const minSpinDelay = forceRefresh
+        ? new Promise((resolve) => setTimeout(resolve, 550))
+        : Promise.resolve();
+
       try {
         const seenIds = seenPostsService.getRecentSeenIds(60);
-        let data: PostDto[];
+        let fetchPromise: Promise<PostDto[]>;
         if (activeTab === 'following') {
-          data = await postApi.getFollowingFeed(1, PAGE_SIZE, seenIds);
+          fetchPromise = postApi.getFollowingFeed(1, PAGE_SIZE, seenIds);
         } else if (activeTab === 'recent') {
-          data = await postApi.getRecentPosts(1, PAGE_SIZE);
+          fetchPromise = postApi.getRecentPosts(1, PAGE_SIZE);
         } else {
-          data = await postApi.getForYouFeed(1, PAGE_SIZE, seenIds);
+          fetchPromise = postApi.getForYouFeed(1, PAGE_SIZE, seenIds);
         }
+
+        const [data] = await Promise.all([fetchPromise, minSpinDelay]);
 
         setTabPosts(activeTab, data, 1, data.length >= PAGE_SIZE);
       } catch (err) {
+        await minSpinDelay;
         setError(getApiErrorMessage(err));
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     },
     [activeTab, tabStates, setTabPosts]
@@ -259,6 +304,35 @@ export const HomePage: React.FC = () => {
 
   return (
     <PageContainer variant="feed" className="home-page-container">
+      {/* Facebook-style Floating Circular Reload Spinner */}
+      <div
+        className={`fb-refresh-indicator ${refreshing ? 'is-active' : ''}`}
+        role="status"
+        aria-live="polite"
+        aria-hidden={!refreshing}
+      >
+        <div className="fb-refresh-disc" title="Đang làm mới bảng tin...">
+          <svg className="fb-refresh-svg" viewBox="0 0 50 50">
+            <circle
+              className="fb-refresh-track"
+              cx="25"
+              cy="25"
+              r="20"
+              fill="none"
+              strokeWidth="4.5"
+            />
+            <circle
+              className="fb-refresh-arc"
+              cx="25"
+              cy="25"
+              r="20"
+              fill="none"
+              strokeWidth="4.5"
+            />
+          </svg>
+        </div>
+      </div>
+
       {/* Refined Welcome Banner for Guests (Compact, not pushing feed away) */}
       {!isAuthenticated && (
         <section className="guest-welcome-card" aria-label="Giới thiệu nền tảng">
@@ -289,8 +363,97 @@ export const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* Main 2-Column Social Feed Layout */}
+      {/* Main 3-Column Social Feed Layout */}
       <div className="social-feed-layout">
+        {/* Left Discovery & Category Filter Column (No duplicate Avatar or Navbar links) */}
+        <aside className="feed-left-sidebar" aria-label="Khám phá chủ đề và danh mục">
+          {/* Widget 1: Chủ đề khám phá trên Bảng tin */}
+          {topInterests.length > 0 && (
+            <div className="aside-widget" style={{ marginBottom: 0 }}>
+              <div className="aside-widget-header">
+                <div className="aside-widget-title-wrap">
+                  <span className="aside-widget-icon aside-widget-icon--purple">
+                    <SparklesIcon size={16} />
+                  </span>
+                  <h3 className="aside-widget-title">Chủ đề khám phá</h3>
+                </div>
+                {isAuthenticated && (
+                  <Link
+                    to={ROUTES.ONBOARDING}
+                    className="aside-widget-link"
+                    title="Cập nhật sở thích gợi ý AI của bạn"
+                  >
+                    Sở thích AI
+                  </Link>
+                )}
+              </div>
+              <div className="sidebar-topics-cloud">
+                {topInterests.map((interest) => {
+                  const isTopicActive =
+                    selectedTopic?.toLowerCase() === interest.name.toLowerCase();
+                  return (
+                    <button
+                      key={interest.id}
+                      type="button"
+                      className={`sidebar-topic-pill ${isTopicActive ? 'active' : ''}`}
+                      aria-pressed={isTopicActive}
+                      onClick={() => {
+                        setSelectedTopic((prev) =>
+                          prev?.toLowerCase() === interest.name.toLowerCase()
+                            ? null
+                            : interest.name
+                        );
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      title={`Lọc bài viết về #${interest.name}`}
+                    >
+                      <span className="topic-pill-hash">#</span>
+                      <span className="topic-pill-name">{interest.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Widget 2: Danh mục Chợ sản phẩm số (Real API) */}
+          {categories.length > 0 && (
+            <div className="aside-widget" style={{ marginBottom: 0, padding: '1rem 0.85rem' }}>
+              <div className="aside-widget-header" style={{ padding: '0 0.3rem', marginBottom: '0.6rem' }}>
+                <div className="aside-widget-title-wrap">
+                  <span className="aside-widget-icon aside-widget-icon--blue">
+                    <TagIcon size={15} />
+                  </span>
+                  <h3 className="aside-widget-title">Danh mục Chợ số</h3>
+                </div>
+              </div>
+              <nav className="left-category-list" aria-label="Danh mục sản phẩm số">
+                {categories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    to={`${ROUTES.MARKETPLACE.INDEX}?categoryId=${encodeURIComponent(cat.id)}`}
+                    className="left-nav-item"
+                    style={{ justifyContent: 'space-between', padding: '0.55rem 0.7rem' }}
+                  >
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {cat.name}
+                    </span>
+                    <ChevronRightIcon size={14} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          )}
+
+          {/* Tip Card */}
+          <div className="left-tip-card">
+            <strong style={{ color: 'var(--accent-primary)', display: 'block', marginBottom: '0.25rem' }}>
+              ⚡ Mẹo gắn sản phẩm
+            </strong>
+            Bạn có thể đính kèm tối đa 3 sản phẩm số vào mỗi bài viết để người đọc mua ngay trên bảng tin.
+          </div>
+        </aside>
+
         {/* Main Feed Column */}
         <main className="feed-stream-col">
           {isAuthenticated && (
@@ -343,11 +506,60 @@ export const HomePage: React.FC = () => {
           {/* Floating Realtime Pill Alert */}
           <NewPostAlertPill count={pendingPosts.length} onClick={handleApplyPendingPosts} />
 
+          {/* Active Topic / Hashtag Filter Banner */}
+          {selectedTopic && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem',
+                padding: '0.65rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--accent-subtle)',
+                border: '1px solid var(--accent-border)',
+                color: 'var(--text-main)',
+                fontSize: '0.86rem',
+              }}
+            >
+              <span>
+                Đang lọc bài viết theo chủ đề:{' '}
+                <strong style={{ color: 'var(--accent-primary)' }}>#{selectedTopic}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedTopic(null)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <CloseIcon size={12} />
+                <span>Bỏ lọc</span>
+              </button>
+            </div>
+          )}
+
           <PostList
-            posts={posts}
+            posts={
+              selectedTopic
+                ? posts.filter((p) =>
+                    p.content?.toLowerCase().includes(selectedTopic.toLowerCase())
+                  )
+                : posts
+            }
             loading={loading}
             loadingMore={loadingMore}
-            hasMore={hasMore || bottomPendingPosts.length > 0}
+            hasMore={!selectedTopic && (hasMore || bottomPendingPosts.length > 0)}
             sentinelRef={sentinelRef}
             error={error}
             onRefresh={handleManualRefresh}
@@ -380,44 +592,53 @@ export const HomePage: React.FC = () => {
 
           {/* Widget: Sản phẩm số nổi bật (Real API) */}
           {featuredProducts.length > 0 && (
-            <div className="aside-widget" style={{ padding: '1.25rem', marginBottom: '1.25rem', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
-                  <MarketplaceIcon size={16} />
-                  <span>Chợ số nổi bật</span>
-                </h3>
-                <Link to={ROUTES.MARKETPLACE.INDEX} style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+            <div className="aside-widget" style={{ marginBottom: 0 }}>
+              <div className="aside-widget-header">
+                <div className="aside-widget-title-wrap">
+                  <span className="aside-widget-icon aside-widget-icon--blue">
+                    <MarketplaceIcon size={16} />
+                  </span>
+                  <h3 className="aside-widget-title">Chợ số nổi bật</h3>
+                </div>
+                <Link to={ROUTES.MARKETPLACE.INDEX} className="aside-widget-link">
                   Xem tất cả
                 </Link>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className="sidebar-product-list">
                 {featuredProducts.map((p) => (
                   <Link
                     key={p.id}
                     to={`/marketplace/products/${p.slug}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.65rem',
-                      padding: '0.4rem',
-                      borderRadius: '8px',
-                      transition: 'background 0.15s ease',
-                    }}
                     className="sidebar-product-item"
                   >
                     <img
-                      src={p.coverImageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60'}
+                      src={p.coverImageUrl || SIDEBAR_PRODUCT_FALLBACK_THUMB}
                       alt={p.name}
-                      style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                      className="sidebar-product-thumb"
                       loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.hasFallback) {
+                          target.dataset.hasFallback = 'true';
+                          target.src = SIDEBAR_PRODUCT_FALLBACK_THUMB;
+                        }
+                      }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {p.name}
                       </div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8', marginTop: '0.15rem' }}>
-                        {p.minPrice.toLocaleString('vi-VN')} đ
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.15rem' }}>
+                        <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                          {p.minPrice.toLocaleString('vi-VN')} đ
+                        </span>
+                        {p.shopName && (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>
+                            <StoreIcon size={11} style={{ display: 'inline', verticalAlign: '-1px', marginRight: '3px' }} />
+                            {p.shopName}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -426,21 +647,53 @@ export const HomePage: React.FC = () => {
             </div>
           )}
 
-          {/* Widget: Chủ đề gợi ý (Real API) */}
-          {topInterests.length > 0 && (
-            <div className="aside-widget" style={{ padding: '1.25rem', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px' }}>
-              <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.85rem' }}>
-                Chủ đề gợi ý
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                {topInterests.map((interest) => (
-                  <Badge key={interest.id} variant="neutral" size="sm" style={{ cursor: 'pointer', padding: '0.3rem 0.65rem' }}>
-                    #{interest.name}
-                  </Badge>
-                ))}
+          {/* Widget: Tiêu chuẩn giao dịch Chợ số */}
+          <div className="aside-widget" style={{ marginBottom: 0 }}>
+            <div className="aside-widget-header">
+              <div className="aside-widget-title-wrap">
+                <span className="aside-widget-icon aside-widget-icon--green">
+                  <ZapIcon size={16} />
+                </span>
+                <h3 className="aside-widget-title">Tiêu chuẩn Chợ số</h3>
+              </div>
+              <span className="aside-widget-badge-green">24/7 Tự động</span>
+            </div>
+
+            <div className="live-activity-list">
+              <div className="live-activity-item">
+                <div className="live-activity-icon">
+                  <CheckCircleIcon size={14} />
+                </div>
+                <div className="live-activity-content">
+                  <div className="live-activity-text">Xuất kho mã số tức thì</div>
+                  <div className="live-activity-meta">Nhận key & tài khoản ngay sau khi thanh toán</div>
+                </div>
+              </div>
+
+              <div className="live-activity-item">
+                <div className="live-activity-icon">
+                  <CheckCircleIcon size={14} />
+                </div>
+                <div className="live-activity-content">
+                  <div className="live-activity-text">Thanh toán VietQR chuẩn Napas</div>
+                  <div className="live-activity-meta">Tự động khớp lệnh chính xác theo từng đơn</div>
+                </div>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Buyer Protection Guarantee Card */}
+          <div className="buyer-guarantee-card" style={{ marginTop: 0 }}>
+            <div className="guarantee-icon">
+              <ShieldIcon size={18} />
+            </div>
+            <div>
+              <div className="guarantee-title">Bảo vệ Người mua 100%</div>
+              <p className="guarantee-desc">
+                Cơ chế ký quỹ giữ tiền an toàn 3 ngày. Bạn chỉ thanh toán khi nhận đúng mã số và hài lòng với chất lượng.
+              </p>
+            </div>
+          </div>
         </aside>
       </div>
 

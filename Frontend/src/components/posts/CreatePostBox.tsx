@@ -11,8 +11,12 @@ import {
   ImageIcon,
   CloseIcon,
   SendIcon,
+  TagIcon,
 } from '@/components/common';
 import { ProductPickerModal } from './ProductPickerModal';
+
+const THUMB_FALLBACK_SVG =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23e2e8f0'/%3E%3Cpath d='M10 20l4-5 3 4 5-7 6 8H6z' fill='%2394a3b8'/%3E%3C/svg%3E";
 
 interface CreatePostBoxProps {
   onPostCreated: (post: PostDto) => void;
@@ -201,7 +205,10 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
                   gap: '0.35rem',
                 }}
               >
-                <span>🛍️ Sản phẩm đính kèm ({taggedProducts.length}/3):</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <TagIcon size={14} />
+                  <span>Sản phẩm đính kèm ({taggedProducts.length}/3):</span>
+                </span>
               </div>
               {taggedProducts.map((p) => (
                 <div
@@ -212,15 +219,22 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
                     gap: '0.5rem',
                     padding: '0.35rem 0.6rem',
                     borderRadius: '20px',
-                    background: 'var(--card-bg, #ffffff)',
-                    border: '1px solid var(--border-color, #e4e6eb)',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-sm)',
                   }}
                 >
                   <img
-                    src={p.coverImageUrl || 'https://via.placeholder.com/32'}
+                    src={p.coverImageUrl || THUMB_FALLBACK_SVG}
                     alt={p.name}
                     style={{ width: '22px', height: '22px', borderRadius: '4px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.dataset.hasFallback) {
+                        target.dataset.hasFallback = 'true';
+                        target.src = THUMB_FALLBACK_SVG;
+                      }
+                    }}
                   />
                   <span
                     style={{
@@ -299,11 +313,11 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({ onPostCreated }) =
                 id="attach-product-btn"
                 title="Gắn thẻ sản phẩm số từ chợ"
                 style={{
-                  color: taggedProducts.length > 0 ? 'var(--primary-color, #1877f2)' : undefined,
+                  color: taggedProducts.length > 0 ? 'var(--accent-primary)' : undefined,
                   fontWeight: taggedProducts.length > 0 ? 600 : undefined,
                 }}
               >
-                <span style={{ fontSize: '1rem', lineHeight: 1 }}>🛍️</span>
+                <TagIcon size={16} />
                 <span>Sản phẩm {taggedProducts.length > 0 && `(${taggedProducts.length}/3)`}</span>
               </button>
             </div>

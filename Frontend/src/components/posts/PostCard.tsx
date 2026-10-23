@@ -19,8 +19,158 @@ import {
   CheckIcon,
   CloseIcon,
   ConfirmModal,
+  DropdownMenu,
+  TagIcon,
+  StoreIcon,
+  CopyIcon,
+  ChevronDownIcon,
 } from '@/components/common';
 import { CommentSection } from './CommentSection';
+
+const DEFAULT_PRODUCT_THUMB =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%23e2e8f0'/%3E%3Cpath d='M30 46l6-8 5 6 7-10 12 16H20z' fill='%2394a3b8'/%3E%3Ccircle cx='32' cy='28' r='4' fill='%2394a3b8'/%3E%3C/svg%3E";
+
+const PostCodeCard: React.FC<{ lang?: string; code: string }> = ({ lang, code }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="post-code-card">
+      <div className="post-code-header">
+        <div className="post-code-dots">
+          <span className="post-code-dot red" />
+          <span className="post-code-dot yellow" />
+          <span className="post-code-dot green" />
+        </div>
+        <span className="post-code-lang">{lang || 'CODE'}</span>
+        <button
+          type="button"
+          className={`post-code-copy-btn ${copied ? 'copied' : ''}`}
+          onClick={handleCopy}
+          aria-label="Sao chép mã"
+        >
+          {copied ? (
+            <>
+              <CheckIcon size={12} />
+              <span>Đã chép!</span>
+            </>
+          ) : (
+            <>
+              <CopyIcon size={12} />
+              <span>Sao chép</span>
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="post-code-body">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
+
+const renderParagraphWithHashtags = (text: string) => {
+  const parts = text.split(/(#[a-zA-Z0-9_À-ỹ]+)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('#')) {
+      const topicName = part.slice(1);
+      return (
+        <span
+          key={i}
+          className="post-hashtag"
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('social_filter_topic', { detail: topicName }));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('social_filter_topic', { detail: topicName }));
+            }
+          }}
+        >
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+};
+
+const isSectionHeader = (line: string): boolean => {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  return (
+    /^(?:🔍|🎯|❓|💻|📌|■|👉|✦|⭐|💡|🚀|⚠️?|✅|❌|🔥|✨)/u.test(trimmed) ||
+    /^(phân tích|mã nguồn|kiến thức|bí quyết|lưu ý|tóm lại|kết luận|bước \d|step \d)/i.test(trimmed)
+  );
+};
+
+const renderFormattedContent = (content: string) => {
+  if (!content) return null;
+
+  // Chuẩn hóa ngắt dòng hệ điều hành (\r\n -> \n)
+  const normalized = content.replace(/\r\n/g, '\n');
+  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let keyIndex = 0;
+
+  const processTextBlock = (text: string) => {
+    // Tách các dòng văn bản
+    const lines = text.split('\n');
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      // Bỏ qua các dòng trống rỗng để không chèn thẻ div nhân tạo gây phình khoảng trắng thừa
+      if (!trimmed) return;
+
+      if (isSectionHeader(trimmed)) {
+        elements.push(
+          <h5 key={`sec-${keyIndex++}`} className="post-section-header">
+            {renderParagraphWithHashtags(trimmed)}
+          </h5>
+        );
+      } else {
+        elements.push(
+          <p key={`p-${keyIndex++}`} className="post-text-p">
+            {renderParagraphWithHashtags(line)}
+          </p>
+        );
+      }
+    });
+  };
+
+  while ((match = codeBlockRegex.exec(normalized)) !== null) {
+    const textBefore = normalized.substring(lastIndex, match.index);
+    if (textBefore) {
+      processTextBlock(textBefore);
+    }
+
+    const lang = match[1] || '';
+    const code = match[2]?.trimEnd() || '';
+    elements.push(<PostCodeCard key={`code-${keyIndex++}`} lang={lang} code={code} />);
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  const remainingText = normalized.substring(lastIndex);
+  if (remainingText) {
+    processTextBlock(remainingText);
+  }
+
+  return elements;
+};
 
 interface PostCardProps {
   post: PostDto;
@@ -40,9 +190,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   // Like state
   const [liked, setLiked] = useState(post.isLikedByCurrentUser || false);
@@ -52,6 +200,15 @@ export const PostCard: React.FC<PostCardProps> = ({
   // Comment state
   const [showComments, setShowComments] = useState(initialShowComments);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
+
+  // Expandable Read More state for long posts
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLongPost = Boolean(
+    post.content &&
+      (post.content.length > 380 ||
+        post.content.split('\n').filter((l) => l.trim().length > 0).length > 7 ||
+        post.content.includes('```'))
+  );
 
   // Đồng bộ số lượng like, trạng thái like và comment khi có cập nhật từ cha hoặc realtime
   useEffect(() => {
@@ -75,19 +232,6 @@ export const PostCard: React.FC<PostCardProps> = ({
   const hasTrackedView = useRef(false);
 
   const isAuthor = user?.id === post.author.id;
-
-  // Đóng menu 3 chấm khi click ngoài
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMenu]);
 
   // Tự động ghi nhận hành vi xem bài (View tracking) bằng IntersectionObserver
   useEffect(() => {
@@ -204,7 +348,6 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const handleCopyLink = () => {
-    setShowMenu(false);
     if (navigator.clipboard) {
       const postUrl = `${window.location.origin}/posts/${post.id}`;
       navigator.clipboard.writeText(postUrl);
@@ -261,59 +404,64 @@ export const PostCard: React.FC<PostCardProps> = ({
             )}
 
             {/* Context Menu 3-dots */}
-            <div className="post-entry-menu" ref={menuRef}>
-              <button
-                type="button"
-                className="btn-icon-ghost"
-                onClick={() => setShowMenu((prev) => !prev)}
-                aria-label="Tùy chọn bài viết"
-                title="Tùy chọn"
-              >
-                <MoreVerticalIcon size={18} />
-              </button>
-
-            {showMenu && (
-              <div className="dropdown-menu-popover">
+            <DropdownMenu
+              align="right"
+              trigger={(isOpen) => (
                 <button
                   type="button"
-                  className="dropdown-menu-item"
-                  onClick={() => {
-                    setShowMenu(false);
-                    openPostModal(post.id);
-                  }}
+                  className={`btn-icon-ghost ${isOpen ? 'active' : ''}`}
+                  aria-label="Tùy chọn bài viết"
+                  title="Tùy chọn"
                 >
-                  <ShareIcon size={16} />
-                  <span>Xem chi tiết</span>
+                  <MoreVerticalIcon size={18} />
                 </button>
-                <button type="button" className="dropdown-menu-item" onClick={handleCopyLink}>
-                  <ShareIcon size={16} />
-                  <span>Sao chép liên kết</span>
+              )}
+            >
+              <button
+                type="button"
+                className="dropdown-item-link"
+                onClick={() => openPostModal(post.id)}
+              >
+                <ShareIcon size={16} />
+                <span>Xem chi tiết</span>
+              </button>
+              <button type="button" className="dropdown-item-link" onClick={handleCopyLink}>
+                <ShareIcon size={16} />
+                <span>Sao chép liên kết</span>
+              </button>
+              {isAuthor && (
+                <button
+                  type="button"
+                  className="dropdown-item-btn is-danger"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <TrashIcon size={16} />
+                  <span>Xóa bài viết</span>
                 </button>
-                {isAuthor && (
-                  <button
-                    type="button"
-                    className="dropdown-menu-item item-danger"
-                    onClick={() => {
-                      setShowMenu(false);
-                      setShowDeleteConfirm(true);
-                    }}
-                  >
-                    <TrashIcon size={16} />
-                    <span>Xóa bài viết</span>
-                  </button>
-                )}
-              </div>
-            )}
-            </div>
+              )}
+            </DropdownMenu>
           </div>
         </header>
 
         {/* Post Content */}
         {post.content && (
-          <div className="post-entry-body">
-            {post.content.split('\n').map((paragraph, index) => (
-              <p key={index}>{paragraph || <br />}</p>
-            ))}
+          <div className="post-content-clamp-wrapper">
+            <div className={isLongPost && !isExpanded ? 'post-content-clamp' : ''}>
+              <div className="post-entry-body">
+                {renderFormattedContent(post.content)}
+              </div>
+            </div>
+            {isLongPost && (
+              <button
+                type="button"
+                className="post-expand-toggle-btn"
+                onClick={() => setIsExpanded(!isExpanded)}
+                aria-expanded={isExpanded}
+              >
+                <span>{isExpanded ? 'Thu gọn bài viết' : 'Xem thêm bài viết...'}</span>
+                <ChevronDownIcon size={14} className={`chevron-icon ${isExpanded ? 'is-rotated' : ''}`} />
+              </button>
+            )}
           </div>
         )}
 
@@ -337,7 +485,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         {post.taggedProducts && post.taggedProducts.length > 0 && (
           <div className="post-tagged-products-container">
             <div className="post-tagged-products-header">
-              <span className="tagged-badge-icon">🛍️</span>
+              <TagIcon size={15} className="tagged-badge-icon" />
               <span className="tagged-badge-title">Sản phẩm số đính kèm ({post.taggedProducts.length})</span>
             </div>
             <div className="post-tagged-products-list">
@@ -349,13 +497,21 @@ export const PostCard: React.FC<PostCardProps> = ({
                   title={`Xem chi tiết sản phẩm "${product.name}"`}
                 >
                   <img
-                    src={product.coverImageUrl || 'https://via.placeholder.com/80'}
+                    src={product.coverImageUrl || DEFAULT_PRODUCT_THUMB}
                     alt={product.name}
                     className="tagged-product-thumb"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.dataset.hasFallback) {
+                        target.dataset.hasFallback = 'true';
+                        target.src = DEFAULT_PRODUCT_THUMB;
+                      }
+                    }}
                   />
                   <div className="tagged-product-info">
                     <span className="tagged-product-shop">
-                      🏪 {product.shopName}
+                      <StoreIcon size={13} style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: '4px' }} />
+                      {product.shopName}
                     </span>
                     <h4 className="tagged-product-title">{product.name}</h4>
                     <div className="tagged-product-pricing">

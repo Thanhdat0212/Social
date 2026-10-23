@@ -21,13 +21,6 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [tempSelected, setTempSelected] = useState<ProductListItem[]>(selectedProducts);
 
-  useEffect(() => {
-    if (isOpen) {
-      setTempSelected(selectedProducts);
-      loadProducts('');
-    }
-  }, [isOpen]);
-
   const loadProducts = async (query: string) => {
     setIsLoading(true);
     try {
@@ -42,6 +35,31 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTempSelected(selectedProducts);
+    setSearch('');
+    loadProducts('');
+    document.body.classList.add('modal-open');
+
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+    // Chỉ khởi tạo lại danh sách khi modal vừa mở
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
