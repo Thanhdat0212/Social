@@ -15,6 +15,9 @@ import {
   ShieldIcon,
 } from '@/components/common';
 
+const DEFAULT_PRODUCT_THUMB =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>';
+
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const { items, updateItemQuantity, removeItem, isLoading } = useCartStore();
@@ -226,18 +229,14 @@ export const CartPage: React.FC = () => {
                       />
 
                       <img
-                        src={
-                          item.coverImageUrl ||
-                          item.imageUrl ||
-                          'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=60'
-                        }
+                        src={item.coverImageUrl || item.imageUrl || DEFAULT_PRODUCT_THUMB}
                         alt={item.productName}
                         className="cart-item-thumb"
                         onError={(e) => {
                           const target = e.currentTarget;
                           if (!target.dataset.hasFallback) {
                             target.dataset.hasFallback = 'true';
-                            target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=60';
+                            target.src = DEFAULT_PRODUCT_THUMB;
                           }
                         }}
                       />
@@ -249,8 +248,9 @@ export const CartPage: React.FC = () => {
                         </div>
                         <div className="cart-item-price">{formatPrice(item.unitPrice ?? item.price ?? 0)}</div>
                         {item.isAvailable === false && (
-                          <div style={{ fontSize: '0.8rem', color: 'var(--color-danger, #ef4444)', marginTop: '0.25rem', fontWeight: 600 }}>
-                            ⚠️ {item.unavailableReason || 'Tạm thời không khả dụng'}
+                          <div style={{ fontSize: '0.8rem', color: 'var(--color-danger, #ef4444)', marginTop: '0.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <AlertCircleIcon size={14} />
+                            <span>{item.unavailableReason || 'Tạm thời không khả dụng'}</span>
                           </div>
                         )}
                       </div>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import type { Category, ProductListItem } from '@/types/marketplace';
 import {
@@ -24,8 +25,11 @@ type PricePreset = 'all' | 'under50k' | '50k-200k' | '200k-500k' | 'over500k' | 
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'name';
 
 export const MarketplacePage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    () => searchParams.get('categoryId')
+  );
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -42,6 +46,14 @@ export const MarketplacePage: React.FC = () => {
   const [sort, setSort] = useState<SortOption>('newest');
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(12);
+
+  // Đồng bộ danh mục từ URL query (?categoryId=...) và cuộn lên đầu trang
+  useEffect(() => {
+    const catFromUrl = searchParams.get('categoryId');
+    setSelectedCategory(catFromUrl);
+    setPage(1);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [searchParams]);
 
   // Debounce search input
   useEffect(() => {
@@ -165,14 +177,15 @@ export const MarketplacePage: React.FC = () => {
   return (
     <PageContainer variant="wide" style={{ padding: '1.25rem 1rem 4rem' }}>
       {/* Compact Hero Banner */}
+      {/* Editorial Marketplace Hero Banner */}
       <section
         className="market-hero"
         style={{
           padding: '1.75rem 2rem',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #0b1329 0%, #0f1f38 50%, #0d172a 100%)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
-          boxShadow: '0 8px 24px -4px rgba(15, 23, 42, 0.35)',
+          borderRadius: 'var(--radius-lg)',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-sm)',
           marginBottom: '1.5rem',
         }}
       >
@@ -183,11 +196,11 @@ export const MarketplacePage: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                color: '#38bdf8',
-                background: 'rgba(56, 189, 248, 0.12)',
+                color: 'var(--accent-primary)',
+                background: 'var(--accent-subtle)',
                 padding: '0.28rem 0.75rem',
-                borderRadius: '999px',
-                border: '1px solid rgba(56, 189, 248, 0.28)',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid var(--accent-border)',
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 textTransform: 'uppercase',
@@ -198,10 +211,10 @@ export const MarketplacePage: React.FC = () => {
               <KeyIcon size={13} />
               <span>Chợ tài khoản & Bản quyền số</span>
             </div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', margin: '0 0 0.45rem', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 0.45rem', letterSpacing: '-0.02em' }}>
               Chợ sản phẩm số
             </h1>
-            <p style={{ color: '#cbd5e1', fontSize: '0.92rem', margin: 0, maxWidth: '580px', lineHeight: '1.55' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', margin: 0, maxWidth: '580px', lineHeight: '1.55' }}>
               Khám phá bản quyền phần mềm, khóa học trực tuyến, key kích hoạt và tài khoản dịch vụ số với hệ thống kho tự động 24/7.
             </p>
           </div>
@@ -213,30 +226,29 @@ export const MarketplacePage: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.65rem',
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'var(--bg-surface-hover)',
                 padding: '0.6rem 0.95rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
               }}
             >
               <div
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '8px',
-                  background: 'rgba(56, 189, 248, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(24, 119, 242, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <KeyIcon size={16} style={{ color: '#38bdf8' }} />
+                <KeyIcon size={16} style={{ color: 'var(--accent-primary)' }} />
               </div>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>Giao tự động</div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>Nhận mã tức thì</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.25 }}>Giao tự động</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500, marginTop: '2px' }}>Nhận mã tức thì</div>
               </div>
             </div>
 
@@ -245,30 +257,29 @@ export const MarketplacePage: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.65rem',
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'var(--bg-surface-hover)',
                 padding: '0.6rem 0.95rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
               }}
             >
               <div
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '8px',
-                  background: 'rgba(52, 211, 153, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(49, 162, 76, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <ShieldIcon size={16} style={{ color: '#34d399' }} />
+                <ShieldIcon size={16} style={{ color: 'var(--color-success)' }} />
               </div>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>Bảo vệ 48h</div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>Khiếu nại an toàn</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.25 }}>Bảo vệ 48h</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500, marginTop: '2px' }}>Khiếu nại an toàn</div>
               </div>
             </div>
 
@@ -277,30 +288,29 @@ export const MarketplacePage: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.65rem',
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'var(--bg-surface-hover)',
                 padding: '0.6rem 0.95rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
               }}
             >
               <div
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '8px',
-                  background: 'rgba(251, 191, 36, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(247, 177, 37, 0.15)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <CheckCheckIcon size={16} style={{ color: '#fbbf24' }} />
+                <CheckCheckIcon size={16} style={{ color: 'var(--color-warning)' }} />
               </div>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>VietQR Napas</div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>Khớp lệnh chuẩn xác</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.25 }}>VietQR Napas</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500, marginTop: '2px' }}>Khớp lệnh chuẩn xác</div>
               </div>
             </div>
           </div>
@@ -436,12 +446,13 @@ export const MarketplacePage: React.FC = () => {
                   fontSize: '0.78rem',
                   fontWeight: 600,
                   padding: '0.3rem 0.75rem',
-                  borderRadius: '20px',
+                  borderRadius: 'var(--radius-full)',
                   border: pricePreset === p.id ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  background: pricePreset === p.id ? 'rgba(14, 165, 233, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                  color: pricePreset === p.id ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  background: pricePreset === p.id ? 'var(--accent-subtle)' : 'var(--bg-surface)',
+                  color: pricePreset === p.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
+                  boxShadow: 'var(--shadow-sm)',
                 }}
               >
                 {p.label}

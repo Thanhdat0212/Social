@@ -24,6 +24,21 @@ export const OrderComplaintModal: React.FC<OrderComplaintModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  React.useEffect(() => {
+    if (!item) return;
+
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [item, onClose]);
+
   if (!item) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {

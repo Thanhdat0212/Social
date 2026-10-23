@@ -11,6 +11,7 @@ import { useCartStore } from '@/store/cartStore';
 import { signalrService } from '@/services/signalrService';
 import { ROUTES } from '@/constants/routes';
 import {
+  Avatar,
   Spinner,
   Button,
   StoreIcon,
@@ -311,7 +312,7 @@ export const ProductDetailPage: React.FC = () => {
                       const target = e.currentTarget;
                       if (!target.dataset.hasFallback) {
                         target.dataset.hasFallback = 'true';
-                        target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+                        target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect width='800' height='600' fill='%23f1f5f9'/%3E%3Cpath d='M300 400l70-90 60 70 90-120 130 140H200z' fill='%23cbd5e1'/%3E%3Ccircle cx='320' cy='220' r='40' fill='%23cbd5e1'/%3E%3C/svg%3E";
                       }
                     }}
                   />
@@ -638,30 +639,7 @@ export const ProductDetailPage: React.FC = () => {
                 {/* Header người mua */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {rev.buyerAvatar ? (
-                      <img
-                        src={rev.buyerAvatar}
-                        alt={rev.buyerName}
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          background: 'var(--primary, #1877f2)',
-                          color: '#fff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                        }}
-                      >
-                        {rev.buyerName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <Avatar src={rev.buyerAvatar} name={rev.buyerName} size="sm" />
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.92rem' }}>

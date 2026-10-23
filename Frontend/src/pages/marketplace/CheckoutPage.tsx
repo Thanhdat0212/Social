@@ -10,6 +10,7 @@ import {
   CheckCheckIcon,
   CopyIcon,
   ClockIcon,
+  SparklesIcon,
 } from '@/components/common';
 import { signalrService } from '@/services/signalrService';
 
@@ -246,7 +247,8 @@ export const CheckoutPage: React.FC = () => {
               onClick={() => handleMockPay('success')}
               loading={isMockPaying}
             >
-              🧪 Thanh toán thử (Dev Mode)
+              <SparklesIcon size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '6px' }} />
+              Thanh toán thử (Dev Mode)
             </Button>
           </div>
         </div>
@@ -429,8 +431,9 @@ export const CheckoutPage: React.FC = () => {
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.6rem' }}>
-            🧪 Chế độ thử nghiệm Dev (Mock Payment M5.5)
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <SparklesIcon size={14} />
+            <span>Chế độ thử nghiệm Dev (Mock Payment M5.5)</span>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button

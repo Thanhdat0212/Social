@@ -9,7 +9,7 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
 } from '@/components/common/Icons';
-import { PageContainer, EmptyState, Button, Skeleton } from '@/components/common';
+import { PageContainer, EmptyState, Button, Skeleton, Badge } from '@/components/common';
 
 interface PublicShopInfo {
   id: string;
@@ -69,24 +69,24 @@ export const ShopProfilePage: React.FC = () => {
     switch (effectiveStatus) {
       case 'Active':
         return (
-          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <CheckCircleIcon size={14} /> Gian hàng uy tín
-          </span>
+          <Badge variant="success" icon={<CheckCircleIcon size={14} />}>
+            Gian hàng uy tín
+          </Badge>
         );
       case 'Closed':
         return (
-          <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <AlertTriangleIcon size={14} /> Tạm nghỉ nhận đơn
-          </span>
+          <Badge variant="warning" icon={<AlertTriangleIcon size={14} />}>
+            Tạm nghỉ nhận đơn
+          </Badge>
         );
       case 'Suspended':
         return (
-          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldIcon size={14} /> Đang bị tạm khóa
-          </span>
+          <Badge variant="danger" icon={<ShieldIcon size={14} />}>
+            Đang bị tạm khóa
+          </Badge>
         );
       default:
-        return <span className="badge badge-secondary">{effectiveStatus || 'Hoạt động'}</span>;
+        return <Badge variant="neutral">{effectiveStatus || 'Hoạt động'}</Badge>;
     }
   };
 
@@ -165,6 +165,10 @@ export const ShopProfilePage: React.FC = () => {
                   src={shop.logoUrl}
                   alt={shop.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '16px' }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="%234f46e5" stroke-width="1.5"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>';
+                  }}
                 />
               ) : (
                 <StoreIcon size={42} />
@@ -283,6 +287,10 @@ export const ShopProfilePage: React.FC = () => {
                     src={product.coverImageUrl}
                     alt={product.name}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>';
+                    }}
                   />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -290,12 +298,9 @@ export const ShopProfilePage: React.FC = () => {
                   </div>
                 )}
                 <div style={{ position: 'absolute', top: '8px', left: '8px' }}>
-                  <span
-                    className="badge badge-success"
-                    style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px' }}
-                  >
+                  <Badge variant="success" size="sm">
                     Tự động 24/7
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
