@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import { FormField, Input, Textarea, Button } from '@/components/common';
 
@@ -22,6 +22,19 @@ export const ShopSettingsModal: React.FC<ShopSettingsModalProps> = ({
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSaveShopSettings = async (e: React.FormEvent) => {
@@ -41,27 +54,19 @@ export const ShopSettingsModal: React.FC<ShopSettingsModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem',
-      }}
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
           maxWidth: '500px',
           width: '100%',
           padding: '1.75rem',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1rem' }}>
           Cài đặt thông tin gian hàng

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import type { Category } from '@/types/marketplace';
 import {
@@ -25,6 +25,19 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
   categories,
 }) => {
   const [createStep, setCreateStep] = useState<1 | 2 | 3 | 4>(1);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
   const [productForm, setProductForm] = useState({
     name: '',
     categoryId: '',
@@ -206,29 +219,21 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem',
-      }}
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '20px',
           maxWidth: '680px',
           width: '100%',
           padding: '2rem',
           maxHeight: '90vh',
           overflowY: 'auto',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div>

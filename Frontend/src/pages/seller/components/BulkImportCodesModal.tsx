@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import { Button, Textarea, Alert } from '@/components/common';
 
@@ -16,6 +16,19 @@ export const BulkImportCodesModal: React.FC<BulkImportCodesModalProps> = ({
   const [bulkCodesText, setBulkCodesText] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    if (!variantId) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [variantId, onClose]);
 
   if (!variantId) return null;
 
@@ -40,27 +53,19 @@ export const BulkImportCodesModal: React.FC<BulkImportCodesModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem',
-      }}
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
           maxWidth: '520px',
           width: '100%',
           padding: '1.75rem',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
           Nạp mã kho số hàng loạt

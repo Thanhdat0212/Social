@@ -106,6 +106,21 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
   const [imageActionLoading, setImageActionLoading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSavingDetails && !isSavingVariants && !isUploadingImage) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, isSavingDetails, isSavingVariants, isUploadingImage]);
+
   // Thông báo phản hồi (Banner feedback)
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
@@ -456,36 +471,27 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1050,
-        padding: '1rem',
-      }}
+      className="modal-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSavingDetails && !isSavingVariants && !isUploadingImage) {
           onClose();
         }
       }}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
           maxWidth: '720px',
           width: '100%',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.6)',
+          borderRadius: '16px',
           overflow: 'hidden',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* MODAL HEADER */}
         <div

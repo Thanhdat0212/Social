@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import { FormField, Textarea, Button } from '@/components/common';
 
@@ -15,6 +15,19 @@ export const ResubmitShopModal: React.FC<ResubmitShopModalProps> = ({
 }) => {
   const [resubmitNotes, setResubmitNotes] = useState('');
   const [resubmitLoading, setResubmitLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -34,27 +47,19 @@ export const ResubmitShopModal: React.FC<ResubmitShopModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem',
-      }}
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
           maxWidth: '500px',
           width: '100%',
           padding: '1.75rem',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
           Nộp lại hồ sơ xét duyệt gian hàng

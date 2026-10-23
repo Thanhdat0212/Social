@@ -11,6 +11,8 @@ import {
   FormField,
   Input,
   FileTextIcon,
+  TagIcon,
+  CloseIcon,
 } from '@/components/common';
 import { EditProductModal } from '../components/EditProductModal';
 import { CreateProductModal } from '../components/CreateProductModal';
@@ -44,6 +46,19 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
   } | null>(null);
   const [isSavingQuickPrice, setIsSavingQuickPrice] = useState(false);
   const [quickPriceError, setQuickPriceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!quickPriceTarget) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSavingQuickPrice) setQuickPriceTarget(null);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [quickPriceTarget, isSavingQuickPrice]);
 
   const handleSaveQuickPrice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -386,32 +401,13 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
           onClick={() => !isSavingQuickPrice && setQuickPriceTarget(null)}
           role="dialog"
           aria-modal="true"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
         >
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '16px',
-              width: '100%',
               maxWidth: '460px',
               padding: '1.5rem',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
               display: 'flex',
               flexDirection: 'column',
               gap: '1.25rem',
@@ -419,8 +415,9 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                  💰 Chỉnh sửa giá bán
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TagIcon size={16} />
+                  <span>Chỉnh sửa giá bán</span>
                 </h3>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
                   {quickPriceTarget.variantName} • {quickPriceTarget.productName}
@@ -429,16 +426,10 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({ onProductCountChange }
               <button
                 type="button"
                 onClick={() => !isSavingQuickPrice && setQuickPriceTarget(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: '1.25rem',
-                  cursor: 'pointer',
-                  padding: '2px',
-                }}
+                className="btn-close-modal"
+                aria-label="Đóng"
               >
-                ✕
+                <CloseIcon size={16} />
               </button>
             </div>
 

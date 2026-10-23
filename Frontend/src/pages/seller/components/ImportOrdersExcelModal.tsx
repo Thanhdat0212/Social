@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import type {
   ExcelOrderImportPreviewResultDto,
@@ -40,6 +40,19 @@ export const ImportOrdersExcelModal: React.FC<ImportOrdersExcelModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loading && !executing) onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, loading, executing]);
 
   if (!isOpen) return null;
 
@@ -136,30 +149,24 @@ export const ImportOrdersExcelModal: React.FC<ImportOrdersExcelModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1.5rem',
+      className="modal-overlay"
+      onClick={() => {
+        if (!loading && !executing) onClose();
       }}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
           maxWidth: '850px',
           width: '100%',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          borderRadius: '16px',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div

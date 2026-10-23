@@ -29,11 +29,27 @@ export const InspectCodesModal: React.FC<InspectCodesModalProps> = ({
     }
   };
 
+  const variantId = variant?.id;
+
   useEffect(() => {
-    if (variant) {
-      loadVariantCodes(variant.id);
-    }
-  }, [variant]);
+    if (!variantId) return;
+    loadVariantCodes(variantId);
+    document.body.classList.add('modal-open');
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [variantId]);
+
+  useEffect(() => {
+    if (!variantId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [variantId, onClose]);
 
   const handleInvalidateCode = async (codeId: string) => {
     if (!variant) return;
@@ -52,29 +68,21 @@ export const InspectCodesModal: React.FC<InspectCodesModalProps> = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem',
-      }}
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '16px',
           maxWidth: '650px',
           width: '100%',
           padding: '1.75rem',
           maxHeight: '85vh',
           overflowY: 'auto',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div>
