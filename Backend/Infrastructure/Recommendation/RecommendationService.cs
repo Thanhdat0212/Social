@@ -50,14 +50,14 @@ public class RecommendationService : IRecommendationService
         {
             int quota = generatorMetadata.Source switch
             {
-                CandidateSource.Recent => 100,
-                CandidateSource.Interest => 300,
-                CandidateSource.Following => 100,
-                CandidateSource.Trending => 100,
-                CandidateSource.Exploration => 100,
-                CandidateSource.Collaborative => 200,
-                CandidateSource.Semantic => 200,
-                _ => 100
+                CandidateSource.Recent => 30,
+                CandidateSource.Interest => 50,
+                CandidateSource.Following => 30,
+                CandidateSource.Trending => 30,
+                CandidateSource.Exploration => 30,
+                CandidateSource.Collaborative => 50,
+                CandidateSource.Semantic => 50,
+                _ => 30
             };
 
             await semaphore.WaitAsync(cancellationToken);

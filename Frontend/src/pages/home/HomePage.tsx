@@ -26,6 +26,7 @@ import {
   CloseIcon,
   TagIcon,
   ChevronRightIcon,
+  SidebarProductsSkeleton,
 } from '@/components/common';
 import { getApiErrorMessage } from '@/utils/error';
 import { seenPostsService } from '@/utils/seenPosts';
@@ -33,7 +34,8 @@ import { useFeedStore, type FeedTab } from '@/store';
 import { ROUTES } from '@/constants/routes';
 import { ENV } from '@/config';
 
-const PAGE_SIZE = 20;
+const INITIAL_PAGE_SIZE = 2; // Micro-batching: Chỉ tải 2 bài viết đầu tiên để tốc độ phản hồi siêu tốc (< 200ms)
+const PAGE_SIZE = 5; // Khi người dùng cuộn (Infinite Scroll) nạp tiếp từng đợt 5 bài
 const SIDEBAR_PRODUCT_FALLBACK_THUMB =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='42' viewBox='0 0 42 42'%3E%3Crect width='42' height='42' fill='%23e2e8f0'/%3E%3Cpath d='M14 26l6-7 4 5 6-8 8 10H8z' fill='%2394a3b8'/%3E%3C/svg%3E";
 
@@ -67,8 +69,9 @@ export const HomePage: React.FC = () => {
   const [pendingPosts, setPendingPosts] = useState<PostDto[]>([]);
   const [bottomPendingPosts, setBottomPendingPosts] = useState<PostDto[]>([]);
 
-  // Dữ liệu sidebar thực tế
+  // Dữ liệu sidebar thực tế (tải độc lập theo BigPipe pattern)
   const [featuredProducts, setFeaturedProducts] = useState<ProductListItem[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [topInterests, setTopInterests] = useState<InterestDto[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -88,7 +91,8 @@ export const HomePage: React.FC = () => {
     marketplaceApi
       .getProducts({ page: 1, pageSize: 5 })
       .then((res) => setFeaturedProducts(res.items || []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsProductsLoading(false));
 
     marketplaceApi
       .getCategoriesTree()
@@ -133,16 +137,16 @@ export const HomePage: React.FC = () => {
         const seenIds = seenPostsService.getRecentSeenIds(60);
         let fetchPromise: Promise<PostDto[]>;
         if (activeTab === 'following') {
-          fetchPromise = postApi.getFollowingFeed(1, PAGE_SIZE, seenIds);
+          fetchPromise = postApi.getFollowingFeed(1, INITIAL_PAGE_SIZE, seenIds);
         } else if (activeTab === 'recent') {
-          fetchPromise = postApi.getRecentPosts(1, PAGE_SIZE);
+          fetchPromise = postApi.getRecentPosts(1, INITIAL_PAGE_SIZE);
         } else {
-          fetchPromise = postApi.getForYouFeed(1, PAGE_SIZE, seenIds);
+          fetchPromise = postApi.getForYouFeed(1, INITIAL_PAGE_SIZE, seenIds);
         }
 
         const [data] = await Promise.all([fetchPromise, minSpinDelay]);
 
-        setTabPosts(activeTab, data, 1, data.length >= PAGE_SIZE);
+        setTabPosts(activeTab, data, 1, data.length >= INITIAL_PAGE_SIZE);
       } catch (err) {
         await minSpinDelay;
         setError(getApiErrorMessage(err));
@@ -590,8 +594,10 @@ export const HomePage: React.FC = () => {
             </div>
           )}
 
-          {/* Widget: Sản phẩm số nổi bật (Real API) */}
-          {featuredProducts.length > 0 && (
+          {/* Widget: Sản phẩm số nổi bật (Real API + BigPipe Skeleton) */}
+          {isProductsLoading ? (
+            <SidebarProductsSkeleton />
+          ) : featuredProducts.length > 0 ? (
             <div className="aside-widget" style={{ marginBottom: 0 }}>
               <div className="aside-widget-header">
                 <div className="aside-widget-title-wrap">
@@ -645,7 +651,7 @@ export const HomePage: React.FC = () => {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Widget: Tiêu chuẩn giao dịch Chợ số */}
           <div className="aside-widget" style={{ marginBottom: 0 }}>

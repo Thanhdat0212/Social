@@ -1189,9 +1189,9 @@
 .app-skeleton {
   background: linear-gradient(
     90deg,
-    #f0f2f5 25%,
-    #e4e6eb 37%,
-    #f0f2f5 63%
+    var(--bg-tertiary, #f0f2f5) 25%,
+    var(--border-color, #e4e6eb) 37%,
+    var(--bg-tertiary, #f0f2f5) 63%
   );
   background-size: 400% 100%;
   animation: skeletonPulse 1.4s ease infinite;

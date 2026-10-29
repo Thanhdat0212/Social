@@ -89,7 +89,7 @@ public sealed class FeedService : IFeedService
             Page = page,
             PageSize = pageSize,
             SeenPostIds = seenSet,
-            TargetCandidateCount = 300
+            TargetCandidateCount = 80
         };
 
         // Nạp trước dữ liệu người dùng 1 lần duy nhất để tái sử dụng xuyên suốt các Generators và Aggregator

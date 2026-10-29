@@ -17,3 +17,4 @@ public class PostCandidateDto
     public int ViewCount { get; set; }
     public List<CandidatePostInterestDto> PostInterests { get; set; } = new();
 }
+

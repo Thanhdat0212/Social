@@ -40,3 +40,4 @@ public class DiversityServiceTests
         result[2].Should().Be(candidates[3].Post.Id);
     }
 }
+
