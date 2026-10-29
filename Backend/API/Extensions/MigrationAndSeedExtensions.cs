@@ -44,7 +44,8 @@ public static class MigrationAndSeedExtensions
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Lỗi xảy ra khi áp dụng database migrations hoặc seed data: {Message}", ex.Message);
+            logger.LogCritical(ex, "Lỗi nghiêm trọng khi áp dụng database migrations hoặc seed data khi khởi động: {Message}", ex.Message);
+            throw;
         }
     }
 }
