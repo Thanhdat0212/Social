@@ -73,3 +73,4 @@ Thumbs.db
 # AI Agent folders (internal tools, không đưa lên project)
 _skill-source/
 antigravity-awesome-skills/
+.agent/
