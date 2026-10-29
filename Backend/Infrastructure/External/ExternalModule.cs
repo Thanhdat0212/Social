@@ -29,7 +29,9 @@ public static class ExternalModule
             {
                 var options = StackExchange.Redis.ConfigurationOptions.Parse(redisConn);
                 options.AbortOnConnectFail = false;
-                options.ConnectTimeout = 5000;
+                options.ConnectTimeout = 3000;
+                options.SyncTimeout = 2000;
+                options.AsyncTimeout = 2000;
                 return StackExchange.Redis.ConnectionMultiplexer.Connect(options);
             });
             services.AddSingleton<ICacheService, RedisCacheService>();

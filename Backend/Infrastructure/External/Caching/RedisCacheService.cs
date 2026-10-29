@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Application.Common;
 using Microsoft.Extensions.Configuration;
@@ -48,6 +48,12 @@ public class RedisCacheService : ICacheService
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
+        if (!_redis.IsConnected)
+        {
+            _logger.LogWarning("Redis chưa sẵn sàng kết nối. Tự động fallback bỏ qua đọc cache cho key {Key}.", key);
+            return default;
+        }
+
         var fullKey = GetFullKey(key);
         try
         {
@@ -103,6 +109,12 @@ public class RedisCacheService : ICacheService
     {
         if (value == null) return;
 
+        if (!_redis.IsConnected)
+        {
+            _logger.LogWarning("Redis chưa sẵn sàng kết nối. Bỏ qua ghi cache key {Key}.", key);
+            return;
+        }
+
         var fullKey = GetFullKey(key);
         try
         {
@@ -126,6 +138,8 @@ public class RedisCacheService : ICacheService
 
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
+        if (!_redis.IsConnected) return;
+
         var fullKey = GetFullKey(key);
         try
         {
