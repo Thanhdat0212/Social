@@ -18,25 +18,28 @@ export const apiClient = axios.create({
 // Request interceptor: Gắn Access Token từ Zustand store và danh sách bài đã xem
 apiClient.interceptors.request.use(
   async (config) => {
-    // Không chờ đối với các endpoint auth cơ bản để tránh deadlock
+    // Không chờ đối với các endpoint auth cơ bản và profile nội bộ để tránh deadlock
     const isAuthRoute =
       config.url?.includes('/auth/login') ||
       config.url?.includes('/auth/register') ||
       config.url?.includes('/auth/refresh') ||
       config.url?.includes('/auth/forgot-password') ||
-      config.url?.includes('/auth/reset-password');
+      config.url?.includes('/auth/reset-password') ||
+      config.url?.includes('/profile/me');
 
     // Nếu đang trong quá trình khôi phục phiên đăng nhập (F5/Reload trang),
-    // tạm dừng request cho đến khi xác thực xong để đảm bảo luôn có Authorization header
-    if (!isAuthRoute && useAuthStore.getState().isInitializing) {
+    // chỉ tạm dừng nếu CHƯA có token (chờ refresh token cấp token xong).
+    // Nếu đã có token hoặc request thuộc auth/profile thì gửi ngay lập tức.
+    if (!isAuthRoute && useAuthStore.getState().isInitializing && !useAuthStore.getState().accessToken) {
       await new Promise<void>((resolve) => {
-        if (!useAuthStore.getState().isInitializing) {
+        if (!useAuthStore.getState().isInitializing || useAuthStore.getState().accessToken) {
           resolve();
           return;
         }
         let timer: ReturnType<typeof setTimeout>;
         const unsubscribe = useAuthStore.subscribe((state) => {
-          if (!state.isInitializing) {
+          // Mở khóa ngay khi có Access Token hoặc khi quá trình phục hồi kết thúc
+          if (state.accessToken || !state.isInitializing) {
             clearTimeout(timer);
             unsubscribe();
             resolve();
@@ -45,7 +48,7 @@ apiClient.interceptors.request.use(
         timer = setTimeout(() => {
           unsubscribe();
           resolve();
-        }, 5000);
+        }, 2500);
       });
     }
 

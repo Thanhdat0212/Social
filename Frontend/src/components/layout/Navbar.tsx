@@ -22,7 +22,7 @@ import {
 } from '@/components/common';
 
 export const Navbar: React.FC = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isInitializing, logout } = useAuth();
   const { totalQuantity, fetchCart } = useCartStore();
   const location = useLocation();
 
@@ -130,7 +130,18 @@ export const Navbar: React.FC = () => {
             )}
           </Link>
 
-          {isAuthenticated ? (
+          {isInitializing ? (
+            <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e2e8f0',
+                }}
+              />
+            </div>
+          ) : isAuthenticated ? (
             <div className="user-menu">
               <NotificationBell />
 

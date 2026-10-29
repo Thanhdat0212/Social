@@ -5,7 +5,6 @@ import { authApi } from '@/api/authApi';
 import { profileApi } from '@/api/profileApi';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
-import { LoadingScreen } from '@/components/feedback/LoadingScreen';
 import { signalrService } from '@/services/signalrService';
 
 export const App: React.FC = () => {
@@ -49,10 +48,6 @@ export const App: React.FC = () => {
       signalrService.start();
     }
   }, [isInitializing, accessToken]);
-
-  if (isInitializing) {
-    return <LoadingScreen message="Đang khởi tạo ứng dụng..." />;
-  }
 
   return (
     <ErrorBoundary>
