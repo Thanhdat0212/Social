@@ -23,12 +23,14 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
     public async Task<IReadOnlyList<(Guid UserId, double Similarity)>> FindSimilarUsersAsync(
         Guid userId,
         int topN = 20,
+        Dictionary<Guid, double>? knownUserPreferences = null,
         CancellationToken cancellationToken = default)
     {
-        // 1. Lấy vector sở thích của User mục tiêu
-        var myPreferences = await _context.UserPreferences
-            .Where(up => up.UserId == userId && up.Score > 0)
-            .ToDictionaryAsync(up => up.InterestId, up => up.Score, cancellationToken);
+        // 1. Lấy vector sở thích của User mục tiêu (ưu tiên dùng dữ liệu nạp sẵn)
+        var myPreferences = knownUserPreferences
+            ?? await _context.UserPreferences
+                .Where(up => up.UserId == userId && up.Score > 0)
+                .ToDictionaryAsync(up => up.InterestId, up => up.Score, cancellationToken);
 
         if (myPreferences.Count == 0)
         {
@@ -111,12 +113,13 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
     public async Task<IReadOnlyList<Post>> GetCollaborativeCandidatesAsync(
         Guid userId,
         int targetCount = 200,
+        Dictionary<Guid, double>? knownUserPreferences = null,
         CancellationToken cancellationToken = default)
     {
         if (targetCount <= 0) targetCount = 200;
 
         // 1. Tìm các người dùng tương tự
-        var similarUsers = await FindSimilarUsersAsync(userId, 30, cancellationToken);
+        var similarUsers = await FindSimilarUsersAsync(userId, 30, knownUserPreferences, cancellationToken);
         if (similarUsers.Count == 0)
         {
             return Array.Empty<Post>();

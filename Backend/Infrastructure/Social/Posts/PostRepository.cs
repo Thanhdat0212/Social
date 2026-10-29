@@ -12,6 +12,15 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
     {
     }
 
+    private IQueryable<Post> GetCandidatePostQuery()
+    {
+        return _dbSet
+            .AsNoTracking()
+            .Include(p => p.Author)
+            .Include(p => p.PostInterests)
+                .ThenInclude(pi => pi.Interest);
+    }
+
     private IQueryable<Post> GetBasePostQuery(bool asNoTracking = true)
     {
         var query = _dbSet.AsQueryable();
@@ -41,7 +50,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
 
     public async Task<IReadOnlyList<Post>> GetRecentPostsAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        return await GetBasePostQuery()
+        return await GetCandidatePostQuery()
             .OrderByDescending(p => p.CreatedAtUtc)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -50,7 +59,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
 
     public async Task<IReadOnlyList<Post>> GetCandidatePostsForFeedAsync(int limit = 200, CancellationToken cancellationToken = default)
     {
-        return await GetBasePostQuery()
+        return await GetCandidatePostQuery()
             .OrderByDescending(p => p.CreatedAtUtc)
             .Take(limit)
             .ToListAsync(cancellationToken);
@@ -61,7 +70,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
         var idList = followingUserIds.ToList();
         if (idList.Count == 0) return Array.Empty<Post>();
 
-        return await GetBasePostQuery()
+        return await GetCandidatePostQuery()
             .Where(p => idList.Contains(p.AuthorId))
             .OrderByDescending(p => p.CreatedAtUtc)
             .Skip((page - 1) * pageSize)
@@ -74,7 +83,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
         var idList = interestIds.ToList();
         if (idList.Count == 0) return Array.Empty<Post>();
 
-        return await GetBasePostQuery()
+        return await GetCandidatePostQuery()
             .Where(p => p.PostInterests.Any(pi => idList.Contains(pi.InterestId)))
             .OrderByDescending(p => p.CreatedAtUtc)
             .Take(limit)
@@ -85,35 +94,31 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
     {
         var cutoff = DateTime.UtcNow - timeWindow;
 
-        // Ưu tiên bài viết trong khung thời gian có tương tác cao
-        var recentTrending = await GetBasePostQuery()
+        // Ưu tiên bài viết trong khung thời gian có tương tác cao (dùng Candidate Query nhẹ)
+        var recentTrending = await GetCandidatePostQuery()
             .Where(p => p.CreatedAtUtc >= cutoff)
             .OrderByDescending(p => (p.LikeCount * 2) + (p.CommentCount * 3) + (p.ViewCount * 0.2))
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        if (recentTrending.Count >= limit / 2)
+        // Nếu trong 48h đã có bài (kể cả số lượng ít do hệ thống mới), trả về ngay mà không cần query lần 2
+        if (recentTrending.Count > 0)
         {
             return recentTrending;
         }
 
-        // Nếu hệ thống ít bài trong 48h, bổ sung bài có tương tác cao tổng thể
-        var existingIds = recentTrending.Select(p => p.Id).ToHashSet();
-        var fallback = await GetBasePostQuery()
-            .Where(p => !existingIds.Contains(p.Id))
+        // Chỉ khi trong 48h hoàn toàn không có bài nào mới fallback sang bài có tương tác cao tổng thể
+        return await GetCandidatePostQuery()
             .OrderByDescending(p => (p.LikeCount * 2) + (p.CommentCount * 3) + (p.ViewCount * 0.2))
-            .Take(limit - recentTrending.Count)
+            .Take(limit)
             .ToListAsync(cancellationToken);
-
-        recentTrending.AddRange(fallback);
-        return recentTrending;
     }
 
     public async Task<IReadOnlyList<Post>> GetExplorationPostsAsync(IEnumerable<Guid> excludeInterestIds, int limit = 100, CancellationToken cancellationToken = default)
     {
         var excludeList = excludeInterestIds.ToList();
 
-        var query = GetBasePostQuery().AsQueryable();
+        var query = GetCandidatePostQuery();
 
         if (excludeList.Count > 0)
         {

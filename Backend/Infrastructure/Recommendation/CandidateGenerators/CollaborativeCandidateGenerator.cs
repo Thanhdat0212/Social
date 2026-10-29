@@ -38,6 +38,7 @@ public class CollaborativeCandidateGenerator : ICandidateGenerator
             var posts = await _collaborativeService.GetCollaborativeCandidatesAsync(
                 context.UserId.Value,
                 targetCount,
+                context.UserPreferenceScores,
                 cancellationToken);
 
             var result = new List<CandidatePostDto>(posts.Count);

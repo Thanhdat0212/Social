@@ -30,12 +30,20 @@ public class RecommendationRankingService : IRecommendationRankingService
 
         var now = DateTime.UtcNow;
 
-        // Lấy thông tin sở thích nếu user đã đăng nhập
-        Dictionary<Guid, double> prefMap = new();
-        if (context.UserId.HasValue)
+        // Lấy thông tin sở thích nếu user đã đăng nhập (ưu tiên dùng dữ liệu đã pre-load)
+        Dictionary<Guid, double> prefMap;
+        if (context.UserPreferenceScores != null)
+        {
+            prefMap = context.UserPreferenceScores;
+        }
+        else if (context.UserId.HasValue)
         {
             var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
             prefMap = preferences.ToDictionary(p => p.InterestId, p => p.Score);
+        }
+        else
+        {
+            prefMap = new();
         }
 
         var scoredList = new List<ScoredCandidateDto>(candidates.Count);

@@ -44,33 +44,31 @@ public sealed class FeedService : IFeedService
         var currentUserId = _currentUserService.IsAuthenticated ? _currentUserService.UserId : null;
         var cacheKey = $"feed:foryou:{currentUserId?.ToString() ?? "anon"}";
 
-        // Tối ưu hóa phân trang: Khi người dùng cuộn đến trang 2, 3... tận dụng cache các candidate IDs đã xếp hạng
-        if (page > 1)
+        // Tối ưu hóa phân tầng Cache (áp dụng cho CẢ page 1 và page > 1):
+        // Nếu đã có danh sách candidate IDs xếp hạng sẵn trong Cache, phục vụ ngay lập tức (< 80ms)
+        var cachedIds = await _cacheService.GetAsync<List<Guid>>(cacheKey, cancellationToken);
+        if (cachedIds != null && cachedIds.Count > 0)
         {
-            var cachedIds = await _cacheService.GetAsync<List<Guid>>(cacheKey, cancellationToken);
-            if (cachedIds != null && cachedIds.Count > 0)
+            var pagedIds = cachedIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            if (pagedIds.Count > 0)
             {
-                var pagedIds = cachedIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-                if (pagedIds.Count > 0)
+                var cachedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
+                if (cachedPosts.Count > 0)
                 {
-                    var cachedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
-                    if (cachedPosts.Count > 0)
+                    var cachedDtos = _mapper.Map<List<PostDto>>(cachedPosts);
+                    if (currentUserId.HasValue && cachedDtos.Count > 0)
                     {
-                        var cachedDtos = _mapper.Map<List<PostDto>>(cachedPosts);
-                        if (currentUserId.HasValue && cachedDtos.Count > 0)
-                        {
-                            var likedIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
-                                currentUserId.Value,
-                                cachedDtos.Select(d => d.Id),
-                                cancellationToken)).ToHashSet();
+                        var likedIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
+                            currentUserId.Value,
+                            cachedDtos.Select(d => d.Id),
+                            cancellationToken)).ToHashSet();
 
-                            foreach (var dto in cachedDtos)
-                            {
-                                dto.IsLikedByCurrentUser = likedIds.Contains(dto.Id);
-                            }
+                        foreach (var dto in cachedDtos)
+                        {
+                            dto.IsLikedByCurrentUser = likedIds.Contains(dto.Id);
                         }
-                        return cachedDtos;
                     }
+                    return cachedDtos;
                 }
             }
         }
@@ -83,6 +81,21 @@ public sealed class FeedService : IFeedService
             SeenPostIds = seenPostIds != null ? new HashSet<Guid>(seenPostIds) : new HashSet<Guid>(),
             TargetCandidateCount = 700
         };
+
+        // Nạp trước dữ liệu người dùng 1 lần duy nhất để tái sử dụng xuyên suốt các Generators và Aggregator
+        if (currentUserId.HasValue)
+        {
+            var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(currentUserId.Value, cancellationToken);
+            recommendationContext.UserPreferenceScores = preferences
+                .Where(p => p.Score > 0)
+                .ToDictionary(p => p.InterestId, p => p.Score);
+
+            var staticInterests = await _unitOfWork.UserInterests.GetByUserIdAsync(currentUserId.Value, cancellationToken);
+            recommendationContext.UserInterestIds = staticInterests.Select(ui => ui.InterestId).ToList();
+
+            recommendationContext.ViewedPostIds = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(currentUserId.Value, 500, cancellationToken);
+            recommendationContext.FollowingUserIds = await _unitOfWork.UserFollows.GetFollowingUserIdsAsync(currentUserId.Value, cancellationToken);
+        }
 
         // Kích hoạt toàn bộ Pipeline gợi ý: Generators -> Aggregator -> Ranking -> Diversity
         var rankedPosts = await _recommendationService.GetForYouFeedPostsAsync(recommendationContext, cancellationToken);
@@ -99,15 +112,14 @@ public sealed class FeedService : IFeedService
         }
         else
         {
-            // Lưu cache danh sách ID bài viết xếp hạng trong 3 phút để phục vụ các trang tiếp theo
+            // Lưu cache danh sách ID bài viết xếp hạng trong 90 giây để phục vụ reload trang và phân trang siêu tốc
             var allRankedIds = rankedPosts.Select(p => p.Id).ToList();
-            await _cacheService.SetAsync(cacheKey, allRankedIds, TimeSpan.FromMinutes(3), cancellationToken);
+            await _cacheService.SetAsync(cacheKey, allRankedIds, TimeSpan.FromSeconds(90), cancellationToken);
 
-            // Phân trang kết quả trang đầu
-            pagedPosts = rankedPosts
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            var pagedIds = allRankedIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            // Lấy bài viết đầy đủ chi tiết (kèm TaggedProducts, Author, Images) cho riêng số lượng của trang hiện tại
+            var fullDetailedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
+            pagedPosts = fullDetailedPosts.Count > 0 ? fullDetailedPosts.ToList() : rankedPosts.Skip((page - 1) * pageSize).Take(pageSize).ToList();
         }
 
         if (pagedPosts.Count == 0)

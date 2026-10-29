@@ -2,6 +2,7 @@ using Application.DTOs.Recommendation;
 using Application.Interfaces.Recommendation;
 using Domain.Entities;
 using Domain.Enums;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Recommendation;
@@ -12,6 +13,7 @@ public class RecommendationService : IRecommendationService
     private readonly ICandidateAggregator _aggregator;
     private readonly IRecommendationRankingService _rankingService;
     private readonly IDiversityService _diversityService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RecommendationService> _logger;
 
     public RecommendationService(
@@ -19,12 +21,14 @@ public class RecommendationService : IRecommendationService
         ICandidateAggregator aggregator,
         IRecommendationRankingService rankingService,
         IDiversityService diversityService,
+        IServiceScopeFactory scopeFactory,
         ILogger<RecommendationService> logger)
     {
         _generators = generators;
         _aggregator = aggregator;
         _rankingService = rankingService;
         _diversityService = diversityService;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -32,7 +36,7 @@ public class RecommendationService : IRecommendationService
         RecommendationContext context,
         CancellationToken cancellationToken = default)
     {
-        // 1. Kích hoạt tuần tự các Candidate Generators (tránh xung đột Concurrency trên Scoped DbContext của EF Core)
+        // 1. Kích hoạt song song các Candidate Generators trên các Scoped DbContext độc lập
         var activeGenerators = _generators.OrderBy(g => g.Priority).ToList();
         if (activeGenerators.Count == 0)
         {
@@ -40,11 +44,9 @@ public class RecommendationService : IRecommendationService
             return Array.Empty<Post>();
         }
 
-        var allCandidates = new List<CandidatePostDto>();
-
-        foreach (var generator in activeGenerators)
+        var tasks = activeGenerators.Select(async generatorMetadata =>
         {
-            int quota = generator.Source switch
+            int quota = generatorMetadata.Source switch
             {
                 CandidateSource.Recent => 100,
                 CandidateSource.Interest => 300,
@@ -58,15 +60,26 @@ public class RecommendationService : IRecommendationService
 
             try
             {
-                var candidates = await generator.GenerateCandidatesAsync(context, quota, cancellationToken);
-                if (candidates.Count > 0)
-                {
-                    allCandidates.AddRange(candidates);
-                }
+                using var scope = _scopeFactory.CreateScope();
+                var scopedGenerator = scope.ServiceProvider.GetServices<ICandidateGenerator>()
+                    .First(g => g.Source == generatorMetadata.Source);
+
+                return await scopedGenerator.GenerateCandidatesAsync(context, quota, cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên từ generator {Source}.", generator.Source);
+                _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên từ generator {Source}.", generatorMetadata.Source);
+                return (IReadOnlyList<CandidatePostDto>)Array.Empty<CandidatePostDto>();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        var allCandidates = new List<CandidatePostDto>();
+        foreach (var candidateBatch in results)
+        {
+            if (candidateBatch.Count > 0)
+            {
+                allCandidates.AddRange(candidateBatch);
             }
         }
 

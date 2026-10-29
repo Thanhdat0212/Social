@@ -35,8 +35,8 @@ public class CandidateAggregator : ICandidateAggregator
 
         if (context.UserId.HasValue)
         {
-            var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(
-                context.UserId.Value, 500, cancellationToken);
+            var dbViewed = context.ViewedPostIds 
+                ?? await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(context.UserId.Value, 500, cancellationToken);
             foreach (var id in dbViewed)
             {
                 viewedPostIds.Add(id);

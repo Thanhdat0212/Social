@@ -34,8 +34,15 @@ public class ExplorationCandidateGenerator : ICandidateGenerator
             List<Guid> knownInterestIds = new();
             if (context.UserId.HasValue)
             {
-                var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
-                knownInterestIds = preferences.Select(p => p.InterestId).ToList();
+                if (context.UserPreferenceScores != null)
+                {
+                    knownInterestIds = context.UserPreferenceScores.Keys.ToList();
+                }
+                else
+                {
+                    var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
+                    knownInterestIds = preferences.Select(p => p.InterestId).ToList();
+                }
             }
 
             var posts = await _unitOfWork.Posts.GetExplorationPostsAsync(

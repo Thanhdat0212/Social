@@ -36,7 +36,8 @@ public class FollowingCandidateGenerator : ICandidateGenerator
 
         try
         {
-            var followingUserIds = await _unitOfWork.UserFollows.GetFollowingUserIdsAsync(context.UserId.Value, cancellationToken);
+            var followingUserIds = context.FollowingUserIds 
+                ?? await _unitOfWork.UserFollows.GetFollowingUserIdsAsync(context.UserId.Value, cancellationToken);
             if (followingUserIds.Count == 0)
             {
                 return Array.Empty<CandidatePostDto>();

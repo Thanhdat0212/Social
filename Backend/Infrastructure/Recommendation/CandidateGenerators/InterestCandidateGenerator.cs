@@ -35,22 +35,41 @@ public class InterestCandidateGenerator : ICandidateGenerator
 
             if (context.UserId.HasValue)
             {
-                var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
-                if (preferences.Count > 0)
+                if (context.UserPreferenceScores != null && context.UserPreferenceScores.Count > 0)
                 {
-                    targetInterestIds = preferences
-                        .Where(p => p.Score > 0)
-                        .OrderByDescending(p => p.Score)
+                    targetInterestIds = context.UserPreferenceScores
+                        .Where(kv => kv.Value > 0)
+                        .OrderByDescending(kv => kv.Value)
                         .Take(10)
-                        .Select(p => p.InterestId)
+                        .Select(kv => kv.Key)
                         .ToList();
+                }
+                else
+                {
+                    var preferences = await _unitOfWork.UserPreferences.GetByUserIdAsync(context.UserId.Value, cancellationToken);
+                    if (preferences.Count > 0)
+                    {
+                        targetInterestIds = preferences
+                            .Where(p => p.Score > 0)
+                            .OrderByDescending(p => p.Score)
+                            .Take(10)
+                            .Select(p => p.InterestId)
+                            .ToList();
+                    }
                 }
 
                 // Fallback sang UserInterests nếu preferences chưa có hoặc ít
                 if (targetInterestIds.Count == 0)
                 {
-                    var staticInterests = await _unitOfWork.UserInterests.GetByUserIdAsync(context.UserId.Value, cancellationToken);
-                    targetInterestIds = staticInterests.Select(ui => ui.InterestId).ToList();
+                    if (context.UserInterestIds != null && context.UserInterestIds.Count > 0)
+                    {
+                        targetInterestIds = context.UserInterestIds.ToList();
+                    }
+                    else
+                    {
+                        var staticInterests = await _unitOfWork.UserInterests.GetByUserIdAsync(context.UserId.Value, cancellationToken);
+                        targetInterestIds = staticInterests.Select(ui => ui.InterestId).ToList();
+                    }
                 }
             }
 
