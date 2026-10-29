@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { marketplaceApi } from '@/api/marketplaceApi';
 import type {
   ProductDetail,
@@ -8,6 +8,8 @@ import type {
   ProductReviewSummaryDto,
 } from '@/types/marketplace';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { signalrService } from '@/services/signalrService';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -33,6 +35,9 @@ import {
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuthStore();
+  const { showToast } = useNotificationStore();
   const { addItem, isLoading: isCartLoading } = useCartStore();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
@@ -167,20 +172,50 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
+
+    if (!isAuthenticated) {
+      showToast('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.', 'warning');
+      navigate(ROUTES.AUTH.LOGIN, {
+        state: {
+          from: location,
+          message: 'Vui lòng đăng nhập để quản lý giỏ hàng và mua sắm.',
+        },
+      });
+      return;
+    }
+
     trackAction('AddToCart');
     const success = await addItem(selectedVariant.id, quantity);
     if (success) {
       setMessage(`Đã thêm ${quantity}x "${getVariantLabel(selectedVariant)}" vào giỏ hàng thành công!`);
       setTimeout(() => setMessage(null), 3500);
+    } else {
+      const cartError = useCartStore.getState().error;
+      showToast(cartError || 'Không thể thêm sản phẩm vào giỏ hàng.', 'error');
     }
   };
 
   const handleBuyNow = async () => {
     if (!selectedVariant) return;
+
+    if (!isAuthenticated) {
+      showToast('Vui lòng đăng nhập để tiến hành mua hàng.', 'warning');
+      navigate(ROUTES.AUTH.LOGIN, {
+        state: {
+          from: location,
+          message: 'Vui lòng đăng nhập để tiếp tục mua và thanh toán đơn hàng.',
+        },
+      });
+      return;
+    }
+
     trackAction('AddToCart');
     const success = await addItem(selectedVariant.id, quantity);
     if (success) {
       navigate(ROUTES.MARKETPLACE.CART);
+    } else {
+      const cartError = useCartStore.getState().error;
+      showToast(cartError || 'Không thể tiến hành mua ngay. Vui lòng thử lại.', 'error');
     }
   };
 

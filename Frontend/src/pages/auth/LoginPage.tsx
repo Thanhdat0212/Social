@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/hooks/useAuth';
 import { useTitle } from '@/hooks/useTitle';
@@ -19,18 +19,38 @@ export const LoginPage: React.FC = () => {
 
   const { setAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const infoMessage = (location.state as any)?.message;
 
   const handlePostLoginRedirect = async () => {
     try {
       const status = await interestApi.getOnboardingStatus();
       if (!status.isOnboarded) {
-        navigate(ROUTES.ONBOARDING);
+        navigate(ROUTES.ONBOARDING, { replace: true });
         return;
       }
     } catch {
       // Fallback
     }
-    navigate(ROUTES.HOME);
+
+    const stateFrom = (location.state as any)?.from;
+    const redirectParam = new URLSearchParams(location.search).get('redirect');
+    const fromPath =
+      typeof stateFrom === 'string'
+        ? stateFrom
+        : stateFrom?.pathname
+        ? `${stateFrom.pathname}${stateFrom.search || ''}${stateFrom.hash || ''}`
+        : redirectParam;
+
+    const safeDestination =
+      fromPath &&
+      !fromPath.startsWith('/auth') &&
+      !fromPath.startsWith('//') &&
+      !fromPath.includes('://')
+        ? fromPath
+        : ROUTES.HOME;
+
+    navigate(safeDestination, { replace: true });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,6 +90,7 @@ export const LoginPage: React.FC = () => {
           <p className="auth-box-subtitle">Chào mừng bạn trở lại với Social</p>
         </div>
 
+        {infoMessage && !error && <Alert type="info" message={infoMessage} className="mb-4" />}
         {error && <Alert type="error" message={error} className="mb-4" />}
 
         <form onSubmit={handleSubmit} className="auth-box-form" noValidate>
