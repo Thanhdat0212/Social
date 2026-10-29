@@ -25,3 +25,4 @@ public class HealthController : ControllerBase
         return Ok("pong");
     }
 }
+

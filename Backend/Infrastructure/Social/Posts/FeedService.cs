@@ -60,6 +60,10 @@ public sealed class FeedService : IFeedService
             // Nếu người dùng đã xem hết toàn bộ pool cache, fallback dùng lại toàn bộ pool
             var candidatePool = unseenIds.Count >= pageSize ? unseenIds : cachedIds;
             var pagedIds = candidatePool.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            if (pagedIds.Count == 0 && candidatePool.Count > 0)
+            {
+                pagedIds = candidatePool.Take(pageSize).ToList();
+            }
             if (pagedIds.Count > 0)
             {
                 var cachedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
@@ -124,8 +128,8 @@ public sealed class FeedService : IFeedService
 
         if (finalPoolIds.Count > 0)
         {
-            // Lưu cache danh sách ID (90s cho user đã login, 180s cho anonymous vãng lai)
-            var ttl = currentUserId.HasValue ? TimeSpan.FromSeconds(90) : TimeSpan.FromSeconds(180);
+            // Lưu cache danh sách ID (5 phút cho user đã login, 10 phút cho anonymous vãng lai)
+            var ttl = currentUserId.HasValue ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(10);
             await _cacheService.SetAsync(cacheKey, finalPoolIds, ttl, cancellationToken);
         }
 

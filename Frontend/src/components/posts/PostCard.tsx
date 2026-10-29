@@ -176,12 +176,14 @@ interface PostCardProps {
   post: PostDto;
   onPostDeleted?: (postId: string) => void;
   initialShowComments?: boolean;
+  priority?: boolean;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   onPostDeleted,
   initialShowComments = false,
+  priority = false,
 }) => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotificationStore();
@@ -468,16 +470,25 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Post Media Gallery */}
         {post.mediaUrls && post.mediaUrls.length > 0 && (
           <div className={`post-gallery gallery-count-${Math.min(post.mediaUrls.length, 5)}`}>
-            {post.mediaUrls.map((url, index) => (
-              <div
-                key={index}
-                className="gallery-cell"
-                onClick={() => setPreviewImage(url)}
-                title="Bấm để xem ảnh kích thước đầy đủ"
-              >
-                <img src={url} alt={`post-media-${index}`} loading="lazy" />
-              </div>
-            ))}
+            {post.mediaUrls.map((url, index) => {
+              const isLcpCandidate = priority && index === 0;
+              return (
+                <div
+                  key={index}
+                  className="gallery-cell"
+                  onClick={() => setPreviewImage(url)}
+                  title="Bấm để xem ảnh kích thước đầy đủ"
+                >
+                  <img
+                    src={url}
+                    alt={`post-media-${index}`}
+                    loading={isLcpCandidate ? 'eager' : 'lazy'}
+                    fetchPriority={isLcpCandidate ? 'high' : 'auto'}
+                    decoding={isLcpCandidate ? 'sync' : 'async'}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
 
