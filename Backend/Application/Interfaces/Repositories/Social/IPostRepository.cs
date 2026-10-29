@@ -11,6 +11,7 @@ public interface IPostRepository : IGenericRepository<Post>
     Task<IReadOnlyList<Post>> GetPostsByInterestIdsAsync(IEnumerable<Guid> interestIds, int limit = 300, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Post>> GetTrendingPostsAsync(TimeSpan timeWindow, int limit = 100, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Post>> GetExplorationPostsAsync(IEnumerable<Guid> excludeInterestIds, int limit = 100, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Post>> GetPostsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Post>> GetPostsByAuthorIdAsync(Guid authorId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<int> GetPostCountByAuthorIdAsync(Guid authorId, CancellationToken cancellationToken = default);
 }

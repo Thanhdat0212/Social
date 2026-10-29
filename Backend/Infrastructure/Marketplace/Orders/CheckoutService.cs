@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Marketplace.Orders;
 
-public class CheckoutService : ICheckoutService
+public sealed class CheckoutService : ICheckoutService
 {
     private readonly SocialDbContext _context;
     private readonly IUnitOfWork _unitOfWork;

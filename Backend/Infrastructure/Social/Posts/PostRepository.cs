@@ -12,9 +12,16 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
     {
     }
 
-    private IQueryable<Post> GetBasePostQuery()
+    private IQueryable<Post> GetBasePostQuery(bool asNoTracking = true)
     {
-        return _dbSet
+        var query = _dbSet.AsQueryable();
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return query
+            .AsSplitQuery()
             .Include(p => p.Author)
             .Include(p => p.PostInterests)
                 .ThenInclude(pi => pi.Interest)
@@ -28,7 +35,7 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
 
     public async Task<Post?> GetWithDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await GetBasePostQuery()
+        return await GetBasePostQuery(asNoTracking: false)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
@@ -118,6 +125,20 @@ public class PostRepository : GenericRepository<Post>, IPostRepository
             .OrderByDescending(p => p.CreatedAtUtc)
             .Take(limit)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Post>> GetPostsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return Array.Empty<Post>();
+
+        var posts = await GetBasePostQuery()
+            .Where(p => idList.Contains(p.Id))
+            .ToListAsync(cancellationToken);
+
+        // Bảo toàn đúng thứ tự danh sách ID đầu vào
+        var postMap = posts.ToDictionary(p => p.Id);
+        return idList.Where(id => postMap.ContainsKey(id)).Select(id => postMap[id]).ToList();
     }
 
     public async Task<IReadOnlyList<Post>> GetPostsByAuthorIdAsync(Guid authorId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)

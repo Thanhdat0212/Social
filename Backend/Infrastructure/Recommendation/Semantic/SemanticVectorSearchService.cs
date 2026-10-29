@@ -26,6 +26,7 @@ public class SemanticVectorSearchService : ISemanticVectorSearchService
 
         // Lấy các bài viết người dùng đã tương tác tích cực gần đây có sẵn Embedding
         var interactions = await _context.UserInteractions
+            .AsNoTracking()
             .Include(ui => ui.Post)
                 .ThenInclude(p => p!.Embedding)
             .Where(ui => ui.UserId == userId
@@ -126,6 +127,8 @@ public class SemanticVectorSearchService : ISemanticVectorSearchService
 
         // Lấy các bài viết có embedding gần đây (tối đa 500 bài ứng viên)
         var candidateEmbeddings = await _context.PostEmbeddings
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(pe => pe.Post)
                 .ThenInclude(p => p.Author)
             .Include(pe => pe.Post)

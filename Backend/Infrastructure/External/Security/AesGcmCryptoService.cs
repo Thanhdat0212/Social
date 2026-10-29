@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using Application.Common;
 using Microsoft.Extensions.Configuration;
@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.External.Security;
 
-public class AesGcmCryptoService : ICryptoService
+public sealed class AesGcmCryptoService : ICryptoService
 {
     private readonly byte[] _key;
     private readonly byte[] _hashSalt;
@@ -76,13 +76,10 @@ public class AesGcmCryptoService : ICryptoService
             throw new CryptographicException("Dữ liệu mã hóa không đúng định dạng AES-GCM.");
         }
 
-        var nonce = new byte[nonceSize];
-        var tag = new byte[tagSize];
-        var cipherBytes = new byte[combined.Length - nonceSize - tagSize];
-
-        Buffer.BlockCopy(combined, 0, nonce, 0, nonceSize);
-        Buffer.BlockCopy(combined, nonceSize, tag, 0, tagSize);
-        Buffer.BlockCopy(combined, nonceSize + tagSize, cipherBytes, 0, cipherBytes.Length);
+        ReadOnlySpan<byte> combinedSpan = combined;
+        var nonce = combinedSpan.Slice(0, nonceSize);
+        var tag = combinedSpan.Slice(nonceSize, tagSize);
+        var cipherBytes = combinedSpan.Slice(nonceSize + tagSize);
 
         var plainBytes = new byte[cipherBytes.Length];
         using var aesGcm = new AesGcm(_key, AesGcm.TagByteSizes.MaxSize);

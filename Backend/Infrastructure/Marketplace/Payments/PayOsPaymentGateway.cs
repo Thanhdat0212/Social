@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Marketplace.Payments;
 
-public class PayOsPaymentGateway : IPaymentGateway
+public sealed class PayOsPaymentGateway : IPaymentGateway
 {
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;

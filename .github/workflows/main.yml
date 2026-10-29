@@ -31,3 +31,6 @@ jobs:
 
       - name: Build solution
         run: dotnet build Backend/API/API.csproj --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test Backend/Tests/Tests.csproj --configuration Release

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Marketplace.Ledger;
 
-public class LedgerService : ILedgerService
+public sealed class LedgerService : ILedgerService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cacheService;

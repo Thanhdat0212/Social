@@ -109,6 +109,7 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Products
+            .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.Images.OrderBy(i => i.Position))
             .Include(p => p.Variants.Where(v => v.DeletedAtUtc == null))
@@ -123,8 +124,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s) || p.Slug.ToLower().Contains(s));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%") || EF.Functions.ILike(p.Slug, $"%{s}%"));
         }
 
         return await query
@@ -141,6 +142,7 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Products
+            .AsNoTracking()
             .Where(p => p.ShopId == shopId && p.DeletedAtUtc == null);
 
         if (status.HasValue)
@@ -150,8 +152,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s) || p.Slug.ToLower().Contains(s));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%") || EF.Functions.ILike(p.Slug, $"%{s}%"));
         }
 
         return await query.CountAsync(cancellationToken);
@@ -170,6 +172,8 @@ public class ProductRepository : IProductRepository
         var nowUtc = DateTime.UtcNow;
 
         var query = _context.Products
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(p => p.Shop)
             .Include(p => p.Category)
             .Include(p => p.Images.OrderBy(i => i.Position))
@@ -210,8 +214,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s) || (p.Description != null && p.Description.ToLower().Contains(s)));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%") || (p.Description != null && EF.Functions.ILike(p.Description, $"%{s}%")));
         }
 
         if (minPrice.HasValue && minPrice.Value > 0)
@@ -248,6 +252,7 @@ public class ProductRepository : IProductRepository
         var nowUtc = DateTime.UtcNow;
 
         var query = _context.Products
+            .AsNoTracking()
             .Where(p => p.DeletedAtUtc == null && p.Status == ProductStatus.Listed)
             .Where(p => !p.Takedowns.Any(t => t.LiftedAtUtc == null))
             .Where(p => p.Shop != null && p.Shop.DeletedAtUtc == null &&
@@ -282,8 +287,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s) || (p.Description != null && p.Description.ToLower().Contains(s)));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%") || (p.Description != null && EF.Functions.ILike(p.Description, $"%{s}%")));
         }
 
         if (minPrice.HasValue && minPrice.Value > 0)
@@ -307,6 +312,7 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Products
+            .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.Images.OrderBy(i => i.Position))
             .Include(p => p.Variants.Where(v => v.DeletedAtUtc == null))
@@ -315,8 +321,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%"));
         }
 
         return await query
@@ -332,13 +338,14 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Products
+            .AsNoTracking()
             .Where(p => p.ShopId == shopId && p.DeletedAtUtc == null && p.Status == ProductStatus.Listed)
             .Where(p => !p.Takedowns.Any(t => t.LiftedAtUtc == null));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%"));
         }
 
         return await query.CountAsync(cancellationToken);
@@ -353,6 +360,7 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Products
+            .AsNoTracking()
             .Include(p => p.Shop)
             .Include(p => p.Category)
             .Include(p => p.Images.OrderBy(i => i.Position))
@@ -372,8 +380,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s) || p.Slug.ToLower().Contains(s));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%") || EF.Functions.ILike(p.Slug, $"%{s}%"));
         }
 
         return await query
@@ -390,6 +398,7 @@ public class ProductRepository : IProductRepository
         CancellationToken cancellationToken = default)
     {
         var query = _context.Products
+            .AsNoTracking()
             .Where(p => p.DeletedAtUtc == null);
 
         if (shopId.HasValue)
@@ -404,8 +413,8 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(p => p.Name.ToLower().Contains(s) || p.Slug.ToLower().Contains(s));
+            var s = search.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.Name, $"%{s}%") || EF.Functions.ILike(p.Slug, $"%{s}%"));
         }
 
         return await query.CountAsync(cancellationToken);

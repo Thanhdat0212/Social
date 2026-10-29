@@ -48,11 +48,13 @@ public readonly struct Money : IEquatable<Money>, IComparable<Money>
 
     public override int GetHashCode() => Amount.GetHashCode();
 
+    private static readonly CultureInfo ViVnCulture = new("vi-VN");
+
     public int CompareTo(Money other) => Amount.CompareTo(other.Amount);
 
     public override string ToString()
     {
-        return $"{Amount.ToString("N0", new CultureInfo("vi-VN"))} ₫";
+        return $"{Amount.ToString("N0", ViVnCulture)} ₫";
     }
 
     public static implicit operator long(Money money) => money.Amount;

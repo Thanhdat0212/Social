@@ -55,8 +55,8 @@ public class AdminController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var searchLower = search.Trim().ToLower();
-            query = query.Where(u => u.Email.ToLower().Contains(searchLower) || u.DisplayName.ToLower().Contains(searchLower));
+            var s = search.Trim();
+            query = query.Where(u => EF.Functions.ILike(u.Email, $"%{s}%") || EF.Functions.ILike(u.DisplayName, $"%{s}%"));
         }
 
         if (role.HasValue)

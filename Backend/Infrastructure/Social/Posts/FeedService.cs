@@ -11,11 +11,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Social.Posts;
 
-public class FeedService : IFeedService
+public sealed class FeedService : IFeedService
 {
     private readonly IUnitOfWork _unitOfWork; // Dùng để lấy danh sách bài viết từ database
     private readonly ICurrentUserService _currentUserService;// dùng để biết người dùng hiện tại là ai
     private readonly IRecommendationService _recommendationService; // Dùng để lấy danh sách bài viết từ RecommendationService
+    private readonly ICacheService _cacheService; // Bộ nhớ đệm phân tán / in-memory cache cho feed pagination
     private readonly IMapper _mapper;
     private readonly ILogger<FeedService> _logger;
 
@@ -23,12 +24,14 @@ public class FeedService : IFeedService
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
         IRecommendationService recommendationService,
+        ICacheService cacheService,
         IMapper mapper,
         ILogger<FeedService> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _recommendationService = recommendationService;
+        _cacheService = cacheService;
         _mapper = mapper;
         _logger = logger;
     }
@@ -39,6 +42,38 @@ public class FeedService : IFeedService
         if (pageSize < 1 || pageSize > 50) pageSize = 20;
 
         var currentUserId = _currentUserService.IsAuthenticated ? _currentUserService.UserId : null;
+        var cacheKey = $"feed:foryou:{currentUserId?.ToString() ?? "anon"}";
+
+        // Tối ưu hóa phân trang: Khi người dùng cuộn đến trang 2, 3... tận dụng cache các candidate IDs đã xếp hạng
+        if (page > 1)
+        {
+            var cachedIds = await _cacheService.GetAsync<List<Guid>>(cacheKey, cancellationToken);
+            if (cachedIds != null && cachedIds.Count > 0)
+            {
+                var pagedIds = cachedIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+                if (pagedIds.Count > 0)
+                {
+                    var cachedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
+                    if (cachedPosts.Count > 0)
+                    {
+                        var cachedDtos = _mapper.Map<List<PostDto>>(cachedPosts);
+                        if (currentUserId.HasValue && cachedDtos.Count > 0)
+                        {
+                            var likedIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
+                                currentUserId.Value,
+                                cachedDtos.Select(d => d.Id),
+                                cancellationToken)).ToHashSet();
+
+                            foreach (var dto in cachedDtos)
+                            {
+                                dto.IsLikedByCurrentUser = likedIds.Contains(dto.Id);
+                            }
+                        }
+                        return cachedDtos;
+                    }
+                }
+            }
+        }
 
         var recommendationContext = new RecommendationContext
         {
@@ -64,7 +99,11 @@ public class FeedService : IFeedService
         }
         else
         {
-            // Phân trang kết quả
+            // Lưu cache danh sách ID bài viết xếp hạng trong 3 phút để phục vụ các trang tiếp theo
+            var allRankedIds = rankedPosts.Select(p => p.Id).ToList();
+            await _cacheService.SetAsync(cacheKey, allRankedIds, TimeSpan.FromMinutes(3), cancellationToken);
+
+            // Phân trang kết quả trang đầu
             pagedPosts = rankedPosts
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)

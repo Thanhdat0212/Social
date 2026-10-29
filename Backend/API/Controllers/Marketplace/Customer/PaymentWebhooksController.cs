@@ -44,7 +44,8 @@ public class PaymentWebhooksController : ControllerBase
         using var reader = new StreamReader(Request.Body);
         var webhookBody = await reader.ReadToEndAsync(cancellationToken);
 
-        _logger.LogInformation("Nhận webhook thanh toán từ {Provider}: {Body}", provider, webhookBody);
+        _logger.LogInformation("Nhận webhook thanh toán từ {Provider} (Payload length: {PayloadLength} bytes, HasSignature: {HasSignature})", 
+            provider, webhookBody.Length, !string.IsNullOrWhiteSpace(signature));
 
         var result = await _paymentService.HandleWebhookAsync(provider, webhookBody, signature ?? string.Empty, cancellationToken);
         if (!result.Success)
