@@ -45,7 +45,7 @@ public class ExplorationCandidateGenerator : ICandidateGenerator
                 }
             }
 
-            var posts = await _unitOfWork.Posts.GetExplorationPostsAsync(
+            var posts = await _unitOfWork.Posts.GetExplorationCandidatesAsync(
                 knownInterestIds,
                 targetCount,
                 cancellationToken);
@@ -62,7 +62,7 @@ public class ExplorationCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 0.95
                 });
             }

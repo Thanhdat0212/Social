@@ -53,7 +53,7 @@ public class CollaborativeCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 1.15 // Ưu tiên nhẹ các bài viết gợi ý từ cộng đồng
                 });
             }

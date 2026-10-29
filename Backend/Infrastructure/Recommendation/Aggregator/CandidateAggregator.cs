@@ -62,7 +62,7 @@ public class CandidateAggregator : ICandidateAggregator
         // Bổ sung các bài viết mới đăng gần đây (trong vòng 48h) của chính người dùng vào nhóm ứng viên để chấm điểm
         if (context.UserId.HasValue)
         {
-            var myRecentPosts = await _unitOfWork.Posts.GetPostsByAuthorIdAsync(context.UserId.Value, 1, 10, cancellationToken);
+            var myRecentPosts = await _unitOfWork.Posts.GetAuthorRecentCandidatesAsync(context.UserId.Value, 10, cancellationToken);
             var recentCutoff = DateTime.UtcNow.AddHours(-48);
             foreach (var post in myRecentPosts.Where(p => p.CreatedAtUtc >= recentCutoff))
             {

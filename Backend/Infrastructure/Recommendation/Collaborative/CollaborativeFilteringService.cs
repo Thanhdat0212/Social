@@ -1,3 +1,4 @@
+using Application.DTOs.Recommendation;
 using Application.Interfaces.Recommendation;
 using Domain.Entities;
 using Domain.Enums;
@@ -110,7 +111,7 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
             .ToList();
     }
 
-    public async Task<IReadOnlyList<Post>> GetCollaborativeCandidatesAsync(
+    public async Task<IReadOnlyList<PostCandidateDto>> GetCollaborativeCandidatesAsync(
         Guid userId,
         int targetCount = 200,
         Dictionary<Guid, double>? knownUserPreferences = null,
@@ -122,7 +123,7 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
         var similarUsers = await FindSimilarUsersAsync(userId, 30, knownUserPreferences, cancellationToken);
         if (similarUsers.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<PostCandidateDto>();
         }
 
         var similarUserMap = similarUsers.ToDictionary(s => s.UserId, s => s.Similarity);
@@ -158,7 +159,7 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
 
         if (interactions.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<PostCandidateDto>();
         }
 
         // 4. Tính điểm bài viết dựa trên trọng số tương đồng và loại tương tác
@@ -198,15 +199,28 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
 
         if (topPostIds.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<PostCandidateDto>();
         }
 
-        // 5. Truy vấn danh sách Post chi tiết
-        var posts = await _context.Posts
-            .Include(p => p.Author)
-            .Include(p => p.PostInterests)
-                .ThenInclude(pi => pi.Interest)
-            .Where(p => topPostIds.Contains(p.Id))
+        // 5. Truy vấn danh sách PostCandidateDto siêu nhẹ (1 câu SQL, không nạp thực thể nặng)
+        var candidates = await _context.Posts
+            .AsNoTracking()
+            .Where(p => topPostIds.Contains(p.Id) && p.Status == PostStatus.Published)
+            .Select(p => new PostCandidateDto
+            {
+                Id = p.Id,
+                AuthorId = p.AuthorId,
+                CreatedAtUtc = p.CreatedAtUtc,
+                LikeCount = p.LikeCount,
+                CommentCount = p.CommentCount,
+                ViewCount = p.ViewCount,
+                PostInterests = p.PostInterests.Select(pi => new CandidatePostInterestDto
+                {
+                    InterestId = pi.InterestId,
+                    Name = pi.Interest.Name,
+                    Confidence = pi.Confidence
+                }).ToList()
+            })
             .ToListAsync(cancellationToken);
 
         // Giữ thứ tự theo điểm số
@@ -214,6 +228,6 @@ public class CollaborativeFilteringService : ICollaborativeFilteringService
             .Select((id, index) => new { id, index })
             .ToDictionary(x => x.id, x => x.index);
 
-        return posts.OrderBy(p => orderMap.TryGetValue(p.Id, out var idx) ? idx : int.MaxValue).ToList();
+        return candidates.OrderBy(p => orderMap.TryGetValue(p.Id, out var idx) ? idx : int.MaxValue).ToList();
     }
 }

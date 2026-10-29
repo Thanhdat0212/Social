@@ -1,11 +1,10 @@
 using Application.DTOs.Recommendation;
-using Domain.Entities;
 
 namespace Application.Interfaces.Recommendation;
 
 public interface IRecommendationService
 {
-    Task<IReadOnlyList<Post>> GetForYouFeedPostsAsync(
+    Task<IReadOnlyList<Guid>> GetForYouFeedPostIdsAsync(
         RecommendationContext context,
         CancellationToken cancellationToken = default);
 }

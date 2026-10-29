@@ -74,8 +74,8 @@ public class InterestCandidateGenerator : ICandidateGenerator
             }
 
             var posts = targetInterestIds.Count > 0
-                ? await _unitOfWork.Posts.GetPostsByInterestIdsAsync(targetInterestIds, targetCount, cancellationToken)
-                : await _unitOfWork.Posts.GetCandidatePostsForFeedAsync(targetCount, cancellationToken);
+                ? await _unitOfWork.Posts.GetInterestCandidatesAsync(targetInterestIds, targetCount, cancellationToken)
+                : await _unitOfWork.Posts.GetRecentCandidatesAsync(targetCount, cancellationToken);
 
             var result = new List<CandidatePostDto>(posts.Count);
             foreach (var post in posts)
@@ -89,7 +89,7 @@ public class InterestCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 1.0
                 });
             }

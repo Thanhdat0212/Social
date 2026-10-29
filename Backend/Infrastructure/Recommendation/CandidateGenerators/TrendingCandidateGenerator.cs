@@ -31,7 +31,7 @@ public class TrendingCandidateGenerator : ICandidateGenerator
 
         try
         {
-            var posts = await _unitOfWork.Posts.GetTrendingPostsAsync(
+            var posts = await _unitOfWork.Posts.GetTrendingCandidatesAsync(
                 TimeSpan.FromHours(48),
                 targetCount,
                 cancellationToken);
@@ -48,7 +48,7 @@ public class TrendingCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 1.0
                 });
             }

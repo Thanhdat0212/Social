@@ -13,10 +13,10 @@ namespace Infrastructure.Social.Posts;
 
 public sealed class FeedService : IFeedService
 {
-    private readonly IUnitOfWork _unitOfWork; // Dùng để lấy danh sách bài viết từ database
-    private readonly ICurrentUserService _currentUserService;// dùng để biết người dùng hiện tại là ai
-    private readonly IRecommendationService _recommendationService; // Dùng để lấy danh sách bài viết từ RecommendationService
-    private readonly ICacheService _cacheService; // Bộ nhớ đệm phân tán / in-memory cache cho feed pagination
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IRecommendationService _recommendationService;
+    private readonly ICacheService _cacheService;
     private readonly IMapper _mapper;
     private readonly ILogger<FeedService> _logger;
 
@@ -44,12 +44,22 @@ public sealed class FeedService : IFeedService
         var currentUserId = _currentUserService.IsAuthenticated ? _currentUserService.UserId : null;
         var cacheKey = $"feed:foryou:{currentUserId?.ToString() ?? "anon"}";
 
-        // Tối ưu hóa phân tầng Cache (áp dụng cho CẢ page 1 và page > 1):
-        // Nếu đã có danh sách candidate IDs xếp hạng sẵn trong Cache, phục vụ ngay lập tức (< 80ms)
+        var seenSet = seenPostIds != null ? new HashSet<Guid>(seenPostIds) : new HashSet<Guid>();
+
+        // 1. Kiểm tra Cache tầng 1: Danh sách ID bài viết đã xếp hạng (Ranked Post IDs)
+        // Áp dụng cho CẢ page 1 và phân trang, phục vụ tức thì (< 80ms)
         var cachedIds = await _cacheService.GetAsync<List<Guid>>(cacheKey, cancellationToken);
         if (cachedIds != null && cachedIds.Count > 0)
         {
-            var pagedIds = cachedIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            // Lọc bỏ bài người dùng vừa xem trên màn hình (được Frontend gửi lên qua seenIds)
+            // để đảm bảo mỗi lần reload người dùng luôn thấy bài viết MỚI / KHÁC BIỆT
+            var unseenIds = seenSet.Count > 0
+                ? cachedIds.Where(id => !seenSet.Contains(id)).ToList()
+                : cachedIds;
+
+            // Nếu người dùng đã xem hết toàn bộ pool cache, fallback dùng lại toàn bộ pool
+            var candidatePool = unseenIds.Count >= pageSize ? unseenIds : cachedIds;
+            var pagedIds = candidatePool.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             if (pagedIds.Count > 0)
             {
                 var cachedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
@@ -78,8 +88,8 @@ public sealed class FeedService : IFeedService
             UserId = currentUserId,
             Page = page,
             PageSize = pageSize,
-            SeenPostIds = seenPostIds != null ? new HashSet<Guid>(seenPostIds) : new HashSet<Guid>(),
-            TargetCandidateCount = 700
+            SeenPostIds = seenSet,
+            TargetCandidateCount = 300
         };
 
         // Nạp trước dữ liệu người dùng 1 lần duy nhất để tái sử dụng xuyên suốt các Generators và Aggregator
@@ -97,37 +107,48 @@ public sealed class FeedService : IFeedService
             recommendationContext.FollowingUserIds = await _unitOfWork.UserFollows.GetFollowingUserIdsAsync(currentUserId.Value, cancellationToken);
         }
 
-        // Kích hoạt toàn bộ Pipeline gợi ý: Generators -> Aggregator -> Ranking -> Diversity
-        var rankedPosts = await _recommendationService.GetForYouFeedPostsAsync(recommendationContext, cancellationToken);
-        List<Post> pagedPosts;
+        // Kích hoạt toàn bộ Pipeline gợi ý: Generators (DTOs) -> Aggregator -> Ranking -> Diversity -> Ranked Post IDs
+        var rankedPostIds = await _recommendationService.GetForYouFeedPostIdsAsync(recommendationContext, cancellationToken);
+        List<Guid> finalPoolIds;
 
-        if (rankedPosts.Count == 0)
+        if (rankedPostIds.Count == 0)
         {
-            // Dự phòng an toàn: nếu pipeline gợi ý không trả về bài nào, lấy các bài viết ứng viên mới nhất
-            var fallback = await _unitOfWork.Posts.GetCandidatePostsForFeedAsync(pageSize * 2, cancellationToken);
-            pagedPosts = fallback
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            // Dự phòng an toàn: nếu pipeline gợi ý không trả về bài nào, lấy các bài viết mới nhất
+            var fallback = await _unitOfWork.Posts.GetRecentCandidatesAsync(pageSize * 2, cancellationToken);
+            finalPoolIds = fallback.Select(p => p.Id).ToList();
         }
         else
         {
-            // Lưu cache danh sách ID bài viết xếp hạng trong 90 giây để phục vụ reload trang và phân trang siêu tốc
-            var allRankedIds = rankedPosts.Select(p => p.Id).ToList();
-            await _cacheService.SetAsync(cacheKey, allRankedIds, TimeSpan.FromSeconds(90), cancellationToken);
-
-            var pagedIds = allRankedIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            // Lấy bài viết đầy đủ chi tiết (kèm TaggedProducts, Author, Images) cho riêng số lượng của trang hiện tại
-            var fullDetailedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
-            pagedPosts = fullDetailedPosts.Count > 0 ? fullDetailedPosts.ToList() : rankedPosts.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            finalPoolIds = rankedPostIds.ToList();
         }
 
-        if (pagedPosts.Count == 0)
+        if (finalPoolIds.Count > 0)
+        {
+            // Lưu cache danh sách ID (90s cho user đã login, 180s cho anonymous vãng lai)
+            var ttl = currentUserId.HasValue ? TimeSpan.FromSeconds(90) : TimeSpan.FromSeconds(180);
+            await _cacheService.SetAsync(cacheKey, finalPoolIds, ttl, cancellationToken);
+        }
+
+        var unseenFinalIds = seenSet.Count > 0
+            ? finalPoolIds.Where(id => !seenSet.Contains(id)).ToList()
+            : finalPoolIds;
+
+        var targetPool = unseenFinalIds.Count >= pageSize ? unseenFinalIds : finalPoolIds;
+        var targetPagedIds = targetPool.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        if (targetPagedIds.Count == 0)
         {
             return Array.Empty<PostDto>();
         }
 
-        var dtos = _mapper.Map<List<PostDto>>(pagedPosts);
+        // Hydration: Lấy bài viết đầy đủ chi tiết (kèm TaggedProducts, Author, Images) cho riêng số lượng của trang hiện tại (1 câu split query duy nhất)
+        var detailedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(targetPagedIds, cancellationToken);
+        if (detailedPosts.Count == 0)
+        {
+            return Array.Empty<PostDto>();
+        }
+
+        var dtos = _mapper.Map<List<PostDto>>(detailedPosts);
 
         // Gắn trạng thái Like của người dùng hiện tại
         if (currentUserId.HasValue && dtos.Count > 0)
@@ -201,4 +222,3 @@ public sealed class FeedService : IFeedService
         return dtos;
     }
 }
-

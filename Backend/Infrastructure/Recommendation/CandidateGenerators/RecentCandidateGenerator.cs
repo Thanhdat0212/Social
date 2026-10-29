@@ -31,8 +31,8 @@ public class RecentCandidateGenerator : ICandidateGenerator
 
         try
         {
-            // Lấy danh sách các bài viết mới nhất trên toàn hệ thống (không lọc sở thích để bài mới luôn có cơ hội hiển thị)
-            var posts = await _unitOfWork.Posts.GetRecentPostsAsync(1, targetCount, cancellationToken);
+            // Lấy danh sách các bài viết mới nhất trên toàn hệ thống (dùng DTO projection nhẹ)
+            var posts = await _unitOfWork.Posts.GetRecentCandidatesAsync(targetCount, cancellationToken);
             var result = new List<CandidatePostDto>(posts.Count);
 
             foreach (var post in posts)
@@ -46,7 +46,7 @@ public class RecentCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 1.30 // Ưu tiên trọng số cao cho bài viết mới trên bảng tin
                 });
             }

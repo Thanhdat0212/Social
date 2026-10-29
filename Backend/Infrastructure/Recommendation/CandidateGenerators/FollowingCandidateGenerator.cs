@@ -43,7 +43,7 @@ public class FollowingCandidateGenerator : ICandidateGenerator
                 return Array.Empty<CandidatePostDto>();
             }
 
-            var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, targetCount, cancellationToken);
+            var posts = await _unitOfWork.Posts.GetFollowingCandidatesAsync(followingUserIds, targetCount, cancellationToken);
 
             var result = new List<CandidatePostDto>(posts.Count);
             foreach (var post in posts)
@@ -57,7 +57,7 @@ public class FollowingCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 1.1 // Ưu tiên nhẹ bài từ người theo dõi
                 });
             }

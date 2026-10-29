@@ -1,6 +1,5 @@
 using Application.DTOs.Recommendation;
 using Application.Interfaces.Recommendation;
-using Domain.Entities;
 using Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -32,17 +31,20 @@ public class RecommendationService : IRecommendationService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<Post>> GetForYouFeedPostsAsync(
+    public async Task<IReadOnlyList<Guid>> GetForYouFeedPostIdsAsync(
         RecommendationContext context,
         CancellationToken cancellationToken = default)
     {
-        // 1. Kích hoạt song song các Candidate Generators trên các Scoped DbContext độc lập
+        // 1. Kích hoạt các Candidate Generators với SemaphoreSlim giới hạn tối đa 3 generator đồng thời
+        // để bảo vệ Connection Pool của PostgreSQL / Supabase
         var activeGenerators = _generators.OrderBy(g => g.Priority).ToList();
         if (activeGenerators.Count == 0)
         {
             _logger.LogWarning("Không tìm thấy CandidateGenerator nào được cấu hình trong hệ thống.");
-            return Array.Empty<Post>();
+            return Array.Empty<Guid>();
         }
+
+        using var semaphore = new SemaphoreSlim(3);
 
         var tasks = activeGenerators.Select(async generatorMetadata =>
         {
@@ -58,6 +60,7 @@ public class RecommendationService : IRecommendationService
                 _ => 100
             };
 
+            await semaphore.WaitAsync(cancellationToken);
             try
             {
                 using var scope = _scopeFactory.CreateScope();
@@ -70,6 +73,10 @@ public class RecommendationService : IRecommendationService
             {
                 _logger.LogError(ex, "Lỗi xảy ra khi sinh ứng viên từ generator {Source}.", generatorMetadata.Source);
                 return (IReadOnlyList<CandidatePostDto>)Array.Empty<CandidatePostDto>();
+            }
+            finally
+            {
+                semaphore.Release();
             }
         });
 
@@ -85,22 +92,22 @@ public class RecommendationService : IRecommendationService
 
         if (allCandidates.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<Guid>();
         }
 
-        // 2. Tổng hợp, khử trùng lặp và loại bài đã xem (Candidate Aggregation)
+        // 2. Tổng hợp, khử trùng lặp và phân tách bài đã xem (Candidate Aggregation)
         var aggregatedCandidates = await _aggregator.AggregateAsync(allCandidates, context, cancellationToken);
         if (aggregatedCandidates.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<Guid>();
         }
 
         // 3. Xếp hạng đa yếu tố (Multi-factor Ranking)
         var rankedCandidates = await _rankingService.RankAsync(aggregatedCandidates, context, cancellationToken);
 
-        // 4. Đa dạng hóa feed theo chủ đề (Diversity Re-ranking)
-        var diversifiedPosts = _diversityService.ApplyDiversity(rankedCandidates, maxConsecutiveSameTopic: 2);
+        // 4. Đa dạng hóa feed theo chủ đề (Diversity Re-ranking) -> Trả về danh sách Ranked Post IDs
+        var diversifiedPostIds = _diversityService.ApplyDiversity(rankedCandidates, maxConsecutiveSameTopic: 2);
 
-        return diversifiedPosts;
+        return diversifiedPostIds;
     }
 }

@@ -63,7 +63,7 @@ public class SemanticCandidateGenerator : ICandidateGenerator
                     Post = post,
                     Source = Source,
                     PrimaryInterestId = primaryPi?.InterestId,
-                    PrimaryInterestName = primaryPi?.Interest?.Name,
+                    PrimaryInterestName = primaryPi?.Name,
                     SourceWeight = 1.10 // Ưu tiên nhẹ các bài viết khớp ngữ nghĩa sâu
                 });
             }

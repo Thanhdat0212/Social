@@ -1,3 +1,4 @@
+using Application.DTOs.Recommendation;
 using Application.Interfaces.Recommendation;
 using Domain.Entities;
 using Domain.Enums;
@@ -112,7 +113,7 @@ public class SemanticVectorSearchService : ISemanticVectorSearchService
         return resultVector;
     }
 
-    public async Task<IReadOnlyList<Post>> FindSimilarPostsByVectorAsync(
+    public async Task<IReadOnlyList<PostCandidateDto>> FindSimilarPostsByVectorAsync(
         float[] userVector,
         IEnumerable<Guid>? excludePostIds = null,
         int topN = 200,
@@ -120,31 +121,26 @@ public class SemanticVectorSearchService : ISemanticVectorSearchService
     {
         if (userVector.Length == 0 || topN <= 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<PostCandidateDto>();
         }
 
         var excludeSet = excludePostIds != null ? new HashSet<Guid>(excludePostIds) : new HashSet<Guid>();
 
-        // Lấy các bài viết có embedding gần đây (tối đa 500 bài ứng viên)
+        // Lấy các bài viết có embedding gần đây (chỉ lấy PostId và Values, 1 câu SQL cực nhẹ)
         var candidateEmbeddings = await _context.PostEmbeddings
             .AsNoTracking()
-            .AsSplitQuery()
-            .Include(pe => pe.Post)
-                .ThenInclude(p => p.Author)
-            .Include(pe => pe.Post)
-                .ThenInclude(p => p.PostInterests)
-                    .ThenInclude(pi => pi.Interest)
             .Where(pe => !excludeSet.Contains(pe.PostId))
             .OrderByDescending(pe => pe.CreatedAtUtc)
             .Take(500)
+            .Select(pe => new { pe.PostId, pe.Values })
             .ToListAsync(cancellationToken);
 
         if (candidateEmbeddings.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<PostCandidateDto>();
         }
 
-        var scored = new List<(Post Post, double Similarity)>();
+        var scored = new List<(Guid PostId, double Similarity)>();
 
         foreach (var pe in candidateEmbeddings)
         {
@@ -167,15 +163,44 @@ public class SemanticVectorSearchService : ISemanticVectorSearchService
                 double sim = dot / normPost;
                 if (sim >= 0.4) // Ngưỡng tương đồng ngữ nghĩa
                 {
-                    scored.Add((pe.Post, sim));
+                    scored.Add((pe.PostId, sim));
                 }
             }
         }
 
-        return scored
+        var topPostIds = scored
             .OrderByDescending(s => s.Similarity)
             .Take(topN)
-            .Select(s => s.Post)
+            .Select(s => s.PostId)
             .ToList();
+
+        if (topPostIds.Count == 0)
+        {
+            return Array.Empty<PostCandidateDto>();
+        }
+
+        // Truy vấn DTO siêu nhẹ cho topPostIds
+        var candidates = await _context.Posts
+            .AsNoTracking()
+            .Where(p => topPostIds.Contains(p.Id) && p.Status == PostStatus.Published)
+            .Select(p => new PostCandidateDto
+            {
+                Id = p.Id,
+                AuthorId = p.AuthorId,
+                CreatedAtUtc = p.CreatedAtUtc,
+                LikeCount = p.LikeCount,
+                CommentCount = p.CommentCount,
+                ViewCount = p.ViewCount,
+                PostInterests = p.PostInterests.Select(pi => new CandidatePostInterestDto
+                {
+                    InterestId = pi.InterestId,
+                    Name = pi.Interest.Name,
+                    Confidence = pi.Confidence
+                }).ToList()
+            })
+            .ToListAsync(cancellationToken);
+
+        var orderMap = topPostIds.Select((id, index) => new { id, index }).ToDictionary(x => x.id, x => x.index);
+        return candidates.OrderBy(p => orderMap.TryGetValue(p.Id, out var idx) ? idx : int.MaxValue).ToList();
     }
 }

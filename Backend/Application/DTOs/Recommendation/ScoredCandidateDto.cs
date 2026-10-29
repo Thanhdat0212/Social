@@ -1,10 +1,8 @@
-using Domain.Entities;
-
 namespace Application.DTOs.Recommendation;
 
 public class ScoredCandidateDto
 {
-    public Post Post { get; set; } = null!;
+    public PostCandidateDto Post { get; set; } = null!;
     public double FinalScore { get; set; }
     
     // Điểm thành phần từ 0 đến 100

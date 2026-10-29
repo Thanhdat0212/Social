@@ -1,4 +1,4 @@
-﻿    using Application.Common;
+    using Application.Common;
     using Application.DTOs.Posts;
     using Application.Interfaces;
     using Application.Interfaces.Repositories;
@@ -16,6 +16,7 @@
         private readonly ICurrentUserService _currentUserService;
         private readonly IPostAiChannel _postAiChannel;
         private readonly IRealtimeNotificationService _realtimeNotificationService;
+        private readonly ICacheService _cacheService;
         private readonly IMapper _mapper;
         private readonly ILogger<PostService> _logger;
 
@@ -24,6 +25,7 @@
             ICurrentUserService currentUserService,
             IPostAiChannel postAiChannel,
             IRealtimeNotificationService realtimeNotificationService,
+            ICacheService cacheService,
             IMapper mapper,
             ILogger<PostService> logger)
         {
@@ -31,6 +33,7 @@
             _currentUserService = currentUserService;
             _postAiChannel = postAiChannel;
             _realtimeNotificationService = realtimeNotificationService;
+            _cacheService = cacheService;
             _mapper = mapper;
             _logger = logger;
         }
@@ -78,6 +81,17 @@
 
             await _unitOfWork.Posts.AddAsync(post, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Invalidate Feed Cache để khi quay lại trang chủ thấy ngay bài viết mới của chính mình
+            try
+            {
+                await _cacheService.RemoveAsync($"feed:foryou:{currentUserId}", cancellationToken);
+                await _cacheService.RemoveAsync("feed:foryou:anon", cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Lỗi khi xóa feed cache sau khi tạo bài viết {PostId}.", post.Id);
+            }
 
             // Đẩy PostId vào kênh bất đồng bộ để Gemini AI phân tích nội dung ngầm
             if (!string.IsNullOrWhiteSpace(post.Content))

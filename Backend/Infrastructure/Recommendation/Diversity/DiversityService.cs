@@ -1,21 +1,20 @@
 using Application.DTOs.Recommendation;
 using Application.Interfaces.Recommendation;
-using Domain.Entities;
 
 namespace Infrastructure.Recommendation.Diversity;
 
 public class DiversityService : IDiversityService
 {
-    public IReadOnlyList<Post> ApplyDiversity(
+    public IReadOnlyList<Guid> ApplyDiversity(
         IReadOnlyList<ScoredCandidateDto> rankedCandidates,
         int maxConsecutiveSameTopic = 2)
     {
         if (rankedCandidates.Count == 0)
         {
-            return Array.Empty<Post>();
+            return Array.Empty<Guid>();
         }
 
-        var result = new List<Post>(rankedCandidates.Count);
+        var result = new List<Guid>(rankedCandidates.Count);
         var buffer = new List<ScoredCandidateDto>();
 
         Guid? currentTopicId = null;
@@ -36,13 +35,13 @@ public class DiversityService : IDiversityService
                 }
 
                 // Vẫn trong giới hạn cho phép
-                result.Add(candidate.Post);
+                result.Add(candidate.Post.Id);
                 consecutiveCount++;
             }
             else
             {
                 // Chủ đề khác -> Cho phép xuất hiện
-                result.Add(candidate.Post);
+                result.Add(candidate.Post.Id);
                 currentTopicId = topicId;
                 consecutiveCount = 1;
 
@@ -54,7 +53,7 @@ public class DiversityService : IDiversityService
                         var buffered = buffer[i];
                         if (!buffered.PrimaryInterestId.HasValue || buffered.PrimaryInterestId != currentTopicId)
                         {
-                            result.Add(buffered.Post);
+                            result.Add(buffered.Post.Id);
                             currentTopicId = buffered.PrimaryInterestId;
                             consecutiveCount = 1;
                             buffer.RemoveAt(i);
@@ -68,7 +67,7 @@ public class DiversityService : IDiversityService
         // Đổ toàn bộ các bài còn lại trong buffer vào cuối danh sách
         foreach (var remaining in buffer)
         {
-            result.Add(remaining.Post);
+            result.Add(remaining.Post.Id);
         }
 
         return result;
