@@ -187,6 +187,12 @@ public class AuthController : ControllerBase
                 ExpiresAt = result.ExpiresAt
             });
         }
+        catch (OperationCanceledException)
+        {
+            // Trình duyệt ngắt kết nối do người dùng bấm F5 / tải lại trang / đóng tab:
+            // Không xóa cookie của người dùng!
+            return NoContent();
+        }
         catch
         {
             // Xoá cookie nếu refresh token không hợp lệ và ném exception cho GlobalExceptionHandler xử lý

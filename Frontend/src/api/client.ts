@@ -48,7 +48,7 @@ apiClient.interceptors.request.use(
         timer = setTimeout(() => {
           unsubscribe();
           resolve();
-        }, 2500);
+        }, 6000);
       });
     }
 

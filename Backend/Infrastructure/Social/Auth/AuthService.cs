@@ -385,7 +385,7 @@ public class AuthService : IAuthService
         var tokenHash = TokenHasher.HashToken(rawRefreshToken);
         var token = await _unitOfWork.RefreshTokens.GetByTokenHashWithUserAsync(tokenHash, cancellationToken);
 
-        if (token == null || token.IsRevoked || token.IsExpired || token.User == null)
+        if (token == null || token.IsExpired || token.User == null)
         {
             throw new ValidationAppException("Token", "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
         }
@@ -396,6 +396,75 @@ public class AuthService : IAuthService
             _unitOfWork.RefreshTokens.Update(token);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             throw new ValidationAppException("Account", "Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ ban quản trị.");
+        }
+
+        if (token.IsRevoked)
+        {
+            // Cơ chế Grace Period (30s) chống race condition khi F5 / reload liên tục hoặc mạng trễ
+            var gracePeriod = TimeSpan.FromSeconds(30);
+            var isWithinGracePeriod = token.RevokedAtUtc.HasValue &&
+                                      (DateTime.UtcNow - token.RevokedAtUtc.Value) <= gracePeriod;
+
+            if (isWithinGracePeriod && !string.IsNullOrEmpty(token.ReplacedByTokenHash))
+            {
+                // Lần theo chuỗi token thay thế để tìm token hợp lệ mới nhất
+                var currentSuccessor = await _unitOfWork.RefreshTokens.GetByTokenHashWithUserAsync(token.ReplacedByTokenHash, cancellationToken);
+                while (currentSuccessor != null && currentSuccessor.IsRevoked && !string.IsNullOrEmpty(currentSuccessor.ReplacedByTokenHash) && currentSuccessor.UserId == token.UserId)
+                {
+                    var next = await _unitOfWork.RefreshTokens.GetByTokenHashWithUserAsync(currentSuccessor.ReplacedByTokenHash, cancellationToken);
+                    if (next == null || next.UserId != token.UserId)
+                    {
+                        break;
+                    }
+                    currentSuccessor = next;
+                }
+
+                if (currentSuccessor != null && currentSuccessor.UserId == token.UserId && !currentSuccessor.IsExpired)
+                {
+                    // Thu hồi token kế tiếp (vì client chưa kịp nhận được nó do reload trang) và cấp lại cặp token mới an toàn
+                    currentSuccessor.RevokedAtUtc = DateTime.UtcNow;
+
+                    var graceAccessToken = _jwtTokenService.GenerateAccessToken(token.User);
+                    var graceAccessTokenExpiresAt = _jwtTokenService.GetAccessTokenExpiration();
+
+                    var graceRawRefreshToken = _jwtTokenService.GenerateRefreshToken();
+                    var graceRefreshTokenExpiresAt = _jwtTokenService.GetRefreshTokenExpiration();
+                    var graceTokenHash = TokenHasher.HashToken(graceRawRefreshToken);
+
+                    currentSuccessor.ReplacedByTokenHash = graceTokenHash;
+                    _unitOfWork.RefreshTokens.Update(currentSuccessor);
+
+                    var graceRefreshToken = new RefreshToken
+                    {
+                        UserId = token.UserId,
+                        TokenHash = graceTokenHash,
+                        ExpiresAtUtc = graceRefreshTokenExpiresAt,
+                        CreatedByIp = ipAddress
+                    };
+
+                    await _unitOfWork.RefreshTokens.AddAsync(graceRefreshToken, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                    return new RefreshResultDto
+                    {
+                        AccessToken = graceAccessToken,
+                        ExpiresAt = graceAccessTokenExpiresAt,
+                        RawRefreshToken = graceRawRefreshToken,
+                        RefreshTokenExpiresAt = graceRefreshTokenExpiresAt
+                    };
+                }
+            }
+
+            // Nếu bị tái sử dụng ngoài 30s -> Nghi vấn Replay Attack (đánh cắp token), thu hồi tất cả phiên của user
+            var activeTokens = await _unitOfWork.RefreshTokens.GetActiveTokensByUserIdAsync(token.UserId, cancellationToken);
+            foreach (var activeToken in activeTokens)
+            {
+                activeToken.RevokedAtUtc = DateTime.UtcNow;
+                _unitOfWork.RefreshTokens.Update(activeToken);
+            }
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            throw new ValidationAppException("Token", "Phiên đăng nhập đã hết hạn hoặc không hợp lệ do phát hiện truy cập bất thường. Vui lòng đăng nhập lại.");
         }
 
         // Token rotation: Thu hồi token cũ
