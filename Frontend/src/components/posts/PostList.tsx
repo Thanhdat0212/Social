@@ -81,7 +81,7 @@ export const PostList: React.FC<PostListProps> = ({
       <div className="posts-stream">
         {posts.map((post, idx) => (
           <PostCard
-            key={post.id}
+            key={`${post.id}-${idx}`}
             post={post}
             priority={idx === 0}
             onPostDeleted={onPostDeleted}

@@ -129,6 +129,11 @@
 
             // Bảng tin "Mới nhất" hiển thị chuẩn theo thứ tự thời gian tạo giảm dần (CreatedAtUtc DESC)
             var pagedPosts = await _unitOfWork.Posts.GetRecentPostsAsync(page, pageSize, cancellationToken);
+            if (pagedPosts.Count == 0 && page > 1)
+            {
+                // Khi cuộn hết các bài mới nhất, tuần hoàn lại từ đầu
+                pagedPosts = await _unitOfWork.Posts.GetRecentPostsAsync(1, pageSize, cancellationToken);
+            }
             var postDtos = _mapper.Map<List<PostDto>>(pagedPosts);
 
             if (_currentUserService.IsAuthenticated && _currentUserService.UserId.HasValue)

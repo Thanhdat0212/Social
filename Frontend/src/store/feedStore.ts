@@ -57,15 +57,36 @@ export const useFeedStore = create<FeedStoreState>((set) => ({
   appendTabPosts: (tab, incoming, page, hasMore) =>
     set((state) => {
       const current = state.tabStates[tab].posts;
-      const existingIds = new Set(current.map((p) => p.id));
-      const deduplicated = incoming.filter((p) => !existingIds.has(p.id));
+      if (incoming.length === 0) {
+        return {
+          tabStates: {
+            ...state.tabStates,
+            [tab]: {
+              ...state.tabStates[tab],
+              page,
+              hasMore,
+            },
+          },
+        };
+      }
+
+      // Tránh lặp ngay lập tức các bài viết vừa hiển thị ở cuối feed
+      const recentWindow = current.slice(-Math.max(incoming.length, 5));
+      const recentIds = new Set(recentWindow.map((p) => p.id));
+      let toAppend = incoming.filter((p) => !recentIds.has(p.id));
+
+      // Khi đã lướt hết toàn bộ bài viết mới và hệ thống tuần hoàn lại (hoặc số bài ít),
+      // chấp nhận nạp tiếp incoming để feed tiếp tục cuộn vô hạn không ngắt quãng
+      if (toAppend.length === 0) {
+        toAppend = incoming;
+      }
 
       return {
         tabStates: {
           ...state.tabStates,
           [tab]: {
             ...state.tabStates[tab],
-            posts: [...current, ...deduplicated],
+            posts: [...current, ...toAppend],
             page,
             hasMore,
           },

@@ -51,25 +51,19 @@ public sealed class FeedService : IFeedService
         var cachedIds = await _cacheService.GetAsync<List<Guid>>(cacheKey, cancellationToken);
         if (cachedIds != null && cachedIds.Count > 0)
         {
-            // Lọc bỏ bài người dùng vừa xem trên màn hình (được Frontend gửi lên qua seenIds)
-            // để đảm bảo mỗi lần reload người dùng luôn thấy bài viết MỚI / KHÁC BIỆT
-            var unseenIds = seenSet.Count > 0
-                ? cachedIds.Where(id => !seenSet.Contains(id)).ToList()
-                : cachedIds;
-
-            // Nếu người dùng đã xem hết toàn bộ pool cache, fallback dùng lại toàn bộ pool
-            var candidatePool = unseenIds.Count >= pageSize ? unseenIds : cachedIds;
-            var pagedIds = candidatePool.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            if (pagedIds.Count == 0 && candidatePool.Count > 0)
-            {
-                pagedIds = candidatePool.Take(pageSize).ToList();
-            }
+            var pagedIds = SelectCandidateIdsWithRecirculation(cachedIds, seenSet, page, pageSize);
             if (pagedIds.Count > 0)
             {
                 var cachedPosts = await _unitOfWork.Posts.GetPostsByIdsAsync(pagedIds, cancellationToken);
                 if (cachedPosts.Count > 0)
                 {
-                    var cachedDtos = _mapper.Map<List<PostDto>>(cachedPosts);
+                    var postDict = cachedPosts.ToDictionary(p => p.Id);
+                    var orderedPosts = pagedIds
+                        .Where(id => postDict.ContainsKey(id))
+                        .Select(id => postDict[id])
+                        .ToList();
+
+                    var cachedDtos = _mapper.Map<List<PostDto>>(orderedPosts);
                     if (currentUserId.HasValue && cachedDtos.Count > 0)
                     {
                         var likedIds = (await _unitOfWork.PostLikes.GetLikedPostIdsByUserAsync(
@@ -118,7 +112,7 @@ public sealed class FeedService : IFeedService
         if (rankedPostIds.Count == 0)
         {
             // Dự phòng an toàn: nếu pipeline gợi ý không trả về bài nào, lấy các bài viết mới nhất
-            var fallback = await _unitOfWork.Posts.GetRecentCandidatesAsync(pageSize * 2, cancellationToken);
+            var fallback = await _unitOfWork.Posts.GetRecentCandidatesAsync(Math.Max(pageSize * 4, 40), cancellationToken);
             finalPoolIds = fallback.Select(p => p.Id).ToList();
         }
         else
@@ -133,12 +127,7 @@ public sealed class FeedService : IFeedService
             await _cacheService.SetAsync(cacheKey, finalPoolIds, ttl, cancellationToken);
         }
 
-        var unseenFinalIds = seenSet.Count > 0
-            ? finalPoolIds.Where(id => !seenSet.Contains(id)).ToList()
-            : finalPoolIds;
-
-        var targetPool = unseenFinalIds.Count >= pageSize ? unseenFinalIds : finalPoolIds;
-        var targetPagedIds = targetPool.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        var targetPagedIds = SelectCandidateIdsWithRecirculation(finalPoolIds, seenSet, page, pageSize);
 
         if (targetPagedIds.Count == 0)
         {
@@ -152,7 +141,13 @@ public sealed class FeedService : IFeedService
             return Array.Empty<PostDto>();
         }
 
-        var dtos = _mapper.Map<List<PostDto>>(detailedPosts);
+        var detailedDict = detailedPosts.ToDictionary(p => p.Id);
+        var orderedDetailed = targetPagedIds
+            .Where(id => detailedDict.ContainsKey(id))
+            .Select(id => detailedDict[id])
+            .ToList();
+
+        var dtos = _mapper.Map<List<PostDto>>(orderedDetailed);
 
         // Gắn trạng thái Like của người dùng hiện tại
         if (currentUserId.HasValue && dtos.Count > 0)
@@ -195,17 +190,21 @@ public sealed class FeedService : IFeedService
         {
             foreach (var id in seenPostIds) viewedPostIds.Add(id);
         }
-        var dbViewed = await _unitOfWork.UserInteractions.GetViewedPostIdsAsync(currentUserId, 500, cancellationToken);
-        foreach (var id in dbViewed) viewedPostIds.Add(id);
 
         var fetchLimit = Math.Max(200, page * pageSize);
         var posts = await _unitOfWork.Posts.GetFollowingPostsAsync(followingUserIds, 1, fetchLimit, cancellationToken);
-        var unseen = posts.Where(p => !viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
-        var viewed = posts.Where(p => viewedPostIds.Contains(p.Id)).OrderByDescending(p => p.CreatedAtUtc).ToList();
+        if (posts.Count == 0)
+        {
+            return Array.Empty<PostDto>();
+        }
 
-        var rankedPosts = unseen.Concat(viewed)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        var allFollowingIds = posts.Select(p => p.Id).ToList();
+        var targetPagedIds = SelectCandidateIdsWithRecirculation(allFollowingIds, viewedPostIds, page, pageSize);
+
+        var postDict = posts.ToDictionary(p => p.Id);
+        var rankedPosts = targetPagedIds
+            .Where(id => postDict.ContainsKey(id))
+            .Select(id => postDict[id])
             .ToList();
 
         var dtos = _mapper.Map<List<PostDto>>(rankedPosts);
@@ -224,5 +223,63 @@ public sealed class FeedService : IFeedService
         }
 
         return dtos;
+    }
+
+    /// <summary>
+    /// Thuật toán chọn bài viết hỗ trợ tuần hoàn vô hạn (Infinite Loop Recirculation)
+    /// Ưu tiên bài chưa xem; khi hết bài mới, tự động xoay vòng bài cũ theo modulo để feed không bị dừng.
+    /// </summary>
+    private static List<Guid> SelectCandidateIdsWithRecirculation(
+        List<Guid> pool,
+        HashSet<Guid> seenSet,
+        int page,
+        int pageSize)
+    {
+        if (pool.Count == 0) return new List<Guid>();
+
+        var selected = new List<Guid>();
+
+        if (seenSet.Count > 0)
+        {
+            var unseen = pool.Where(id => !seenSet.Contains(id)).ToList();
+            if (unseen.Count > 0)
+            {
+                selected.AddRange(unseen.Take(pageSize));
+            }
+
+            // Nếu đã cạn bài chưa xem hoặc không đủ pageSize, bù đắp bằng các bài cũ trong pool để tuần hoàn vô tận
+            if (selected.Count < pageSize)
+            {
+                var alreadySelected = new HashSet<Guid>(selected);
+                var remainingPool = pool.Where(id => !alreadySelected.Contains(id)).ToList();
+                if (remainingPool.Count == 0)
+                {
+                    remainingPool = pool;
+                }
+
+                var offset = Math.Abs((page - 1) * pageSize) % remainingPool.Count;
+                int needed = pageSize - selected.Count;
+                for (int i = 0; i < needed && i < remainingPool.Count; i++)
+                {
+                    var candidateId = remainingPool[(offset + i) % remainingPool.Count];
+                    if (!alreadySelected.Contains(candidateId))
+                    {
+                        selected.Add(candidateId);
+                        alreadySelected.Add(candidateId);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Không có seenSet, phân trang tuần hoàn theo modulo trên pool
+            var offset = Math.Abs((page - 1) * pageSize) % pool.Count;
+            for (int i = 0; i < pageSize && i < pool.Count; i++)
+            {
+                selected.Add(pool[(offset + i) % pool.Count]);
+            }
+        }
+
+        return selected;
     }
 }

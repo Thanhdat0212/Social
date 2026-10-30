@@ -146,7 +146,8 @@ export const HomePage: React.FC = () => {
 
         const [data] = await Promise.all([fetchPromise, minSpinDelay]);
 
-        setTabPosts(activeTab, data, 1, data.length >= INITIAL_PAGE_SIZE);
+        // Luôn giữ hasMore = true khi có bài viết để kích hoạt tuần hoàn vô tận (Infinite Loop)
+        setTabPosts(activeTab, data, 1, data.length > 0);
       } catch (err) {
         await minSpinDelay;
         setError(getApiErrorMessage(err));
@@ -174,10 +175,14 @@ export const HomePage: React.FC = () => {
     const nextPage = page + 1;
 
     try {
-      const currentSeenIds = [
-        ...seenPostsService.getRecentSeenIds(60),
-        ...posts.map((p) => p.id),
-      ];
+      // Giới hạn danh sách ID đã xem gần nhất để tránh lỗi HTTP 414 URL Too Long
+      // đồng thời cho phép hệ thống tuần hoàn lại các bài viết cũ hơn
+      const currentSeenIds = Array.from(
+        new Set([
+          ...seenPostsService.getRecentSeenIds(30),
+          ...posts.slice(-15).map((p) => p.id),
+        ])
+      );
 
       let nextBatch: PostDto[];
       if (activeTab === 'following') {
@@ -191,7 +196,8 @@ export const HomePage: React.FC = () => {
       const incoming = [...bottomPendingPosts, ...nextBatch];
       setBottomPendingPosts([]);
 
-      appendTabPosts(activeTab, incoming, nextPage, nextBatch.length >= PAGE_SIZE);
+      // Khi có bài viết nạp về, duy trì hasMore = true để feed cuộn vô tận
+      appendTabPosts(activeTab, incoming, nextPage, incoming.length > 0);
     } catch (err) {
       console.warn('Lỗi khi nạp thêm bài viết:', err);
     } finally {
